@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": false,
+    // En build resolvemos @proplay/shared por sus declaraciones compiladas:
+    // así tsc no intenta emitir los fuentes del paquete compartido.
+    "paths": {
+      "@proplay/shared": ["../../packages/shared/dist/index.d.ts"],
+      "@proplay/shared/*": ["../../packages/shared/dist/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["tests", "prisma", "dist"]
+}

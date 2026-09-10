@@ -1,0 +1,384 @@
+// ---------------------------------------------------------------------------
+// ProPlay — modelo de datos
+//
+// Este archivo es también la documentación del modelo: los nombres de las
+// entidades y de sus campos van en español (así están definidos en el
+// documento del proyecto); el resto del código va en inglés.
+//
+// Los enums de abajo deben coincidir EXACTAMENTE con
+// packages/shared/src/enums.ts.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------- Enums ---------------------------------------
+
+enum Rol {
+  JUGADOR
+  EQUIPO
+  SCOUT
+  ADMIN
+}
+
+enum CategoriaHabilidad {
+  TECNICA
+  BLANDA
+}
+
+enum Plataforma {
+  RIOT
+  STEAM
+  TWITCH
+  YOUTUBE
+}
+
+enum EstadoOferta {
+  BORRADOR
+  ABIERTA
+  CERRADA
+}
+
+enum EstadoPostulacion {
+  ENVIADA
+  EN_REVISION
+  ACEPTADA
+  RECHAZADA
+}
+
+// ----------------------------- Usuarios ------------------------------------
+
+model Usuario {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  nombre          String
+  rol             Rol      @default(JUGADOR)
+  emailVerificado Boolean  @default(false)
+  activo          Boolean  @default(true)
+  creadoEn        DateTime @default(now())
+  actualizadoEn   DateTime @updatedAt
+
+  perfilJugador  PerfilJugador?
+  perfilEquipo   PerfilEquipo?
+  publicaciones  Publicacion[]
+  endorsements   Endorsement[]
+  mensajes       Mensaje[]
+  conversaciones ParticipanteConversacion[]
+  notificaciones Notificacion[]
+  auditLogs      AuditLog[]
+
+  @@index([rol])
+}
+
+// ----------------------------- Perfiles ------------------------------------
+
+model PerfilJugador {
+  id                   String    @id @default(cuid())
+  usuarioId            String    @unique
+  bio                  String?
+  region               String?
+  pais                 String?
+  fechaNacimiento      DateTime?
+  disponibilidadHoras  Int?
+  dispuestoRelocalizar Boolean   @default(false)
+  avatarUrl            String?
+  creadoEn             DateTime  @default(now())
+  actualizadoEn        DateTime  @updatedAt
+
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  habilidades   HabilidadJugador[]
+  cuentasGaming CuentaGaming[]
+  estadisticas  Estadistica[]
+  vector        PerfilVector?
+  postulaciones Postulacion[]
+  matchings     Matching[]
+
+  @@index([region])
+}
+
+model PerfilEquipo {
+  id            String   @id @default(cuid())
+  usuarioId     String   @unique
+  nombreOrg     String
+  descripcion   String?
+  sitioWeb      String?
+  logoUrl       String?
+  region        String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  usuario Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ofertas Oferta[]
+
+  @@index([region])
+}
+
+// ----------------------------- Habilidades ---------------------------------
+
+model Habilidad {
+  id        String             @id @default(cuid())
+  nombre    String             @unique
+  categoria CategoriaHabilidad
+  creadoEn  DateTime           @default(now())
+
+  jugadores HabilidadJugador[]
+
+  @@index([categoria])
+}
+
+model HabilidadJugador {
+  id          String   @id @default(cuid())
+  jugadorId   String
+  habilidadId String
+  nivel       Int // 1..5, validado por @proplay/shared
+  verificada  Boolean  @default(false)
+  creadoEn    DateTime @default(now())
+
+  jugador      PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  habilidad    Habilidad     @relation(fields: [habilidadId], references: [id], onDelete: Cascade)
+  endorsements Endorsement[]
+
+  @@unique([jugadorId, habilidadId])
+  @@index([jugadorId])
+  @@index([habilidadId])
+}
+
+model Endorsement {
+  id                 String   @id @default(cuid())
+  habilidadJugadorId String
+  autorId            String
+  comentario         String?
+  creadoEn           DateTime @default(now())
+
+  habilidadJugador HabilidadJugador @relation(fields: [habilidadJugadorId], references: [id], onDelete: Cascade)
+  autor            Usuario          @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@unique([habilidadJugadorId, autorId])
+  @@index([autorId])
+}
+
+// ----------------------------- Cuentas externas ----------------------------
+
+model CuentaGaming {
+  id           String     @id @default(cuid())
+  jugadorId    String
+  plataforma   Plataforma
+  externalId   String
+  handle       String?
+  /// Cifrados con AES-256-GCM (src/utils/crypto.ts). Nunca en claro.
+  accessToken  String?
+  refreshToken String?
+  expiraEn     DateTime?
+  verificadaEn DateTime?
+  creadoEn     DateTime   @default(now())
+
+  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+
+  @@unique([jugadorId, plataforma])
+  @@unique([plataforma, externalId])
+  @@index([jugadorId])
+}
+
+// ----------------------------- Estadísticas --------------------------------
+
+model Estadistica {
+  id          String     @id @default(cuid())
+  jugadorId   String
+  juego       String
+  rol         String?
+  partidas    Int        @default(0)
+  victorias   Int        @default(0)
+  kda         Float      @default(0)
+  winRate     Float      @default(0)
+  /// Métricas específicas del título (CS/min, ADR, GPM, ...)
+  metricas    Json?
+  fuente      Plataforma
+  capturadaEn DateTime   @default(now())
+
+  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+
+  @@index([jugadorId])
+  @@index([jugadorId, juego])
+  @@index([juego])
+}
+
+model PerfilVector {
+  id          String   @id @default(cuid())
+  jugadorId   String   @unique
+  /// Vector de características. Se mantiene como Float[] para que Prisma lo
+  /// pueda leer y escribir; la columna `embedding` de tipo vector(64) la añade
+  /// la migración 20260910000001_pgvector para las búsquedas de similitud.
+  dimensiones Float[]
+  /// Columna nativa de pgvector añadida por la migración
+  /// 20260910145700_pgvector_perfil_vector. Prisma no la puede leer ni
+  /// escribir (Unsupported), pero sí la conoce, así que no genera deriva.
+  embedding   Unsupported("vector(64)")?
+  version     Int      @default(1)
+  calculadoEn DateTime @default(now())
+
+  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------- Feed ----------------------------------------
+
+model Publicacion {
+  id            String   @id @default(cuid())
+  autorId       String
+  texto         String
+  mediaUrls     String[] @default([])
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  autor Usuario @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@index([autorId])
+  @@index([creadoEn])
+}
+
+// ----------------------------- Ofertas -------------------------------------
+
+model Oferta {
+  id                  String       @id @default(cuid())
+  equipoId            String
+  titulo              String
+  juego               String
+  rol                 String
+  rangoMinimo         String?
+  experienciaMinAnios Int          @default(0)
+  region              String?
+  horasSemana         Int?
+  descripcion         String
+  estado              EstadoOferta @default(BORRADOR)
+  creadoEn            DateTime     @default(now())
+  actualizadoEn       DateTime     @updatedAt
+
+  equipo        PerfilEquipo  @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  postulaciones Postulacion[]
+  matchings     Matching[]
+
+  @@index([equipoId])
+  @@index([juego])
+  @@index([region])
+  @@index([estado])
+}
+
+model Postulacion {
+  id            String            @id @default(cuid())
+  ofertaId      String
+  jugadorId     String
+  estado        EstadoPostulacion @default(ENVIADA)
+  mensaje       String?
+  creadoEn      DateTime          @default(now())
+  actualizadoEn DateTime          @updatedAt
+
+  oferta  Oferta        @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
+  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+
+  @@unique([ofertaId, jugadorId])
+  @@index([ofertaId])
+  @@index([jugadorId])
+  @@index([estado])
+}
+
+// ----------------------------- Matching ------------------------------------
+
+model Matching {
+  id          String   @id @default(cuid())
+  ofertaId    String
+  jugadorId   String
+  puntaje     Float // 0..1
+  /// Desglose de las cinco dimensiones (ver PESOS_MATCHING en @proplay/shared)
+  desglose    Json
+  calculadoEn DateTime @default(now())
+
+  oferta  Oferta        @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
+  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+
+  @@unique([ofertaId, jugadorId])
+  @@index([ofertaId])
+  @@index([jugadorId])
+  @@index([ofertaId, puntaje])
+}
+
+// ----------------------------- Mensajería ----------------------------------
+
+model Conversacion {
+  id            String   @id @default(cuid())
+  titulo        String?
+  esGrupo       Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  participantes ParticipanteConversacion[]
+  mensajes      Mensaje[]
+}
+
+model ParticipanteConversacion {
+  id             String    @id @default(cuid())
+  conversacionId String
+  usuarioId      String
+  leidoEn        DateTime?
+  creadoEn       DateTime  @default(now())
+
+  conversacion Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([conversacionId, usuarioId])
+  @@index([usuarioId])
+}
+
+model Mensaje {
+  id             String   @id @default(cuid())
+  conversacionId String
+  autorId        String
+  texto          String
+  creadoEn       DateTime @default(now())
+
+  conversacion Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  autor        Usuario      @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@index([conversacionId, creadoEn])
+  @@index([autorId])
+}
+
+// ----------------------------- Notificaciones ------------------------------
+
+model Notificacion {
+  id        String    @id @default(cuid())
+  usuarioId String
+  /// Valor de TIPOS_NOTIFICACION en @proplay/shared
+  tipo      String
+  payload   Json
+  leidaEn   DateTime?
+  creadoEn  DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([usuarioId, leidaEn])
+}
+
+// ----------------------------- Auditoría -----------------------------------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  accion    String
+  entidad   String
+  entidadId String?
+  metadata  Json?
+  creadoEn  DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([entidad, entidadId])
+  @@index([creadoEn])
+}
