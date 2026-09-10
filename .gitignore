@@ -20,3 +20,5 @@ npm-debug.log*
 apps/web/dist/
 apps/api/dist/
 packages/shared/dist/
+# Convenciones locales para sesiones de Claude Code: no viaja al repositorio
+claude.md
