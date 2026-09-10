@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proplay
+          POSTGRES_PASSWORD: proplay
+          POSTGRES_DB: proplay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U proplay -d proplay_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://proplay:proplay@localhost:5432/proplay_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-que-supera-los-32-caracteres
+      JWT_REFRESH_SECRET: ci-refresh-secret-que-supera-los-32-caracteres
+      ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+      NODE_ENV: test
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+      VITE_API_URL: http://localhost:3000/api/v1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install (raíz del monorepo)
+        run: npm install
+
+      - name: Apply migrations
+        run: npm run db:deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

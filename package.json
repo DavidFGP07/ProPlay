@@ -1,0 +1,38 @@
+{
+  "name": "proplay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Red profesional para el scouting de talento en eSports",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "postinstall": "npm run db:generate -w api",
+    "dev": "concurrently -n api,web -c magenta.bold,cyan.bold \"npm run dev -w api\" \"npm run dev -w web\"",
+    "build": "npm run build -w @proplay/shared && npm run build -w api && npm run build -w web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate -w api",
+    "db:migrate": "npm run db:migrate -w api",
+    "db:deploy": "npm run db:deploy -w api",
+    "db:seed": "npm run db:seed -w api",
+    "db:studio": "npm run db:studio -w api",
+    "db:reset": "npm run db:reset -w api",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0"
+  }
+}
