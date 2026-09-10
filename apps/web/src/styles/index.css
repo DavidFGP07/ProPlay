@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply min-h-screen bg-fondo font-sans text-slate-100 antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primario-300 ring-offset-2 ring-offset-fondo;
+  }
+}
+
+@layer components {
+  .enlace-nav {
+    @apply rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-fondo-elevado hover:text-white;
+  }
+
+  .enlace-nav-activo {
+    @apply bg-primario-600/20 text-white;
+  }
+}
