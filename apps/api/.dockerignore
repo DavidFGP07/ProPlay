@@ -1,0 +1,10 @@
+# El contexto de build es la raíz del monorepo; este archivo sólo aplica si
+# alguien construye desde apps/api por error. El .dockerignore efectivo es el
+# de la raíz del repositorio.
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+*.log
