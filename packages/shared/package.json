@@ -1,0 +1,44 @@
+{
+  "name": "@proplay/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contrato compartido (esquemas Zod, tipos, enums y constantes) entre api y web",
+  "license": "UNLICENSED",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./enums": {
+      "types": "./src/enums.ts",
+      "default": "./dist/enums.js"
+    },
+    "./constants": {
+      "types": "./src/constants.ts",
+      "default": "./dist/constants.js"
+    },
+    "./schemas": {
+      "types": "./src/schemas/index.ts",
+      "default": "./dist/schemas/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
