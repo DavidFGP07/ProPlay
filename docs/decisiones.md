@@ -94,3 +94,10 @@ del proyecto se anotan igual, para que el registro esté completo.
 | El `package-lock.json` propio del prototipo se elimina | En un monorepo de npm workspaces sólo hay un lockfile, el de la raíz. |
 | `apps/api` sube de vitest 2 a vitest 3 | Con dos versiones mayores, npm eleva la de `api` a la raíz y `@testing-library/jest-dom` se registra sobre la equivocada: rompe los matchers y los tipos de los tests del cliente. Una sola versión lo resuelve. |
 | `server.open` del prototipo se sustituye por `strictPort` | `npm run dev` arranca api y web a la vez; abrir el navegador en cada arranque estorba y el puerto 5173 está fijado por `CORS_ORIGIN`. |
+| Los datos simulados (`mocks/api.ts`, `mocks/seed.ts`) se movieron sin reescribir su lógica y sólo se consumen desde los hooks de `src/api/` | Es la costura de datos: cada hook tiene la firma de la llamada real y un `// TODO: Sx` con su endpoint; conectarlo no toca los componentes. |
+| Los hooks de recursos «míos» (notificaciones, mensajes, privacidad, perfil propio) no reciben el id del usuario | La API real identifica al usuario por el access token; la simulación lo lee de `mocks/sesion.ts`, que registra el `AuthContext`. |
+| Los componentes resuelven sus identificadores de dominio con `useIdentidad()` | Es el equivalente de `GET /perfiles/me`: dice de qué perfil de jugador u organización es dueño el usuario, sin que la vista toque el mock. |
+| Toda mutación invalida todas las consultas | La simulación tiene efectos cruzados (una postulación emite notificación y auditoría). Al conectar cada endpoint se acota la invalidación a sus claves. |
+| Al cerrar sesión se vacía la caché de TanStack Query | Ningún dato del usuario anterior debe quedar visible para el siguiente. |
+| `services/matching.ts` y `services/llm.ts` siguen en `services/` | Son el motor de matching y el explicador simulados; sólo los usa el mock. Se retiran cuando los módulos `matching` (S3) y la IA generativa (S4) vivan en el backend. |
+

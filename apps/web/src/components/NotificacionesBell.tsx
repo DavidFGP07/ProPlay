@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -11,11 +11,11 @@ import {
 } from 'lucide-react'
 import { Button, cn } from '@/components/ui'
 import {
-  listarNotificaciones,
-  marcarNotificacionLeida,
-  marcarTodasLeidas,
-} from '@/services/api'
-import type { Notificacion, TipoNotificacion, Usuario } from '@/types'
+  useMarcarNotificacionLeida,
+  useMarcarTodasLeidas,
+  useNotificaciones,
+} from '@/api/notificaciones'
+import type { Notificacion, TipoNotificacion } from '@/types'
 
 const ICONOS: Record<TipoNotificacion, typeof Bell> = {
   postulacion: Briefcase,
@@ -53,21 +53,13 @@ function tiempoRelativo(iso: string): string {
  * la capa de API: postulaciones, cambios de estado, endoses, sincronizaciones
  * del worker y mensajes.
  */
-export function NotificacionesBell({ usuario }: { usuario: Usuario }) {
+export function NotificacionesBell() {
   const navegar = useNavigate()
   const [abierto, setAbierto] = useState(false)
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
+  const { data: notificaciones = [] } = useNotificaciones()
+  const marcarLeida = useMarcarNotificacionLeida()
+  const marcarTodas = useMarcarTodasLeidas()
   const contenedorRef = useRef<HTMLDivElement>(null)
-
-  const cargar = useCallback(async () => {
-    setNotificaciones(await listarNotificaciones(usuario.id))
-  }, [usuario.id])
-
-  useEffect(() => {
-    void cargar()
-    const t = window.setInterval(() => void cargar(), 30_000)
-    return () => window.clearInterval(t)
-  }, [cargar])
 
   // Cierre al pulsar fuera del panel.
   useEffect(() => {
@@ -89,8 +81,7 @@ export function NotificacionesBell({ usuario }: { usuario: Usuario }) {
   const noLeidas = notificaciones.filter((n) => !n.leida).length
 
   const abrirNotificacion = async (n: Notificacion) => {
-    await marcarNotificacionLeida(n.id)
-    setNotificaciones(await listarNotificaciones(usuario.id))
+    await marcarLeida.mutateAsync(n.id)
     setAbierto(false)
     if (n.enlace) navegar(n.enlace)
   }
@@ -124,10 +115,7 @@ export function NotificacionesBell({ usuario }: { usuario: Usuario }) {
               <Button
                 variante="fantasma"
                 tamano="sm"
-                onClick={async () => {
-                  await marcarTodasLeidas(usuario.id)
-                  await cargar()
-                }}
+                onClick={() => marcarTodas.mutate()}
               >
                 <CheckCheck size={13} />
                 Marcar todas

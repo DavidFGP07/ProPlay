@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Briefcase,
@@ -22,28 +22,18 @@ import {
   cn,
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
-import { listarOfertas, listarPostulaciones } from '@/services/api'
-import { perfilesEquipo } from '@/data/seed'
-import type { Oferta, Postulacion } from '@/types'
+import { usePostulaciones, useVacantes } from '@/api/ofertas'
+import { useEquipos } from '@/api/perfiles'
 
 export default function OfertasPage() {
   const { usuario } = useAuth()
-  const [ofertas, setOfertas] = useState<Oferta[]>([])
-  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([])
-  const [cargando, setCargando] = useState(true)
+  const vacantes = useVacantes()
+  const { data: postulaciones = [] } = usePostulaciones()
+  const { data: perfilesEquipo = [] } = useEquipos()
+  const ofertas = vacantes.data ?? []
+  const cargando = vacantes.isLoading
   const [query, setQuery] = useState('')
   const [soloAbiertas, setSoloAbiertas] = useState(true)
-
-  useEffect(() => {
-    const cargar = async () => {
-      setCargando(true)
-      const [o, p] = await Promise.all([listarOfertas(), listarPostulaciones()])
-      setOfertas(o)
-      setPostulaciones(p)
-      setCargando(false)
-    }
-    cargar()
-  }, [])
 
   const filtradas = ofertas.filter((o) => {
     if (soloAbiertas && o.estado !== 'abierta') return false

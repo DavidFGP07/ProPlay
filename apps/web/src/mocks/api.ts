@@ -11,7 +11,7 @@ import {
   usuarios,
   mensajes as mensajesSeed,
   actividadFeed,
-} from '@/data/seed'
+} from '@/mocks/seed'
 import {
   calcularRanking,
   invalidarCacheEmbeddings,

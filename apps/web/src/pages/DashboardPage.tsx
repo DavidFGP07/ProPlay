@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   Activity,
   BarChart3,
@@ -25,17 +24,12 @@ import {
   YAxis,
 } from 'recharts'
 import { Card, CardHeader, Progress, SectionTitle, Stat, cn } from '@/components/ui'
-import { obtenerMetricas } from '@/services/api'
-import type { MetricasDashboard } from '@/services/api'
+import { useMetricas } from '@/api/admin'
 
 const COLORES = ['#7c4df5', '#22d3ee', '#34d399', '#fbbf24', '#fb7185', '#818cf8']
 
 export default function DashboardPage() {
-  const [m, setM] = useState<MetricasDashboard | null>(null)
-
-  useEffect(() => {
-    obtenerMetricas().then(setM)
-  }, [])
+  const { data: m } = useMetricas()
 
   if (!m) {
     return (

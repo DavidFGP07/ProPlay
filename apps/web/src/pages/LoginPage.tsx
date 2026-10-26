@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Button, Field, Input, Select, cn } from '@/components/ui'
-import { usuariosDemo } from '@/services/api'
+import { usuariosDemo } from '@/mocks/api'
 import type { Region, Usuario } from '@/types'
 
 const CUENTAS_DEMO: { rol: Usuario['rol']; descripcion: string }[] = [

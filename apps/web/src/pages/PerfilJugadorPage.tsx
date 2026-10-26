@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -32,78 +32,42 @@ import {
 } from '@/components/ui'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
-import {
-  endosarHabilidad,
-  listarHabilidades,
-  obtenerPerfil,
-  perfilDeUsuario,
-} from '@/services/api'
+import { useIdentidad } from '@/api/identidad'
+import { useEndosarHabilidad, useHabilidades, usePerfil } from '@/api/perfiles'
 import { DIMENSIONES } from '@/lib/matching'
-import type { CuentaGaming, Endorsement, Estadistica, Habilidad, HabilidadJugador, PerfilJugador } from '@/types'
-
-interface PerfilCargado {
-  perfil: PerfilJugador
-  stats: Estadistica[]
-  cuentas: CuentaGaming[]
-  skills: HabilidadJugador[]
-  endoses: Endorsement[]
-  /** Preferencias de visibilidad configuradas por el jugador (RNF-05). */
-  visibilidad: {
-    mostrarEstadisticas: boolean
-    mostrarPortafolio: boolean
-    mostrarContacto: boolean
-  }
-}
+import type { HabilidadJugador } from '@/types'
 
 export default function PerfilJugadorPage() {
   const { id } = useParams<{ id: string }>()
   const { notificar } = useToast()
   const { usuario } = useAuth()
   const navegar = useNavigate()
-  const [datos, setDatos] = useState<PerfilCargado | null>(null)
-  const [catalogo, setCatalogo] = useState<Habilidad[]>([])
-  const [cargando, setCargando] = useState(true)
+  const consulta = usePerfil(id)
+  const { data: catalogo = [] } = useHabilidades()
+  const { data: identidad } = useIdentidad()
+  const endoso = useEndosarHabilidad()
   const [endorsement, setEndorsement] = useState<HabilidadJugador | null>(null)
   const [comentario, setComentario] = useState('')
-  const [enviando, setEnviando] = useState(false)
-
-  useEffect(() => {
-    if (!id) return
-    let cancelado = false
-    const cargar = async () => {
-      setCargando(true)
-      const [p, h] = await Promise.all([obtenerPerfil(id), listarHabilidades()])
-      if (cancelado) return
-      setDatos(p)
-      setCatalogo(h)
-      setCargando(false)
-    }
-    cargar()
-    return () => {
-      cancelado = true
-    }
-  }, [id])
+  const datos = consulta.data ?? null
+  const cargando = consulta.isLoading
+  const enviando = endoso.isPending
 
   /** Un usuario no puede endosar sus propias habilidades (unicidad por autor). */
-  const esPropio = usuario ? perfilDeUsuario(usuario.id)?.id === id : false
+  const esPropio = identidad?.perfilJugadorId === id
   const puedeEndosar = Boolean(usuario) && !esPropio
 
   const enviarEndorsement = async () => {
     if (!usuario || !endorsement) return
-    setEnviando(true)
     try {
-      await endosarHabilidad(endorsement.id, usuario, comentario)
+      await endoso.mutateAsync({ habilidadJugadorId: endorsement.id, comentario })
       setEndorsement(null)
       setComentario('')
       notificar('Endorsement registrado. La habilidad queda validada.')
-      setDatos(await obtenerPerfil(id!))
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo registrar el endorsement.',
         'error',
       )
-    } finally {
-      setEnviando(false)
     }
   }
 

@@ -22,9 +22,9 @@ import {
   Stat,
   cn,
 } from '@/components/ui'
-import { listarJugadores } from '@/services/api'
+import { useJugadores } from '@/api/matching'
 import { DIMENSIONES } from '@/lib/matching'
-import type { FiltrosBusqueda, PerfilJugador } from '@/types'
+import type { FiltrosBusqueda } from '@/types'
 
 const JUEGOS = ['Todos', 'League of Legends', 'Valorant', 'Counter-Strike 2', 'Rocket League', 'Dota 2'] as const
 const REGIONES = [
@@ -71,25 +71,18 @@ export default function ScoutingPage() {
     verificados: false,
     query: '',
   })
-  const [jugadores, setJugadores] = useState<PerfilJugador[]>([])
-  const [cargando, setCargando] = useState(true)
+  const [filtrosConsulta, setFiltrosConsulta] = useState(filtros)
   const [panelAbierto, setPanelAbierto] = useState(false)
 
+  // La busqueda espera a que el usuario deje de teclear.
   useEffect(() => {
-    let cancelado = false
-    const t = window.setTimeout(async () => {
-      setCargando(true)
-      const r = await listarJugadores(filtros)
-      if (!cancelado) {
-        setJugadores(r)
-        setCargando(false)
-      }
-    }, 200)
-    return () => {
-      cancelado = true
-      window.clearTimeout(t)
-    }
+    const t = window.setTimeout(() => setFiltrosConsulta(filtros), 200)
+    return () => window.clearTimeout(t)
   }, [filtros])
+
+  const consulta = useJugadores(filtrosConsulta)
+  const jugadores = useMemo(() => consulta.data ?? [], [consulta.data])
+  const cargando = consulta.isLoading || consulta.isPlaceholderData
 
   const actualizar = (parcial: Partial<FiltrosBusqueda>) =>
     setFiltros((f) => ({ ...f, ...parcial }))

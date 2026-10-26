@@ -15,7 +15,7 @@ import {
   perfilesJugador,
   postulaciones,
   estadisticas,
-} from '@/data/seed'
+} from '@/mocks/seed'
 import type { Oferta } from '@/types'
 
 const contexto: MatchingContexto = {

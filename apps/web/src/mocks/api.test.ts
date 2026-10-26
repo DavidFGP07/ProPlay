@@ -19,8 +19,8 @@ import {
   postular,
   registrarHabilidad,
   registrarUsuario,
-} from '@/services/api'
-import { usuarios } from '@/data/seed'
+} from '@/mocks/api'
+import { usuarios } from '@/mocks/seed'
 
 /**
  * Pruebas de la capa de integracion: verifican el contrato que consumira el

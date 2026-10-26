@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MessageSquare, Send } from 'lucide-react'
 import {
@@ -12,45 +12,26 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { enviarMensaje, listarMensajes } from '@/services/api'
-import { perfilesEquipo, perfilesJugador } from '@/data/seed'
-import type { Mensaje } from '@/types'
+import { useIdentidad } from '@/api/identidad'
+import { useContactos, useEnviarMensaje, useMensajes } from '@/api/mensajes'
 
 export default function MensajesPage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
   const [parametros] = useSearchParams()
-  const [mensajes, setMensajes] = useState<Mensaje[]>([])
+  const { data: mensajes = [] } = useMensajes()
+  const { data: contactos = [] } = useContactos()
+  const { data: identidad } = useIdentidad()
+  const envio = useEnviarMensaje()
   const [texto, setTexto] = useState('')
   const [conversacion, setConversacion] = useState<string | null>(null)
-  const [enviando, setEnviando] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!usuario) return
-    listarMensajes(usuario.id).then(setMensajes)
-  }, [usuario])
+  const yo = identidad?.usuarioId
+  const enviando = envio.isPending
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensajes.length])
-
-  // Contactos disponibles segun el rol.
-  const contactos = useMemo(() => {
-    if (!usuario) return []
-    if (usuario.rol === 'jugador') {
-      return perfilesEquipo.map((e) => ({
-        id: e.usuarioId,
-        nombre: e.nombre,
-        sub: e.region,
-      }))
-    }
-    return perfilesJugador.slice(0, 10).map((p) => ({
-      id: p.usuarioId,
-      nombre: p.nombre,
-      sub: `@${p.handle}`,
-    }))
-  }, [usuario])
 
   // Si la vista llega con ?con=<usuarioId> se abre esa conversacion (por
   // ejemplo, desde el boton "Contactar" del perfil de un jugador).
@@ -66,17 +47,14 @@ export default function MensajesPage() {
   const conversacionActual = contactos.find((c) => c.id === conversacion)
   const hilos = mensajes.filter(
     (m) =>
-      (m.emisorId === conversacion && m.receptorId === usuario?.id) ||
-      (m.receptorId === conversacion && m.emisorId === usuario?.id),
+      (m.emisorId === conversacion && m.receptorId === yo) ||
+      (m.receptorId === conversacion && m.emisorId === yo),
   )
 
   const enviar = async () => {
     if (!usuario || !conversacion || !texto.trim()) return
-    setEnviando(true)
-    const nuevo = await enviarMensaje(usuario, conversacion, texto.trim())
-    setMensajes((prev) => [...prev, nuevo])
+    await envio.mutateAsync({ receptorId: conversacion, texto: texto.trim() })
     setTexto('')
-    setEnviando(false)
     notificar('Mensaje enviado.')
   }
 
@@ -105,8 +83,8 @@ export default function MensajesPage() {
                   .reverse()
                   .find(
                     (m) =>
-                      (m.emisorId === c.id && m.receptorId === usuario?.id) ||
-                      (m.receptorId === c.id && m.emisorId === usuario?.id),
+                      (m.emisorId === c.id && m.receptorId === yo) ||
+                      (m.receptorId === c.id && m.emisorId === yo),
                   )
                 return (
                   <button
@@ -151,7 +129,7 @@ export default function MensajesPage() {
               />
             ) : (
               hilos.map((m) => {
-                const propio = m.emisorId === usuario?.id
+                const propio = m.emisorId === yo
                 return (
                   <div
                     key={m.id}

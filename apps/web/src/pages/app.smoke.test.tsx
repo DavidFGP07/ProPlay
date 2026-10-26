@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
 import App from '@/App'
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
-import { usuarios } from '@/data/seed'
+import { crearQueryClient } from '@/api/queryClient'
+import { usuarios } from '@/mocks/seed'
 
 /**
  * Pruebas de humo de la interfaz: renderizan la aplicacion real con sus
@@ -16,11 +18,13 @@ import { usuarios } from '@/data/seed'
 function renderApp(ruta: string): ReactElement {
   return (
     <MemoryRouter initialEntries={[ruta]}>
-      <ToastProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </ToastProvider>
+      <QueryClientProvider client={crearQueryClient()}>
+        <ToastProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>
     </MemoryRouter>
   )
 }

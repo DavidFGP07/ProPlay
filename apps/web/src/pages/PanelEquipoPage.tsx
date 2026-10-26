@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Briefcase,
@@ -31,18 +31,18 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import { useIdentidad } from '@/api/identidad'
+import { useCandidatos, useJugadores } from '@/api/matching'
 import {
-  actualizarEstadoPostulacion,
-  cerrarOferta,
-  crearOferta,
-  listarOfertas,
-  listarPostulaciones,
-  listarJugadores,
-  obtenerRanking,
-} from '@/services/api'
-import { perfilesEquipo } from '@/data/seed'
+  useActualizarEstadoPostulacion,
+  useCerrarOferta,
+  useCrearOferta,
+  usePostulaciones,
+  useVacantes,
+} from '@/api/ofertas'
+import { useEquipos } from '@/api/perfiles'
 import { PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { Oferta, PerfilJugador, Postulacion, ResultadoMatching } from '@/types'
+import type { Oferta, Postulacion } from '@/types'
 
 const JUEGOS = [
   'League of Legends',
@@ -98,15 +98,16 @@ const ESTADOS: { v: Postulacion['estado']; l: string }[] = [
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
-  const [ofertas, setOfertas] = useState<Oferta[]>([])
-  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([])
-  const [jugadores, setJugadores] = useState<PerfilJugador[]>([])
-  const [resultadosRanking, setResultadosRanking] = useState<ResultadoMatching[]>([])
-  const [trazaRanking, setTrazaRanking] = useState<{
-    modo: 'hibrido' | 'contenido'
-  } | null>(null)
+  const { data: ofertas = [] } = useVacantes()
+  const { data: postulaciones = [] } = usePostulaciones()
+  const { data: jugadores = [] } = useJugadores()
+  const { data: perfilesEquipo = [] } = useEquipos()
+  const { data: identidad } = useIdentidad()
+  const creacion = useCrearOferta()
+  const cierre = useCerrarOferta()
+  const cambioEstado = useActualizarEstadoPostulacion()
   const [modal, setModal] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  const enviando = creacion.isPending
   const [form, setForm] = useState({
     equipoId: 'e-01-team',
     juego: 'League of Legends' as Oferta['juego'],
@@ -125,38 +126,7 @@ export default function PanelEquipoPage() {
   const esScout = usuario?.rol === 'scout'
   const puedeGestionar = usuario?.rol === 'equipo' || usuario?.rol === 'admin'
 
-  const cargar = async () => {
-    const [o, p, j] = await Promise.all([
-      listarOfertas(),
-      listarPostulaciones(),
-      listarJugadores(),
-    ])
-    setOfertas(o)
-    setPostulaciones(p)
-    setJugadores(j)
-
-    // Se calcula el ranking de la primera vacante abierta de la organizacion
-    // para mostrar los candidatos mejor posicionados sin abrir el detalle.
-    const equipoPropio = perfilesEquipo.find((e) => e.usuarioId === usuario?.id)
-    const propias = equipoPropio
-      ? o.filter((x) => x.equipoId === equipoPropio.id)
-      : o
-    const abierta = propias.find((x) => x.estado === 'abierta')
-    if (abierta) {
-      const r = await obtenerRanking(abierta.id, { pesos: PESOS_POR_DEFECTO })
-      setResultadosRanking(r.resultados)
-      setTrazaRanking({ modo: r.traza.modo })
-    } else {
-      setResultadosRanking([])
-      setTrazaRanking(null)
-    }
-  }
-
-  useEffect(() => {
-    void cargar()
-  }, [])
-
-  const miEquipo = perfilesEquipo.find((e) => e.usuarioId === usuario?.id)
+  const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
   const misOfertas = miEquipo
     ? ofertas.filter((o) => o.equipoId === miEquipo.id)
     : ofertas
@@ -167,40 +137,39 @@ export default function PanelEquipoPage() {
   /** Vacante abierta sobre la que se calcula el resumen de recomendaciones. */
   const abiertaPrincipal = misOfertas.find((o) => o.estado === 'abierta')
 
+  // Ranking de la primera vacante abierta de la organizacion, para mostrar
+  // los candidatos mejor posicionados sin abrir el detalle.
+  const ranking = useCandidatos(abiertaPrincipal?.id, PESOS_POR_DEFECTO)
+  const resultadosRanking = abiertaPrincipal ? ranking.data?.resultados : []
+  const trazaRanking = abiertaPrincipal ? ranking.data?.traza : null
+
   const jugadorDe = (id: string) => jugadores.find((j) => j.id === id)
 
   const publicar = async () => {
     if (!usuario) return
-    setEnviando(true)
     try {
-      await crearOferta(
-        {
-          equipoId: form.equipoId,
-          juego: form.juego,
-          rol: form.rol,
-          rangoMinimo: form.rangoMinimo,
-          experienciaMinima: form.experienciaMinima,
-          regionPreferida: form.regionPreferida,
-          horasSemanales: form.horasSemanales,
-          descripcion: form.descripcion || 'Vacante publicada desde el panel de equipo.',
-          salario: form.salario || undefined,
-          requisitos: form.requisitos
-            .split('\n')
-            .map((r) => r.trim())
-            .filter(Boolean),
-        },
-        usuario,
-      )
+      await creacion.mutateAsync({
+        equipoId: form.equipoId,
+        juego: form.juego,
+        rol: form.rol,
+        rangoMinimo: form.rangoMinimo,
+        experienciaMinima: form.experienciaMinima,
+        regionPreferida: form.regionPreferida,
+        horasSemanales: form.horasSemanales,
+        descripcion: form.descripcion || 'Vacante publicada desde el panel de equipo.',
+        salario: form.salario || undefined,
+        requisitos: form.requisitos
+          .split('\n')
+          .map((r) => r.trim())
+          .filter(Boolean),
+      })
       setModal(false)
       notificar('Vacante publicada. El motor de matching ya la incluye en el pool.')
-      await cargar()
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo publicar la vacante.',
         'error',
       )
-    } finally {
-      setEnviando(false)
     }
   }
 
@@ -210,9 +179,8 @@ export default function PanelEquipoPage() {
   ) => {
     if (!usuario) return
     try {
-      await actualizarEstadoPostulacion(id, estado, usuario)
+      await cambioEstado.mutateAsync({ id, estado })
       notificar('Estado de la postulacion actualizado.')
-      await cargar()
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo actualizar el proceso.',
@@ -224,9 +192,8 @@ export default function PanelEquipoPage() {
   const cerrar = async (id: string) => {
     if (!usuario) return
     try {
-      await cerrarOferta(id, usuario)
+      await cierre.mutateAsync(id)
       notificar('Vacante cerrada.', 'info')
-      await cargar()
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo cerrar la vacante.',

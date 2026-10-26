@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -22,16 +21,12 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import {
-  obtenerFeed,
-  ejecutarIngesta,
-  obtenerMetricas,
-  obtenerRecomendaciones,
-  perfilDeUsuario,
-} from '@/services/api'
+import { useMetricas } from '@/api/admin'
+import { useEjecutarIngesta } from '@/api/estadisticas'
+import { useFeed } from '@/api/feed'
+import { useIdentidad } from '@/api/identidad'
+import { useRecomendaciones } from '@/api/matching'
 import { PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { MetricasDashboard } from '@/services/api'
-import type { RecomendacionOferta } from '@/types'
 
 type TipoActividad = 'oferta' | 'logro' | 'sync' | 'endoso'
 
@@ -72,40 +67,21 @@ function tiempoRelativo(iso: string): string {
 export default function FeedPage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
-  const [actividad, setActividad] = useState<Actividad[]>([])
-  const [metricas, setMetricas] = useState<MetricasDashboard | null>(null)
-  const [recomendaciones, setRecomendaciones] = useState<RecomendacionOferta[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [sincronizando, setSincronizando] = useState(false)
-
-  const perfilId = usuario ? perfilDeUsuario(usuario.id)?.id : undefined
-
-  const cargar = async () => {
-    setCargando(true)
-    const [f, m] = await Promise.all([obtenerFeed(), obtenerMetricas()])
-    setActividad(f)
-    setMetricas(m)
-    if (perfilId) {
-      setRecomendaciones(
-        await obtenerRecomendaciones(perfilId, { pesos: PESOS_POR_DEFECTO }),
-      )
-    }
-    setCargando(false)
-  }
-
-  useEffect(() => {
-    void cargar()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [perfilId])
+  const { data: identidad } = useIdentidad()
+  const perfilId = identidad?.perfilJugadorId
+  const feed = useFeed()
+  const { data: metricas = null } = useMetricas()
+  const { data: recomendaciones = [] } = useRecomendaciones(perfilId, PESOS_POR_DEFECTO)
+  const ingesta = useEjecutarIngesta()
+  const actividad: Actividad[] = feed.data ?? []
+  const cargando = feed.isLoading
+  const sincronizando = ingesta.isPending
 
   const sincronizar = async () => {
-    setSincronizando(true)
-    const r = await ejecutarIngesta()
-    setSincronizando(false)
+    const r = await ingesta.mutateAsync()
     notificar(
       `Ingesta completada: ${r.registrosActualizados} registros actualizados desde las APIs de Riot Games y Steam en ${r.duracionMs} ms.`,
     )
-    cargar()
   }
 
   return (

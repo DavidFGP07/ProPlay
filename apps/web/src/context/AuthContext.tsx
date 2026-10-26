@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { iniciarSesion, registrarUsuario, type DatosRegistro } from '@/services/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { iniciarSesion, registrarUsuario, type DatosRegistro } from '@/mocks/api'
+import { establecerActorDemo } from '@/mocks/sesion'
 import type { Usuario } from '@/types'
 
 interface AuthContextValue {
@@ -18,11 +20,14 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 const CLAVE_SESION = 'proplay.sesion'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const raw = localStorage.getItem(CLAVE_SESION)
     if (!raw) return null
     try {
-      return JSON.parse(raw) as Usuario
+      const guardado = JSON.parse(raw) as Usuario
+      establecerActorDemo(guardado)
+      return guardado
     } catch {
       return null
     }
@@ -35,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const u = await iniciarSesion(email)
+      establecerActorDemo(u)
       setUsuario(u)
       localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
       return true
@@ -51,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const u = await registrarUsuario(datos)
+      establecerActorDemo(u)
       setUsuario(u)
       localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
       return true
@@ -65,9 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const salir = useCallback(() => {
+    establecerActorDemo(null)
     setUsuario(null)
     localStorage.removeItem(CLAVE_SESION)
-  }, [])
+    // Ningun dato del usuario anterior debe sobrevivir al cierre de sesion.
+    queryClient.clear()
+  }, [queryClient])
 
   const puede = useCallback(
     (...roles: Usuario['rol'][]) => (usuario ? roles.includes(usuario.rol) : false),

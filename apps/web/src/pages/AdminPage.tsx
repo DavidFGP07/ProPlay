@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { ClipboardList, Database, RefreshCw, ShieldCheck } from 'lucide-react'
 import {
   Badge,
@@ -10,33 +9,22 @@ import {
   Stat,
 } from '@/components/ui'
 import { useToast } from '@/context/ToastContext'
-import { ejecutarIngesta, obtenerAuditLog, obtenerMetricas } from '@/services/api'
-import type { AuditLog } from '@/types'
+import { useAuditoria, useMetricas } from '@/api/admin'
+import { useEjecutarIngesta } from '@/api/estadisticas'
 
 export default function AdminPage() {
   const { notificar } = useToast()
-  const [log, setLog] = useState<AuditLog[]>([])
-  const [sincronizando, setSincronizando] = useState(false)
-  const [verificados, setVerificados] = useState(0)
-
-  const cargar = async () => {
-    const [l, m] = await Promise.all([Promise.resolve(obtenerAuditLog()), obtenerMetricas()])
-    setLog(l)
-    setVerificados(m.perfilesVerificados)
-  }
-
-  useEffect(() => {
-    void cargar()
-  }, [])
+  const { data: log = [] } = useAuditoria()
+  const { data: metricas } = useMetricas()
+  const ingesta = useEjecutarIngesta()
+  const verificados = metricas?.perfilesVerificados ?? 0
+  const sincronizando = ingesta.isPending
 
   const sincronizar = async () => {
-    setSincronizando(true)
-    const r = await ejecutarIngesta()
-    setSincronizando(false)
+    const r = await ingesta.mutateAsync()
     notificar(
       `Ingesta completada: ${r.registrosActualizados} registros en ${r.duracionMs} ms.`,
     )
-    await cargar()
   }
 
   return (

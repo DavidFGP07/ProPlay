@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BadgeCheck,
@@ -35,22 +35,21 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import type { PostulacionConOferta } from '@/services/api'
+import { useIdentidad } from '@/api/identidad'
+import { useMarcarTodasLeidas, useNotificaciones } from '@/api/notificaciones'
+import { useMisPostulaciones, type PostulacionConOferta } from '@/api/ofertas'
 import {
-  actualizarPrivacidad,
-  actualizarPerfil,
-  desvincularCuenta,
-  eliminarHabilidad,
-  listarHabilidades,
-  listarMisPostulaciones,
-  listarNotificaciones,
-  marcarTodasLeidas,
-  obtenerPerfil,
-  obtenerPrivacidad,
-  perfilDeUsuario,
-  registrarHabilidad,
-  vincularCuenta,
-} from '@/services/api'
+  useActualizarPerfil,
+  useActualizarPrivacidad,
+  useDesvincularCuenta,
+  useEliminarHabilidad,
+  useHabilidades,
+  usePerfil,
+  usePrivacidad,
+  useRegistrarHabilidad,
+  type CamposPerfil,
+  useVincularCuenta,
+} from '@/api/perfiles'
 import type {
   ConfiguracionPrivacidad,
   CuentaGaming,
@@ -58,10 +57,8 @@ import type {
   Estadistica,
   Habilidad,
   HabilidadJugador,
-  Notificacion,
   PerfilJugador,
   Postulacion,
-  Usuario,
 } from '@/types'
 
 const REGIONES = [
@@ -95,61 +92,35 @@ const ROLES = [
 
 type Pestana = 'datos' | 'cuentas' | 'habilidades' | 'portafolio' | 'postulaciones' | 'privacidad'
 
-interface PerfilCargado {
-  perfil: PerfilJugador
-  stats: Estadistica[]
-  cuentas: CuentaGaming[]
-  skills: HabilidadJugador[]
-  endoses: Endorsement[]
-  /** Preferencias de visibilidad configuradas por el jugador (RNF-05). */
-  visibilidad: {
-    mostrarEstadisticas: boolean
-    mostrarPortafolio: boolean
-    mostrarContacto: boolean
-  }
-}
-
-
 export default function MiPerfilPage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
 
-  const [datos, setDatos] = useState<PerfilCargado | null>(null)
-  const [catalogo, setCatalogo] = useState<Habilidad[]>([])
-  const [postulaciones, setPostulaciones] = useState<PostulacionConOferta[]>([])
-  const [config, setConfig] = useState<ConfiguracionPrivacidad | null>(null)
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
-  const [cargando, setCargando] = useState(true)
   const [pestana, setPestana] = useState<Pestana>('datos')
 
-  const perfilId = usuario ? perfilDeUsuario(usuario.id)?.id : undefined
-
-  const cargar = useCallback(async () => {
-    if (!perfilId) {
-      setCargando(false)
-      return
-    }
-    setCargando(true)
-    const [p, h, misPosts, priv, avisos] = await Promise.all([
-      obtenerPerfil(perfilId),
-      listarHabilidades(),
-      listarMisPostulaciones(perfilId),
-      obtenerPrivacidad(usuario!.id),
-      listarNotificaciones(usuario!.id),
-    ])
-    setDatos(p)
-    setCatalogo(h)
-    setPostulaciones(misPosts)
-    setConfig(priv)
-    setNotificaciones(avisos)
-    setCargando(false)
-  }, [perfilId, usuario])
-
-  useEffect(() => {
-    void cargar()
-  }, [cargar])
+  const identidad = useIdentidad()
+  const perfilId = identidad.data?.perfilJugadorId
+  const consulta = usePerfil(perfilId)
+  const { data: catalogo = [] } = useHabilidades()
+  const { data: postulaciones = [] } = useMisPostulaciones(perfilId)
+  const { data: config = null } = usePrivacidad()
+  const { data: notificaciones = [] } = useNotificaciones()
+  const edicion = useActualizarPerfil()
+  const privacidad = useActualizarPrivacidad()
+  const marcarTodas = useMarcarTodasLeidas()
+  const datos = consulta.data ?? null
+  const cargando = identidad.isLoading || consulta.isLoading
 
   if (!usuario) return null
+
+  if (identidad.isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="skeleton h-44 rounded-2xl" />
+        <div className="skeleton h-96 rounded-2xl" />
+      </div>
+    )
+  }
 
   if (!perfilId) {
     return (
@@ -250,8 +221,7 @@ export default function MiPerfilPage() {
                 <DatosPanel
                   perfil={perfil}
                   onGuardar={async (cambios) => {
-                    await actualizarPerfil(perfil.id, cambios, usuario)
-                    await cargar()
+                    await edicion.mutateAsync({ perfilId: perfil.id, cambios })
                     notificar('Perfil actualizado. El vector de perfil se recalculó.')
                   }}
                 />
@@ -261,11 +231,7 @@ export default function MiPerfilPage() {
                 <CuentasPanel
                   perfilId={perfil.id}
                   cuentas={cuentas}
-                  usuario={usuario}
-                  onCambio={async () => {
-                    await cargar()
-                    notificar('Cuentas de juego actualizadas.')
-                  }}
+                  onCambio={() => notificar('Cuentas de juego actualizadas.')}
                 />
               )}
 
@@ -275,11 +241,7 @@ export default function MiPerfilPage() {
                   skills={skills}
                   endoses={endoses}
                   catalogo={catalogo}
-                  usuario={usuario}
-                  onCambio={async () => {
-                    await cargar()
-                    notificar('Habilidades actualizadas.')
-                  }}
+                  onCambio={() => notificar('Habilidades actualizadas.')}
                 />
               )}
 
@@ -293,12 +255,7 @@ export default function MiPerfilPage() {
                 <PrivacidadPanel
                   config={config}
                   onCambio={async (cambios) => {
-                    const actualizada = await actualizarPrivacidad(
-                      usuario.id,
-                      cambios,
-                      usuario,
-                    )
-                    setConfig(actualizada)
+                    await privacidad.mutateAsync(cambios)
                     notificar('Preferencias de privacidad guardadas.')
                   }}
                 />
@@ -362,10 +319,7 @@ export default function MiPerfilPage() {
                   <Button
                     variante="fantasma"
                     tamano="sm"
-                    onClick={async () => {
-                      await marcarTodasLeidas(usuario.id)
-                      setNotificaciones(await listarNotificaciones(usuario.id))
-                    }}
+                    onClick={() => marcarTodas.mutate()}
                   >
                     Marcar leidas
                   </Button>
@@ -412,7 +366,7 @@ function DatosPanel({
   onGuardar,
 }: {
   perfil: PerfilJugador
-  onGuardar: (cambios: Parameters<typeof actualizarPerfil>[1]) => Promise<void>
+  onGuardar: (cambios: CamposPerfil) => Promise<void>
 }) {
   const [biografia, setBiografia] = useState(perfil.biografia)
   const [region, setRegion] = useState(perfil.region)
@@ -558,32 +512,29 @@ function DatosPanel({
 function CuentasPanel({
   perfilId,
   cuentas,
-  usuario,
   onCambio,
 }: {
   perfilId: string
   cuentas: CuentaGaming[]
-  usuario: Usuario
-  onCambio: () => Promise<void>
+  onCambio: () => void
 }) {
   const [plataforma, setPlataforma] = useState<'Riot Games' | 'Steam'>('Riot Games')
   const [identificador, setIdentificador] = useState('')
-  const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const vinculacion = useVincularCuenta()
+  const desvinculacion = useDesvincularCuenta()
+  const guardando = vinculacion.isPending
 
   const vinculado = cuentas.some((c) => c.plataforma === plataforma)
 
   const vincular = async () => {
-    setGuardando(true)
     setError(null)
     try {
-      await vincularCuenta(perfilId, plataforma, identificador, usuario)
+      await vinculacion.mutateAsync({ perfilId, plataforma, identificador })
       setIdentificador('')
-      await onCambio()
+      onCambio()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo vincular la cuenta.')
-    } finally {
-      setGuardando(false)
     }
   }
 
@@ -632,8 +583,8 @@ function CuentasPanel({
                   variante="peligro"
                   tamano="sm"
                   onClick={async () => {
-                    await desvincularCuenta(c.id, usuario)
-                    await onCambio()
+                    await desvinculacion.mutateAsync(c.id)
+                    onCambio()
                   }}
                 >
                   <Trash2 size={13} />
@@ -698,20 +649,20 @@ function HabilidadesPanel({
   skills,
   endoses,
   catalogo,
-  usuario,
   onCambio,
 }: {
   perfilId: string
   skills: HabilidadJugador[]
   endoses: Endorsement[]
   catalogo: Habilidad[]
-  usuario: Usuario
-  onCambio: () => Promise<void>
+  onCambio: () => void
 }) {
   const [habilidadId, setHabilidadId] = useState('')
   const [nivel, setNivel] = useState(3)
-  const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const registro = useRegistrarHabilidad()
+  const eliminacion = useEliminarHabilidad()
+  const guardando = registro.isPending
 
   const disponibles = catalogo.filter(
     (h) => !skills.some((s) => s.habilidadId === h.id),
@@ -721,17 +672,14 @@ function HabilidadesPanel({
 
   const agregar = async () => {
     if (!habilidadId) return
-    setGuardando(true)
     setError(null)
     try {
-      await registrarHabilidad(perfilId, habilidadId, nivel, usuario)
+      await registro.mutateAsync({ perfilId, habilidadId, nivel })
       setHabilidadId('')
       setNivel(3)
-      await onCambio()
+      onCambio()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo registrar la habilidad.')
-    } finally {
-      setGuardando(false)
     }
   }
 
@@ -781,8 +729,8 @@ function HabilidadesPanel({
                       variante="fantasma"
                       tamano="sm"
                       onClick={async () => {
-                        await eliminarHabilidad(s.id, usuario)
-                        await onCambio()
+                        await eliminacion.mutateAsync(s.id)
+                        onCambio()
                       }}
                       title="Eliminar habilidad"
                     >

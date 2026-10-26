@@ -19,7 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { Avatar, Badge, Button, cn } from '@/components/ui'
 import { NotificacionesBell } from '@/components/NotificacionesBell'
-import { obtenerEstadoWorker } from '@/services/api'
+import { useEstadoIngesta } from '@/api/estadisticas'
 import type { Usuario } from '@/types'
 
 interface ItemNav {
@@ -53,15 +53,12 @@ export function Layout() {
   const navegar = useNavigate()
   const ubicacion = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const [worker, setWorker] = useState<{
-    ultimaSync: string | null
-    perfiles: number
-    registros: number
-  } | null>(null)
+  const { data: worker, refetch: refrescarWorker } = useEstadoIngesta()
 
+  // El estado del worker se refresca en cada cambio de pantalla.
   useEffect(() => {
-    obtenerEstadoWorker().then(setWorker)
-  }, [ubicacion.pathname])
+    void refrescarWorker()
+  }, [ubicacion.pathname, refrescarWorker])
 
   if (!usuario) return null
 
@@ -183,7 +180,7 @@ export function Layout() {
           </div>
 
           <div className="flex flex-1 items-center justify-end gap-2 md:flex-none">
-            <NotificacionesBell usuario={usuario} />
+            <NotificacionesBell />
 
             <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 py-1 pl-1 pr-3">
               <Avatar nombre={usuario.nombre} size="sm" />

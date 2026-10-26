@@ -36,25 +36,11 @@ import {
 } from '@/components/ui'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
-import {
-  explicarMatching,
-  obtenerEquipoDeOferta,
-  obtenerRanking,
-  listarJugadores,
-  listarPostulaciones,
-  perfilDeUsuario,
-  postular,
-} from '@/services/api'
+import { useIdentidad } from '@/api/identidad'
+import { useCandidatos, useExplicarMatching, useJugadores } from '@/api/matching'
+import { usePostulaciones, usePostular, useVacante } from '@/api/ofertas'
 import { DIMENSIONES, PESOS_POR_DEFECTO } from '@/lib/matching'
-import type {
-  ExplicacionMatching,
-  Oferta,
-  PerfilEquipo,
-  PerfilJugador,
-  Pesos,
-  Postulacion,
-  ResultadoMatching,
-} from '@/types'
+import type { ExplicacionMatching, Pesos } from '@/types'
 
 type Orden = 'puntaje' | 'vectorial' | 'tecnica' | 'experiencia'
 
@@ -63,72 +49,40 @@ export default function OfertaDetallePage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
 
-  const [oferta, setOferta] = useState<Oferta | null>(null)
-  const [equipo, setEquipo] = useState<PerfilEquipo | null>(null)
-  const [resultados, setResultados] = useState<ResultadoMatching[]>([])
-  const [traza, setTraza] = useState<{
-    totalPerfiles: number
-    recuperadosPorContenido: number
-    coincidenciasVectoriales: number
-    pesoColaborativo: number
-    modo: 'hibrido' | 'contenido'
-    latenciaMs: number
-    indice: string
-  } | null>(null)
-  const [cargando, setCargando] = useState(true)
   const [pesos, setPesos] = useState<Pesos>({ ...PESOS_POR_DEFECTO })
+  const [pesosConsulta, setPesosConsulta] = useState<Pesos>(pesos)
   const [orden, setOrden] = useState<Orden>('puntaje')
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
   const [explicacion, setExplicacion] = useState<ExplicacionMatching | null>(null)
-  const [generando, setGenerando] = useState(false)
   const [modalPostular, setModalPostular] = useState(false)
   const [mensajePostulacion, setMensajePostulacion] = useState('')
-  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([])
-  const [perfiles, setPerfiles] = useState<PerfilJugador[]>([])
 
-  const cargar = async () => {
-    if (!id) return
-    setCargando(true)
-    const [r, posts] = await Promise.all([obtenerRanking(id, { pesos }), listarPostulaciones()])
-    setOferta(r.oferta)
-    setEquipo(obtenerEquipoDeOferta(id) ?? null)
-    setResultados(r.resultados)
-    setTraza(r.traza)
-    setPostulaciones(posts)
-    setCargando(false)
-  }
-
+  // El ranking se recalcula cuando el usuario deja de mover los pesos.
   useEffect(() => {
-    void cargar()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-    const t = window.setTimeout(async () => {
-      const r = await obtenerRanking(id, { pesos })
-      setResultados(r.resultados)
-      setTraza(r.traza)
-    }, 150)
+    const t = window.setTimeout(() => setPesosConsulta(pesos), 150)
     return () => window.clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pesos])
 
+  const vacante = useVacante(id)
+  const candidatos = useCandidatos(id, pesosConsulta)
+  const { data: postulaciones = [] } = usePostulaciones()
   // Catalogo de perfiles para resolver nombres en el ranking.
-  useEffect(() => {
-    let cancelado = false
-    listarJugadores().then((lista) => {
-      if (!cancelado) setPerfiles(lista)
-    })
-    return () => {
-      cancelado = true
-    }
-  }, [])
+  const { data: perfiles = [] } = useJugadores()
+  const { data: identidad } = useIdentidad()
+  const explicar = useExplicarMatching()
+  const postulacion = usePostular()
+
+  const oferta = vacante.data?.oferta ?? null
+  const equipo = vacante.data?.equipo ?? null
+  const resultados = useMemo(() => candidatos.data?.resultados ?? [], [candidatos.data])
+  const traza = candidatos.data?.traza ?? null
+  const cargando = vacante.isLoading || candidatos.isLoading
+  const generando = explicar.isPending
 
   const perfilDe = (perfilId: string) => perfiles.find((p) => p.id === perfilId)
 
   /** Postulacion del usuario en sesion sobre esta vacante, si existe. */
-  const miPerfilId = usuario ? perfilDeUsuario(usuario.id)?.id : undefined
+  const miPerfilId = identidad?.perfilJugadorId
   const miPostulacion = miPerfilId
     ? postulaciones.find(
         (p) => p.ofertaId === id && p.perfilId === miPerfilId,
@@ -160,29 +114,25 @@ export default function OfertaDetallePage() {
   )
 
   const generarExplicacion = async (perfilId: string) => {
-    setGenerando(true)
     setExplicacion(null)
     try {
-      const exp = await explicarMatching(id!, perfilId, resultados)
+      const exp = await explicar.mutateAsync({ ofertaId: id!, perfilId, resultados })
       setExplicacion(exp)
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo generar la explicacion.',
         'error',
       )
-    } finally {
-      setGenerando(false)
     }
   }
 
   const enviarPostulacion = async () => {
     if (!usuario || !id) return
     try {
-      await postular(id, mensajePostulacion, usuario)
+      await postulacion.mutateAsync({ ofertaId: id, mensaje: mensajePostulacion })
       setModalPostular(false)
       setMensajePostulacion('')
       notificar('Postulacion enviada. El equipo ya puede revisarla.')
-      setPostulaciones(await listarPostulaciones())
     } catch (e) {
       notificar(
         e instanceof Error ? e.message : 'No se pudo enviar la postulacion.',
