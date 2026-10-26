@@ -1,113 +1,89 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import type { LoginInput, RegisterInput, UsuarioPublico } from "@proplay/shared";
-import { authApi } from "../api/auth";
-import { guardarAccessToken, registrarCierreDeSesion } from "../api/client";
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import { iniciarSesion, registrarUsuario, type DatosRegistro } from '@/services/api'
+import type { Usuario } from '@/types'
 
-/**
- * Sesión del usuario.
- *
- * El access token vive sólo en memoria (nunca en localStorage); la sesión
- * persiste gracias a la cookie httpOnly del refresh token: al recargar la
- * página se pide /auth/me y el interceptor de axios refresca por detrás.
- */
-interface ValorAuth {
-  usuario: UsuarioPublico | null;
-  cargando: boolean;
-  autenticado: boolean;
-  login: (datos: LoginInput) => Promise<UsuarioPublico>;
-  registrar: (datos: RegisterInput) => Promise<UsuarioPublico>;
-  logout: () => Promise<void>;
+interface AuthContextValue {
+  usuario: Usuario | null
+  cargando: boolean
+  error: string | null
+  entrar: (email: string) => Promise<boolean>
+  registrar: (datos: DatosRegistro) => Promise<boolean>
+  salir: () => void
+  puede: (...roles: Usuario['rol'][]) => boolean
 }
 
-const AuthContext = createContext<ValorAuth | null>(null);
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+const CLAVE_SESION = 'proplay.sesion'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [usuario, setUsuario] = useState<UsuarioPublico | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const queryClient = useQueryClient();
-
-  // Al cargar la app intentamos recuperar la sesión: si /auth/me responde 401,
-  // el interceptor prueba a refrescar con la cookie y reintenta la petición.
-  useEffect(() => {
-    let activo = true;
-
-    authApi
-      .yo()
-      .then((respuesta) => {
-        if (activo) setUsuario(respuesta.usuario);
-      })
-      .catch(() => {
-        if (activo) setUsuario(null);
-      })
-      .finally(() => {
-        if (activo) setCargando(false);
-      });
-
-    return () => {
-      activo = false;
-    };
-  }, []);
-
-  // El cliente HTTP avisa cuando la sesión ya no se puede renovar.
-  useEffect(() => {
-    registrarCierreDeSesion(() => {
-      setUsuario(null);
-      queryClient.clear();
-    });
-  }, [queryClient]);
-
-  const login = useCallback(async (datos: LoginInput) => {
-    const respuesta = await authApi.login(datos);
-    guardarAccessToken(respuesta.accessToken);
-    setUsuario(respuesta.usuario);
-    return respuesta.usuario;
-  }, []);
-
-  const registrar = useCallback(async (datos: RegisterInput) => {
-    const respuesta = await authApi.registrar(datos);
-    guardarAccessToken(respuesta.accessToken);
-    setUsuario(respuesta.usuario);
-    return respuesta.usuario;
-  }, []);
-
-  const logout = useCallback(async () => {
+  const [usuario, setUsuario] = useState<Usuario | null>(() => {
+    const raw = localStorage.getItem(CLAVE_SESION)
+    if (!raw) return null
     try {
-      await authApi.logout();
-    } finally {
-      guardarAccessToken(null);
-      setUsuario(null);
-      queryClient.clear();
+      return JSON.parse(raw) as Usuario
+    } catch {
+      return null
     }
-  }, [queryClient]);
+  })
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const valor = useMemo<ValorAuth>(
-    () => ({
-      usuario,
-      cargando,
-      autenticado: Boolean(usuario),
-      login,
-      registrar,
-      logout,
-    }),
-    [usuario, cargando, login, registrar, logout],
-  );
+  const entrar = useCallback(async (email: string) => {
+    setCargando(true)
+    setError(null)
+    try {
+      const u = await iniciarSesion(email)
+      setUsuario(u)
+      localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
+      return true
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al iniciar sesion')
+      return false
+    } finally {
+      setCargando(false)
+    }
+  }, [])
 
-  return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;
+  const registrar = useCallback(async (datos: DatosRegistro) => {
+    setCargando(true)
+    setError(null)
+    try {
+      const u = await registrarUsuario(datos)
+      setUsuario(u)
+      localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
+      return true
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Error al registrar la cuenta',
+      )
+      return false
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
+  const salir = useCallback(() => {
+    setUsuario(null)
+    localStorage.removeItem(CLAVE_SESION)
+  }, [])
+
+  const puede = useCallback(
+    (...roles: Usuario['rol'][]) => (usuario ? roles.includes(usuario.rol) : false),
+    [usuario],
+  )
+
+  const value = useMemo(
+    () => ({ usuario, cargando, error, entrar, registrar, salir, puede }),
+    [usuario, cargando, error, entrar, registrar, salir, puede],
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth(): ValorAuth {
-  const contexto = useContext(AuthContext);
-  if (!contexto) {
-    throw new Error("useAuth debe usarse dentro de <AuthProvider>");
-  }
-  return contexto;
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider')
+  return ctx
 }

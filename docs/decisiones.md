@@ -67,10 +67,8 @@ del proyecto se anotan igual, para que el registro esté completo.
 | El access token vive en un módulo en memoria, no en `localStorage` | Un token en `localStorage` es accesible desde cualquier script de la página. |
 | Un solo interceptor de axios refresca la sesión y reintenta la petición una vez | Concentra el manejo del 401 en un sitio y evita bucles de refresco. |
 | El estado de servidor lo lleva TanStack Query; la sesión, un contexto de React | Query no está pensado para el ciclo de vida de la autenticación, y el contexto es lo bastante simple. |
-| Los hooks de los recursos todavía no implementados existen con `enabled: false` | La página compila y queda escrito dónde conectar el endpoint cuando el módulo esté listo. |
-| Las páginas de los módulos pendientes son maquetas con datos de ejemplo | Sirven para validar la navegación por rol y el diseño sin fingir funcionalidad. |
-| La paleta de marca se define en `tailwind.config.ts` como `primario`, `secundario` y `fondo` | Los nombres semánticos sobreviven a un cambio de color; los hexadecimales sueltos, no. |
-| El tema es oscuro fijo | Es la convención del sector y el fondo `#0F1117` viene dado por la identidad del proyecto. |
+| La paleta de marca se define con `@theme` en `src/index.css` (Tailwind 4) como `brand`, `accent` y `surface` | Viene del prototipo de `Fronted`; los nombres semánticos sobreviven a un cambio de color, los hexadecimales sueltos no. |
+| El tema es oscuro fijo | Es la convención del sector; el fondo es el token `surface-900` del prototipo. |
 
 ## Infraestructura y despliegue
 
@@ -84,3 +82,15 @@ del proyecto se anotan igual, para que el registro esté completo.
 | `vercel.json` reescribe todas las rutas a `index.html` | Sin eso, recargar una URL profunda de React Router devuelve 404. |
 | El CI usa `prisma migrate deploy` sobre una base `proplay_test` | `migrate dev` es interactivo y pensado para desarrollo. |
 | Verificación local con Postgres 17 de Homebrew en lugar de Docker | En la máquina donde se construyó el esqueleto no había Docker; Homebrew compila pgvector contra 17, y `docker-compose.yml` sigue fijando 16 como dice la especificación. |
+
+## Integración del cliente de `Fronted`
+
+| Decisión | Justificación |
+| --- | --- |
+| El prototipo de la rama `Fronted` sustituye al `apps/web` anterior; se integra con un merge `--no-ff` y luego se mueve | El commit original de mogeko-cpu queda intacto en el historial con su autoría, y `git log --follow` sigue los archivos hasta él. |
+| Se conservan Vite 6 y Tailwind 4 del prototipo | Decisión del equipo: no se bajan versiones; la configuración de Tailwind 3 se fue con el cliente reemplazado. |
+| Del `apps/web` anterior sólo sobreviven `.env.example` y `vercel.json` | Son configuración de despliegue que el prototipo no traía; el resto del cliente se reemplaza. |
+| Los documentos del prototipo (C4, modelo de datos, pruebas piloto, trazabilidad) pasan a `docs/prototipo/` | La documentación del proyecto vive en `docs/`; se separan en una subcarpeta porque describen el prototipo, no el código actual. |
+| El `package-lock.json` propio del prototipo se elimina | En un monorepo de npm workspaces sólo hay un lockfile, el de la raíz. |
+| `apps/api` sube de vitest 2 a vitest 3 | Con dos versiones mayores, npm eleva la de `api` a la raíz y `@testing-library/jest-dom` se registra sobre la equivocada: rompe los matchers y los tipos de los tests del cliente. Una sola versión lo resuelve. |
+| `server.open` del prototipo se sustituye por `strictPort` | `npm run dev` arranca api y web a la vez; abrir el navegador en cada arranque estorba y el puerto 5173 está fijado por `CORS_ORIGIN`. |

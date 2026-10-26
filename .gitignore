@@ -20,4 +20,3 @@ npm-debug.log*
 apps/web/dist/
 apps/api/dist/
 packages/shared/dist/
-
