@@ -75,7 +75,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Decisión | Justificación |
 | --- | --- |
 | Postgres y Redis en Docker Compose, pero api y web fuera de Docker | La recarga en caliente y los tiempos de arranque son mucho mejores en local. |
-| Imagen de la API multi-stage sobre `node:20-alpine` con usuario no root | Menos superficie y menos privilegios en la imagen final. |
+| Imagen de la API multi-stage sobre `node:22-alpine` con usuario no root | Menos superficie y menos privilegios en la imagen final. |
 | El contexto de build del Dockerfile es la raíz del monorepo | La imagen necesita `packages/shared`; construir desde `apps/api` no lo alcanzaría. |
 | La imagen de producción instala dependencias con `npm ci --omit=dev` de todos los workspaces | `npm ci` exige el árbol completo de workspaces del lockfile; filtrar por workspace daría un lockfile incoherente por unos pocos megas de diferencia. |
 | El `CMD` ejecuta `prisma migrate deploy` antes de arrancar | El despliegue queda en un paso y la base nunca se queda atrás del código. |
@@ -113,7 +113,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | ESLint del cliente con la configuración base del monorepo y las reglas de `react-hooks` | El prototipo no traía linter. Sólo marcó un `prefer-const` en la simulación, corregido. |
 | El control de acceso se declara una vez por área en el enrutador, con rutas de layout sin path (`router/areas.ts`) | Las once URLs del prototipo no cambian; el menú lateral lee las mismas listas de roles, así que vista, menú y guarda no pueden discrepar. |
 | La 404 es una vista pública, fuera del `Layout` | Responde igual con o sin sesión; antes cualquier ruta desconocida redirigía al feed. |
-| Node 22 fijado con `.nvmrc` y `engines`; el CI lee la versión de `.nvmrc` | Una sola fuente para la versión. **Pendiente de decidir:** la imagen de la API (`apps/api/Dockerfile`) sigue sobre `node:20-alpine`. |
+| Node 22 fijado con `.nvmrc` y `engines`; el CI lee la versión de `.nvmrc` | Una sola fuente para la versión; la imagen de la API (`apps/api/Dockerfile`) usa la misma mayor, `node:22-alpine`. |
 
 ## Deuda conocida
 

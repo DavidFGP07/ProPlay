@@ -179,7 +179,7 @@ Cada app se despliega por separado aunque vivan en el mismo repositorio.
 
 ### API en Railway o Render (Docker)
 
-El `Dockerfile` es multi-stage sobre `node:20-alpine`, corre como usuario no
+El `Dockerfile` es multi-stage sobre `node:22-alpine`, corre como usuario no
 root y su `CMD` aplica las migraciones antes de arrancar el servidor.
 
 **El contexto de build es la raíz del monorepo, no `apps/api`**, porque la

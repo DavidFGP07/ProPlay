@@ -10,7 +10,7 @@
 # Dockerfile path = apps/api/Dockerfile.
 # ---------------------------------------------------------------------------
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 # Prisma necesita openssl en Alpine para su motor de consultas.
 RUN apk add --no-cache openssl libc6-compat
