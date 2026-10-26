@@ -21,6 +21,12 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Las pruebas corren siempre con el puente de demostracion encendido y sin
+    // depender de un apps/web/.env local.
+    env: {
+      VITE_API_URL: 'http://localhost:3000/api/v1',
+      VITE_DEMO_DATA: 'true',
+    },
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],

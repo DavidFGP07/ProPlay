@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { enviarMensaje, listarMensajes } from '@/mocks/api'
 import { perfilesEquipo, perfilesJugador } from '@/mocks/seed'
 import { actorDemo } from '@/mocks/sesion'
-import { useMutacion } from '@/api/queryClient'
+import { simulado, useMutacionSimulada } from '@/api/demo'
 
 export interface Contacto {
   id: string
@@ -15,7 +15,7 @@ export function useMensajes() {
   return useQuery({
     queryKey: ['mensajes'],
     // TODO: S4 — conectar con GET /api/v1/mensajeria/conversaciones
-    queryFn: () => listarMensajes(actorDemo().id),
+    queryFn: () => simulado(() => listarMensajes(actorDemo().id), []),
   })
 }
 
@@ -24,21 +24,22 @@ export function useContactos() {
   return useQuery({
     queryKey: ['mensajes', 'contactos'],
     // TODO: S4 — conectar con GET /api/v1/mensajeria/conversaciones
-    queryFn: async (): Promise<Contacto[]> => {
-      // Un jugador escribe a las organizaciones; el resto, a los jugadores.
-      if (actorDemo().rol === 'jugador') {
-        return perfilesEquipo.map((e) => ({ id: e.usuarioId, nombre: e.nombre, sub: e.region }))
-      }
-      return perfilesJugador
-        .slice(0, 10)
-        .map((p) => ({ id: p.usuarioId, nombre: p.nombre, sub: `@${p.handle}` }))
-    },
+    queryFn: () =>
+      simulado(async (): Promise<Contacto[]> => {
+        // Un jugador escribe a las organizaciones; el resto, a los jugadores.
+        if (actorDemo().rol === 'jugador') {
+          return perfilesEquipo.map((e) => ({ id: e.usuarioId, nombre: e.nombre, sub: e.region }))
+        }
+        return perfilesJugador
+          .slice(0, 10)
+          .map((p) => ({ id: p.usuarioId, nombre: p.nombre, sub: `@${p.handle}` }))
+      }, []),
   })
 }
 
 // RF-12 · Enviar un mensaje
 export function useEnviarMensaje() {
-  return useMutacion(({ receptorId, texto }: { receptorId: string; texto: string }) =>
+  return useMutacionSimulada(({ receptorId, texto }: { receptorId: string; texto: string }) =>
     // TODO: S4 — conectar con POST /api/v1/mensajeria/conversaciones/:id/mensajes
     enviarMensaje(actorDemo(), receptorId, texto),
   )

@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
+import { accionSimulada, simulado } from '@/api/demo'
 import { explicarMatching, listarJugadores, obtenerRanking, obtenerRecomendaciones } from '@/mocks/api'
 import type { FiltrosBusqueda, Pesos, ResultadoMatching } from '@/types'
 
@@ -7,7 +8,7 @@ export function useJugadores(filtros: FiltrosBusqueda = {}) {
   return useQuery({
     queryKey: ['scouting', 'jugadores', filtros],
     // TODO: S3 — conectar con GET /api/v1/scouting/jugadores
-    queryFn: () => listarJugadores(filtros),
+    queryFn: () => simulado(() => listarJugadores(filtros), []),
     placeholderData: keepPreviousData,
   })
 }
@@ -18,7 +19,7 @@ export function useCandidatos(ofertaId: string | undefined, pesos: Pesos) {
     queryKey: ['matching', 'oferta', ofertaId, pesos],
     enabled: Boolean(ofertaId),
     // TODO: S3 — conectar con GET /api/v1/matching/oferta/:id
-    queryFn: () => obtenerRanking(ofertaId!, { pesos }),
+    queryFn: () => simulado(() => obtenerRanking(ofertaId!, { pesos }), null),
     placeholderData: keepPreviousData,
   })
 }
@@ -29,7 +30,7 @@ export function useRecomendaciones(perfilId: string | undefined, pesos: Pesos) {
     queryKey: ['matching', 'jugador', perfilId, pesos],
     enabled: Boolean(perfilId),
     // TODO: S3 — conectar con GET /api/v1/matching/jugador/me
-    queryFn: () => obtenerRecomendaciones(perfilId!, { pesos }),
+    queryFn: () => simulado(() => obtenerRecomendaciones(perfilId!, { pesos }), []),
   })
 }
 
@@ -46,6 +47,6 @@ export function useExplicarMatching() {
       resultados?: ResultadoMatching[]
     }) =>
       // TODO: S4 — conectar con POST /api/v1/matching/calcular
-      explicarMatching(ofertaId, perfilId, resultados),
+      accionSimulada(() => explicarMatching(ofertaId, perfilId, resultados)),
   })
 }

@@ -1,5 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  loginSchema,
+  registerSchema,
+  type LoginInput,
+  type Rol,
+  type RolRegistrable,
+} from '@proplay/shared'
 import {
   Database,
   Fingerprint,
@@ -12,49 +22,77 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Button, Field, Input, Select, cn } from '@/components/ui'
-import { usuariosDemo } from '@/mocks/api'
-import type { Region, Usuario } from '@/types'
+import { mensajeDeError } from '@/api/client'
+import { CUENTAS_SEMILLA, PASSWORD_SEMILLA } from '@/api/cuentasSemilla'
+import { config } from '@/lib/env'
 
-const CUENTAS_DEMO: { rol: Usuario['rol']; descripcion: string }[] = [
-  { rol: 'jugador', descripcion: 'Perfil, postulaciones y endoses' },
-  { rol: 'equipo', descripcion: 'Publica vacantes y usa el matching' },
-  { rol: 'scout', descripcion: 'Busca y evalua talento' },
-  { rol: 'admin', descripcion: 'Gestion, metricas y auditoria' },
+const CUENTAS_DEMO: { rol: Rol; descripcion: string }[] = [
+  { rol: 'JUGADOR', descripcion: 'Perfil, postulaciones y endoses' },
+  { rol: 'EQUIPO', descripcion: 'Publica vacantes y usa el matching' },
+  { rol: 'SCOUT', descripcion: 'Busca y evalua talento' },
+  { rol: 'ADMIN', descripcion: 'Gestion, metricas y auditoria' },
 ]
 
-const REGIONES: Region[] = [
-  'Barranquilla',
-  'Cartagena',
-  'Santa Marta',
-  'Cúcuta',
-  'Bucaramanga',
-  'Medellín',
-  'Bogotá',
-  'Cali',
-]
+/**
+ * El aviso de privacidad es requisito del registro (RNF-05). El contrato de
+ * la API aun no lo recibe, asi que se valida aqui sobre el esquema compartido.
+ */
+const esquemaRegistro = registerSchema.extend({
+  aceptaPrivacidad: z.literal(true, {
+    errorMap: () => ({
+      message: 'Debes aceptar el aviso de privacidad para continuar (Ley 1581 de 2012).',
+    }),
+  }),
+})
+type FormularioRegistro = z.input<typeof esquemaRegistro>
 
 type Modo = 'entrar' | 'registrar'
 
+// RF-01 · Ingreso y registro (misma pantalla, dos modos)
 export default function LoginPage() {
-  const { entrar, registrar, cargando, error } = useAuth()
+  const { entrar, registrar } = useAuth()
   const navegar = useNavigate()
   const [modo, setModo] = useState<Modo>('entrar')
-  const [email, setEmail] = useState('daniel.ocoro@gmail.com')
-  const [nombre, setNombre] = useState('')
-  const [rol, setRol] = useState<Usuario['rol']>('jugador')
-  const [region, setRegion] = useState<Region>('Barranquilla')
-  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const manejarSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const ok =
-      modo === 'entrar'
-        ? await entrar(email)
-        : await registrar({ nombre, email, rol, region, aceptaPrivacidad })
-    if (ok) navegar('/')
+  const formEntrar = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
+  const formRegistro = useForm<FormularioRegistro>({
+    resolver: zodResolver(esquemaRegistro),
+    defaultValues: { nombre: '', email: '', password: '', rol: 'JUGADOR' },
+  })
+  const form = modo === 'entrar' ? formEntrar : formRegistro
+  const errores = form.formState.errors
+  const cargando = form.formState.isSubmitting
+  const email = formEntrar.watch('email')
+
+  const alEntrar = formEntrar.handleSubmit(async (datos) => {
+    setError(null)
+    try {
+      await entrar(datos)
+      navegar('/')
+    } catch (e) {
+      setError(mensajeDeError(e, 'No pudimos iniciar tu sesion.'))
+    }
+  })
+
+  const alRegistrar = formRegistro.handleSubmit(async (datos) => {
+    setError(null)
+    try {
+      const { nombre, email, password, rol } = esquemaRegistro.parse(datos)
+      await registrar({ nombre, email, password, rol })
+      navegar('/')
+    } catch (e) {
+      setError(mensajeDeError(e, 'No pudimos crear tu cuenta.'))
+    }
+  })
+
+  const usarCuenta = (correo: string) => {
+    formEntrar.setValue('email', correo)
+    formEntrar.setValue('password', PASSWORD_SEMILLA)
   }
-
-  const usuarios = usuariosDemo()
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -140,7 +178,10 @@ export default function LoginPage() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setModo(t.id)}
+                onClick={() => {
+                  setModo(t.id)
+                  setError(null)
+                }}
                 className={cn(
                   'rounded-lg px-3 py-2 text-xs font-medium transition',
                   modo === t.id
@@ -153,64 +194,68 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <form onSubmit={manejarSubmit} className="mt-5 space-y-4">
+          <form
+            key={modo}
+            onSubmit={modo === 'entrar' ? alEntrar : alRegistrar}
+            className="mt-5 space-y-4"
+            noValidate
+          >
             {modo === 'registrar' && (
               <Field label="Nombre completo">
                 <Input
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
                   placeholder="Daniel Ocoro"
-                  required
+                  autoComplete="name"
+                  aria-invalid={Boolean(formRegistro.formState.errors.nombre)}
+                  {...formRegistro.register('nombre')}
                 />
+                <ErrorCampo mensaje={formRegistro.formState.errors.nombre?.message} />
               </Field>
             )}
 
             <Field label="Correo electronico">
               <Input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="tucorreo@dominio.com"
-                required
+                autoComplete="email"
+                aria-invalid={Boolean(errores.email)}
+                {...(modo === 'entrar'
+                  ? formEntrar.register('email')
+                  : formRegistro.register('email'))}
               />
+              <ErrorCampo mensaje={errores.email?.message} />
+            </Field>
+
+            <Field label="Contraseña">
+              <Input
+                type="password"
+                placeholder="••••••••"
+                autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
+                aria-invalid={Boolean(errores.password)}
+                {...(modo === 'entrar'
+                  ? formEntrar.register('password')
+                  : formRegistro.register('password'))}
+              />
+              <ErrorCampo mensaje={errores.password?.message} />
             </Field>
 
             {modo === 'registrar' && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Rol en la plataforma">
-                  <Select
-                    value={rol}
-                    onChange={(e) => setRol(e.target.value as Usuario['rol'])}
-                  >
-                    <option value="jugador">Jugador</option>
-                    <option value="equipo">Equipo</option>
-                    <option value="scout">Scout</option>
-                    <option value="admin">Administrador</option>
-                  </Select>
-                </Field>
-                <Field label="Region">
-                  <Select
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value as Region)}
-                  >
-                    {REGIONES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
+              <Field label="Rol en la plataforma">
+                <Select {...formRegistro.register('rol')}>
+                  {(['JUGADOR', 'EQUIPO', 'SCOUT'] satisfies RolRegistrable[]).map((r) => (
+                    <option key={r} value={r}>
+                      {ETIQUETA_ROL[r]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
             )}
 
             {modo === 'registrar' && (
               <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/8 bg-white/3 px-3.5 py-3">
                 <input
                   type="checkbox"
-                  checked={aceptaPrivacidad}
-                  onChange={(e) => setAceptaPrivacidad(e.target.checked)}
-                  required
                   className="mt-0.5 size-4 shrink-0 accent-[#7c4df5]"
+                  {...formRegistro.register('aceptaPrivacidad')}
                 />
                 <span className="text-[11px] leading-relaxed text-slate-400">
                   He leido y acepto el aviso de privacidad de ProPlay, el
@@ -219,6 +264,9 @@ export default function LoginPage() {
                   mi perfil profesional.
                 </span>
               </label>
+            )}
+            {modo === 'registrar' && (
+              <ErrorCampo mensaje={formRegistro.formState.errors.aceptaPrivacidad?.message} />
             )}
 
             {error && (
@@ -239,7 +287,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {modo === 'entrar' && (
+          {modo === 'entrar' && config.esDesarrollo && (
             <>
               <div className="my-7 flex items-center gap-3">
                 <div className="h-px flex-1 bg-white/8" />
@@ -251,13 +299,13 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 {CUENTAS_DEMO.map((c) => {
-                  const usuario = usuarios.find((u) => u.rol === c.rol)
+                  const usuario = CUENTAS_SEMILLA.find((u) => u.rol === c.rol)
                   if (!usuario) return null
                   return (
                     <button
                       key={c.rol}
                       type="button"
-                      onClick={() => setEmail(usuario.email)}
+                      onClick={() => usarCuenta(usuario.email)}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/3 p-3 text-left transition',
                         'hover:border-brand-500/40 hover:bg-white/6',
@@ -292,5 +340,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+const ETIQUETA_ROL: Record<RolRegistrable, string> = {
+  JUGADOR: 'Jugador',
+  EQUIPO: 'Equipo',
+  SCOUT: 'Scout',
+}
+
+function ErrorCampo({ mensaje }: { mensaje?: string }) {
+  if (!mensaje) return null
+  return (
+    <span role="alert" className="mt-1 block text-[11px] text-rose-300">
+      {mensaje}
+    </span>
   )
 }

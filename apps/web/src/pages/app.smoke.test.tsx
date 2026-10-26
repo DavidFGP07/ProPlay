@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -7,7 +7,7 @@ import App from '@/App'
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { crearQueryClient } from '@/api/queryClient'
-import { usuarios } from '@/mocks/seed'
+import type { Rol, UsuarioPublico } from '@proplay/shared'
 
 /**
  * Pruebas de humo de la interfaz: renderizan la aplicacion real con sus
@@ -29,14 +29,51 @@ function renderApp(ruta: string): ReactElement {
   )
 }
 
-function sesionDe(rol: string) {
-  const usuario = usuarios.find((u) => u.rol === rol)!
-  localStorage.setItem('proplay.sesion', JSON.stringify(usuario))
+/**
+ * La sesion la da la API real (GET /auth/me con la cookie de refresco); aqui
+ * se sustituye el recurso `auth` por uno en memoria. Cada usuario lleva el
+ * nombre de la persona de demostracion de su rol, que es la que ven las vistas.
+ */
+const sesion = vi.hoisted(() => ({ usuario: null as UsuarioPublico | null }))
+
+vi.mock('@/api/auth', () => ({
+  authApi: {
+    yo: async () => {
+      if (!sesion.usuario) throw new Error('401')
+      return { usuario: sesion.usuario }
+    },
+    login: async () => {
+      throw new Error('No disponible en las pruebas de humo')
+    },
+    registrar: async () => {
+      throw new Error('No disponible en las pruebas de humo')
+    },
+    logout: async () => {},
+  },
+}))
+
+const NOMBRES: Record<Rol, string> = {
+  JUGADOR: 'Daniel Ocoro',
+  EQUIPO: 'Carlos Mendoza',
+  SCOUT: 'Julian Ochoa',
+  ADMIN: 'Andrea Restrepo',
+}
+
+function sesionDe(rol: Rol) {
+  sesion.usuario = {
+    id: `cuenta-${rol.toLowerCase()}`,
+    email: `${rol.toLowerCase()}@proplay.gg`,
+    nombre: NOMBRES[rol],
+    rol,
+    emailVerificado: true,
+    activo: true,
+    creadoEn: new Date('2026-09-10T00:00:00Z'),
+  }
 }
 
 describe('Aplicacion', () => {
   beforeEach(() => {
-    localStorage.clear()
+    sesion.usuario = null
   })
 
   it('sin sesion activa redirige al login', async () => {
@@ -49,8 +86,8 @@ describe('Aplicacion', () => {
   it('el login ofrece las cuentas de demostracion por rol', async () => {
     render(renderApp('/login'))
     expect(await screen.findByText('Cuentas de demostracion')).toBeInTheDocument()
-    expect(screen.getByText('Carlos Mendoza')).toBeInTheDocument()
-    expect(screen.getByText('Julian Ochoa')).toBeInTheDocument()
+    expect(screen.getByText('Caribe eSports')).toBeInTheDocument()
+    expect(screen.getByText('Marcela Guzmán')).toBeInTheDocument()
   })
 
   it('el registro exige aceptar el aviso de privacidad (RNF-05)', async () => {
@@ -67,7 +104,7 @@ describe('Aplicacion', () => {
   })
 
   it('el feed del jugador carga con sus metricas y recomendaciones', async () => {
-    sesionDe('jugador')
+    sesionDe('JUGADOR')
     render(renderApp('/'))
     expect(
       await screen.findByRole('heading', { name: /Bienvenido, Daniel/i }, { timeout: 8000 }),
@@ -78,7 +115,7 @@ describe('Aplicacion', () => {
   })
 
   it('el jugador accede a su perfil profesional', async () => {
-    sesionDe('jugador')
+    sesionDe('JUGADOR')
     render(renderApp('/mi-perfil'))
     expect(
       await screen.findByRole('heading', { name: 'Daniel Ocoro' }, { timeout: 8000 }),
@@ -89,7 +126,7 @@ describe('Aplicacion', () => {
   })
 
   it('el directorio de talento lista los perfiles con sus roles', async () => {
-    sesionDe('scout')
+    sesionDe('SCOUT')
     render(renderApp('/explorar'))
     expect(
       await screen.findByRole('heading', { name: /Directorio de talento/i }, { timeout: 8000 }),
@@ -100,7 +137,7 @@ describe('Aplicacion', () => {
   })
 
   it('el panel de scouting informa del limite de sus permisos', async () => {
-    sesionDe('scout')
+    sesionDe('SCOUT')
     render(renderApp('/panel-equipo'))
     expect(
       await screen.findByRole('heading', { name: /Panel de scouting/i }, { timeout: 8000 }),
@@ -112,7 +149,7 @@ describe('Aplicacion', () => {
   })
 
   it('el panel de equipo si permite publicar vacantes', async () => {
-    sesionDe('equipo')
+    sesionDe('EQUIPO')
     render(renderApp('/panel-equipo'))
     expect(
       await screen.findByRole('heading', { name: /Panel de equipo/i }, { timeout: 8000 }),
@@ -123,7 +160,7 @@ describe('Aplicacion', () => {
   })
 
   it('el panel de equipo muestra los candidatos recomendados por el motor', async () => {
-    sesionDe('equipo')
+    sesionDe('EQUIPO')
     render(renderApp('/panel-equipo'))
     expect(
       await screen.findByText(/Recomendaciones del motor para tus vacantes/i, {}, { timeout: 8000 }),
@@ -135,7 +172,7 @@ describe('Aplicacion', () => {
   })
 
   it('el jugador no puede entrar al panel de equipo (RNF-04)', async () => {
-    sesionDe('jugador')
+    sesionDe('JUGADOR')
     render(renderApp('/panel-equipo'))
     expect(
       await screen.findByText(/No tienes permisos para esta seccion/i, {}, { timeout: 8000 }),
@@ -143,7 +180,7 @@ describe('Aplicacion', () => {
   })
 
   it('el dashboard de analitica muestra los indicadores de exito', async () => {
-    sesionDe('admin')
+    sesionDe('ADMIN')
     render(renderApp('/dashboard'))
     expect(
       await screen.findByRole('heading', { name: /Dashboard de analitica/i }, { timeout: 8000 }),
@@ -154,7 +191,7 @@ describe('Aplicacion', () => {
   })
 
   it('la bandeja de notificaciones lista los eventos del usuario', async () => {
-    sesionDe('jugador')
+    sesionDe('JUGADOR')
     render(renderApp('/'))
     const boton = await screen.findByLabelText(/Notificaciones/i, {}, { timeout: 8000 })
     boton.click()
@@ -164,7 +201,7 @@ describe('Aplicacion', () => {
   })
 
   it('la auditoria solo es visible para el administrador', async () => {
-    sesionDe('equipo')
+    sesionDe('EQUIPO')
     render(renderApp('/admin'))
     expect(
       await screen.findByText(/No tienes permisos para esta seccion/i, {}, { timeout: 8000 }),
@@ -172,7 +209,7 @@ describe('Aplicacion', () => {
   })
 
   it('el registro de auditoria se abre para el administrador', async () => {
-    sesionDe('admin')
+    sesionDe('ADMIN')
     render(renderApp('/admin'))
     expect(
       await screen.findByRole('heading', { name: /Administracion y trazabilidad/i }, { timeout: 8000 }),
@@ -180,7 +217,7 @@ describe('Aplicacion', () => {
   })
 
   it('la vista de vacantes lista las oportunidades publicadas', async () => {
-    sesionDe('jugador')
+    sesionDe('JUGADOR')
     render(renderApp('/vacantes'))
     expect(
       await screen.findByRole('heading', { name: /Vacantes publicadas/i }, { timeout: 8000 }),
@@ -191,7 +228,7 @@ describe('Aplicacion', () => {
   })
 
   it('el perfil publico de un jugador muestra sus estadisticas verificadas', async () => {
-    sesionDe('scout')
+    sesionDe('SCOUT')
     render(renderApp('/jugador/p-01'))
     expect(
       await screen.findByRole('heading', { name: 'Daniel Ocoro' }, { timeout: 8000 }),

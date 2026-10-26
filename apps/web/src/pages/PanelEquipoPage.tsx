@@ -123,8 +123,8 @@ export default function PanelEquipoPage() {
 
   // El scout consulta los procesos pero no contrata: puede publicar y
   // avanzar estados unicamente la organizacion o el administrador.
-  const esScout = usuario?.rol === 'scout'
-  const puedeGestionar = usuario?.rol === 'equipo' || usuario?.rol === 'admin'
+  const esScout = usuario?.rol === 'SCOUT'
+  const puedeGestionar = usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN'
 
   const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
   const misOfertas = miEquipo

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ejecutarIngesta, obtenerEstadoWorker, type ResultadoIngesta } from '@/mocks/api'
-import { useMutacion } from '@/api/queryClient'
+import { simulado, useMutacionSimulada } from '@/api/demo'
 
 export type { ResultadoIngesta }
 
@@ -9,14 +9,15 @@ export function useEstadoIngesta() {
   return useQuery({
     queryKey: ['estadisticas', 'worker'],
     // TODO: S2 — conectar con GET /api/v1/estadisticas/sincronizar (estado del worker, endpoint por definir)
-    queryFn: obtenerEstadoWorker,
+    queryFn: () =>
+      simulado(obtenerEstadoWorker, { activo: false, ultimaSync: null, registros: 0, perfiles: 0 }),
     staleTime: 0,
   })
 }
 
 // RF-03 · Lanzar una sincronizacion con las APIs oficiales
 export function useEjecutarIngesta() {
-  return useMutacion(() =>
+  return useMutacionSimulada(() =>
     // TODO: S2 — conectar con POST /api/v1/estadisticas/sincronizar
     ejecutarIngesta(),
   )

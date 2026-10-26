@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { simulado } from '@/api/demo'
 import { useAuth } from '@/context/AuthContext'
 import { perfilDeUsuario } from '@/mocks/api'
 import { perfilesEquipo } from '@/mocks/seed'
@@ -18,13 +19,19 @@ export function useIdentidad() {
     queryKey: ['identidad', usuario?.id],
     enabled: Boolean(usuario),
     // TODO: S2 — conectar con GET /api/v1/perfiles/me
-    queryFn: async (): Promise<Identidad> => {
-      const actor = actorDemo()
-      return {
-        usuarioId: actor.id,
-        perfilJugadorId: perfilDeUsuario(actor.id)?.id,
-        perfilEquipoId: perfilesEquipo.find((e) => e.usuarioId === actor.id)?.id,
-      }
-    },
+    queryFn: () =>
+      // Sin el puente, la identidad es solo la de la cuenta real: todavia no
+      // hay endpoint que diga de que perfil es dueña.
+      simulado(
+        async (): Promise<Identidad> => {
+          const actor = actorDemo()
+          return {
+            usuarioId: actor.id,
+            perfilJugadorId: perfilDeUsuario(actor.id)?.id,
+            perfilEquipoId: perfilesEquipo.find((e) => e.usuarioId === actor.id)?.id,
+          }
+        },
+        { usuarioId: usuario!.id },
+      ),
   })
 }

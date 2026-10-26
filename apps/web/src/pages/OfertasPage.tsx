@@ -72,7 +72,7 @@ export default function OfertasPage() {
             >
               Solo abiertas
             </Button>
-            {(usuario?.rol === 'equipo' || usuario?.rol === 'admin') && (
+            {(usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN') && (
               <Link to="/panel-equipo">
                 <Button variante="secundario" tamano="sm">
                   <Plus size={14} />

@@ -249,7 +249,7 @@ export default function OfertaDetallePage() {
               </p>
               <p className="text-2xl font-bold text-slate-50">{resultados.length}</p>
             </div>
-            {usuario?.rol === 'jugador' ? (
+            {usuario?.rol === 'JUGADOR' ? (
               miPostulacion ? (
                 <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 text-center">
                   <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-300">
@@ -271,7 +271,7 @@ export default function OfertaDetallePage() {
               )
             ) : (
               <p className="max-w-[14rem] text-right text-[11px] leading-relaxed text-slate-500">
-                {usuario?.rol === 'equipo' || usuario?.rol === 'admin'
+                {usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN'
                   ? 'Estas viendo la vacante como organización. Puedes gestionar candidatos desde el panel de equipo.'
                   : 'Estas viendo la vacante como scout. Puedes consultar el ranking, pero la postulación la realiza el jugador.'}
               </p>

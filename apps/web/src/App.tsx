@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { Layout } from '@/components/Layout'
 import { useAuth } from '@/context/AuthContext'
 import LoginPage from '@/pages/LoginPage'
-import type { Usuario } from '@/types'
+import type { Rol } from '@proplay/shared'
 
 /**
  * Carga diferida por ruta. Cada pantalla se descarga solo cuando se visita,
@@ -30,10 +30,13 @@ function Privado({
   roles,
   children,
 }: {
-  roles?: Usuario['rol'][]
+  roles?: Rol[]
   children?: ReactNode
 }) {
-  const { usuario } = useAuth()
+  const { usuario, cargando } = useAuth()
+  // Mientras se recupera la sesion no se decide nada: evita mandar al login a
+  // quien tiene una cookie de refresco valida.
+  if (cargando) return <Cargando />
   if (!usuario) return <Navigate to="/login" replace />
   if (roles && !roles.includes(usuario.rol)) {
     return (
@@ -66,7 +69,9 @@ function Cargando() {
 }
 
 export default function App() {
-  const { usuario } = useAuth()
+  const { usuario, cargando } = useAuth()
+
+  if (cargando) return <Cargando />
 
   return (
     <Routes>
@@ -87,7 +92,7 @@ export default function App() {
           <Route
             path="explorar"
             element={
-              <Privado roles={['equipo', 'scout', 'admin']}>
+              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
                 <Suspense fallback={<Cargando />}>
                   <ScoutingPage />
                 </Suspense>
@@ -113,7 +118,7 @@ export default function App() {
           <Route
             path="panel-equipo"
             element={
-              <Privado roles={['equipo', 'scout', 'admin']}>
+              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
                 <Suspense fallback={<Cargando />}>
                   <PanelEquipoPage />
                 </Suspense>
@@ -131,7 +136,7 @@ export default function App() {
           <Route
             path="mi-perfil"
             element={
-              <Privado roles={['jugador']}>
+              <Privado roles={['JUGADOR']}>
                 <Suspense fallback={<Cargando />}>
                   <MiPerfilPage />
                 </Suspense>
@@ -141,7 +146,7 @@ export default function App() {
           <Route
             path="dashboard"
             element={
-              <Privado roles={['equipo', 'scout', 'admin']}>
+              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
                 <Suspense fallback={<Cargando />}>
                   <DashboardPage />
                 </Suspense>
@@ -159,7 +164,7 @@ export default function App() {
           <Route
             path="admin"
             element={
-              <Privado roles={['admin']}>
+              <Privado roles={['ADMIN']}>
                 <Suspense fallback={<Cargando />}>
                   <AdminPage />
                 </Suspense>

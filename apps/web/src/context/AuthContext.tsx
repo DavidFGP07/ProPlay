@@ -1,92 +1,109 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { iniciarSesion, registrarUsuario, type DatosRegistro } from '@/mocks/api'
-import { establecerActorDemo } from '@/mocks/sesion'
-import type { Usuario } from '@/types'
+import type { LoginInput, RegisterInput, Rol, UsuarioPublico } from '@proplay/shared'
+import { authApi } from '@/api/auth'
+import { guardarAccessToken, registrarCierreDeSesion } from '@/api/client'
+import { sincronizarSesionDemo } from '@/api/demo'
 
+/**
+ * Sesion del usuario (RF-01).
+ *
+ * El access token vive solo en memoria, nunca en localStorage; la sesion
+ * persiste gracias a la cookie httpOnly del refresh token: al cargar la app se
+ * pide /auth/me y el interceptor de axios refresca por detras si hace falta.
+ */
 interface AuthContextValue {
-  usuario: Usuario | null
+  usuario: UsuarioPublico | null
+  /** true mientras se intenta recuperar la sesion al cargar la app. */
   cargando: boolean
-  error: string | null
-  entrar: (email: string) => Promise<boolean>
-  registrar: (datos: DatosRegistro) => Promise<boolean>
-  salir: () => void
-  puede: (...roles: Usuario['rol'][]) => boolean
+  entrar: (datos: LoginInput) => Promise<UsuarioPublico>
+  registrar: (datos: RegisterInput) => Promise<UsuarioPublico>
+  salir: () => Promise<void>
+  puede: (...roles: Rol[]) => boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const CLAVE_SESION = 'proplay.sesion'
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const [usuario, setUsuario] = useState<Usuario | null>(() => {
-    const raw = localStorage.getItem(CLAVE_SESION)
-    if (!raw) return null
-    try {
-      const guardado = JSON.parse(raw) as Usuario
-      establecerActorDemo(guardado)
-      return guardado
-    } catch {
-      return null
-    }
-  })
-  const [cargando, setCargando] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [usuario, setUsuarioEstado] = useState<UsuarioPublico | null>(null)
+  const [cargando, setCargando] = useState(true)
 
-  const entrar = useCallback(async (email: string) => {
-    setCargando(true)
-    setError(null)
-    try {
-      const u = await iniciarSesion(email)
-      establecerActorDemo(u)
-      setUsuario(u)
-      localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
-      return true
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al iniciar sesion')
-      return false
-    } finally {
-      setCargando(false)
-    }
+  // Toda la app ve el mismo usuario que el puente de datos de demostracion.
+  const setUsuario = useCallback((u: UsuarioPublico | null) => {
+    sincronizarSesionDemo(u)
+    setUsuarioEstado(u)
   }, [])
 
-  const registrar = useCallback(async (datos: DatosRegistro) => {
-    setCargando(true)
-    setError(null)
-    try {
-      const u = await registrarUsuario(datos)
-      establecerActorDemo(u)
-      setUsuario(u)
-      localStorage.setItem(CLAVE_SESION, JSON.stringify(u))
-      return true
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : 'Error al registrar la cuenta',
-      )
-      return false
-    } finally {
-      setCargando(false)
-    }
-  }, [])
-
-  const salir = useCallback(() => {
-    establecerActorDemo(null)
+  const cerrarLocalmente = useCallback(() => {
+    guardarAccessToken(null)
     setUsuario(null)
-    localStorage.removeItem(CLAVE_SESION)
     // Ningun dato del usuario anterior debe sobrevivir al cierre de sesion.
     queryClient.clear()
-  }, [queryClient])
+  }, [queryClient, setUsuario])
+
+  // Al cargar la app se intenta recuperar la sesion: si /auth/me responde 401,
+  // el interceptor prueba a refrescar con la cookie y reintenta la peticion.
+  useEffect(() => {
+    let activo = true
+    authApi
+      .yo()
+      .then((respuesta) => {
+        if (activo) setUsuario(respuesta.usuario)
+      })
+      .catch(() => {
+        if (activo) setUsuario(null)
+      })
+      .finally(() => {
+        if (activo) setCargando(false)
+      })
+    return () => {
+      activo = false
+    }
+  }, [setUsuario])
+
+  // El cliente HTTP avisa cuando la sesion ya no se puede renovar.
+  useEffect(() => {
+    registrarCierreDeSesion(cerrarLocalmente)
+  }, [cerrarLocalmente])
+
+  const entrar = useCallback(
+    async (datos: LoginInput) => {
+      const respuesta = await authApi.login(datos)
+      guardarAccessToken(respuesta.accessToken)
+      setUsuario(respuesta.usuario)
+      return respuesta.usuario
+    },
+    [setUsuario],
+  )
+
+  const registrar = useCallback(
+    async (datos: RegisterInput) => {
+      const respuesta = await authApi.registrar(datos)
+      guardarAccessToken(respuesta.accessToken)
+      setUsuario(respuesta.usuario)
+      return respuesta.usuario
+    },
+    [setUsuario],
+  )
+
+  const salir = useCallback(async () => {
+    try {
+      await authApi.logout()
+    } finally {
+      cerrarLocalmente()
+    }
+  }, [cerrarLocalmente])
 
   const puede = useCallback(
-    (...roles: Usuario['rol'][]) => (usuario ? roles.includes(usuario.rol) : false),
+    (...roles: Rol[]) => (usuario ? roles.includes(usuario.rol) : false),
     [usuario],
   )
 
   const value = useMemo(
-    () => ({ usuario, cargando, error, entrar, registrar, salir, puede }),
-    [usuario, cargando, error, entrar, registrar, salir, puede],
+    () => ({ usuario, cargando, entrar, registrar, salir, puede }),
+    [usuario, cargando, entrar, registrar, salir, puede],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

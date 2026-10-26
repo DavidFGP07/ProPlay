@@ -11,7 +11,7 @@ import {
   type PostulacionConOferta,
 } from '@/mocks/api'
 import { actorDemo } from '@/mocks/sesion'
-import { useMutacion } from '@/api/queryClient'
+import { simulado, useMutacionSimulada } from '@/api/demo'
 import type { Oferta, Postulacion } from '@/types'
 
 export type { PostulacionConOferta }
@@ -21,7 +21,7 @@ export function useVacantes(estado?: Oferta['estado']) {
   return useQuery({
     queryKey: ['ofertas', { estado }],
     // TODO: S3 — conectar con GET /api/v1/ofertas
-    queryFn: () => listarOfertas(estado),
+    queryFn: () => simulado(() => listarOfertas(estado), []),
   })
 }
 
@@ -31,16 +31,20 @@ export function useVacante(id: string | undefined) {
     queryKey: ['ofertas', id],
     enabled: Boolean(id),
     // TODO: S3 — conectar con GET /api/v1/ofertas/:id
-    queryFn: async () => {
-      const oferta = (await listarOfertas()).find((o) => o.id === id) ?? null
-      return { oferta, equipo: oferta ? (obtenerEquipoDeOferta(oferta.id) ?? null) : null }
-    },
+    queryFn: () =>
+      simulado(
+        async () => {
+          const oferta = (await listarOfertas()).find((o) => o.id === id) ?? null
+          return { oferta, equipo: oferta ? (obtenerEquipoDeOferta(oferta.id) ?? null) : null }
+        },
+        { oferta: null, equipo: null },
+      ),
   })
 }
 
 // RF-07 · Publicar una oferta
 export function useCrearOferta() {
-  return useMutacion((datos: Omit<Oferta, 'id' | 'publicadaEn' | 'estado'>) =>
+  return useMutacionSimulada((datos: Omit<Oferta, 'id' | 'publicadaEn' | 'estado'>) =>
     // TODO: S3 — conectar con POST /api/v1/ofertas
     crearOferta(datos, actorDemo()),
   )
@@ -48,7 +52,7 @@ export function useCrearOferta() {
 
 // RF-07 · Cerrar una oferta propia
 export function useCerrarOferta() {
-  return useMutacion((id: string) =>
+  return useMutacionSimulada((id: string) =>
     // TODO: S3 — conectar con PUT /api/v1/ofertas/:id
     cerrarOferta(id, actorDemo()),
   )
@@ -59,7 +63,7 @@ export function usePostulaciones() {
   return useQuery({
     queryKey: ['postulaciones'],
     // TODO: S3 — conectar con GET /api/v1/ofertas/:id/postulaciones
-    queryFn: () => listarPostulaciones(),
+    queryFn: () => simulado(() => listarPostulaciones(), []),
   })
 }
 
@@ -69,13 +73,13 @@ export function useMisPostulaciones(perfilId: string | undefined) {
     queryKey: ['postulaciones', 'mias', perfilId],
     enabled: Boolean(perfilId),
     // TODO: S3 — conectar con GET /api/v1/ofertas/postulaciones/me
-    queryFn: () => listarMisPostulaciones(perfilId!),
+    queryFn: () => simulado(() => listarMisPostulaciones(perfilId!), []),
   })
 }
 
 // RF-10 · Postularse a una oferta
 export function usePostular() {
-  return useMutacion(({ ofertaId, mensaje }: { ofertaId: string; mensaje: string }) =>
+  return useMutacionSimulada(({ ofertaId, mensaje }: { ofertaId: string; mensaje: string }) =>
     // TODO: S3 — conectar con POST /api/v1/ofertas/:id/postulaciones
     postular(ofertaId, mensaje, actorDemo()),
   )
@@ -83,7 +87,7 @@ export function usePostular() {
 
 // RF-10 · Avanzar el estado de una postulacion recibida
 export function useActualizarEstadoPostulacion() {
-  return useMutacion(({ id, estado }: { id: string; estado: Postulacion['estado'] }) =>
+  return useMutacionSimulada(({ id, estado }: { id: string; estado: Postulacion['estado'] }) =>
     // TODO: S3 — conectar con PATCH /api/v1/ofertas/postulaciones/:id
     actualizarEstadoPostulacion(id, estado, actorDemo()),
   )

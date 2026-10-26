@@ -14,7 +14,7 @@ import {
 } from '@/mocks/api'
 import { perfilesEquipo } from '@/mocks/seed'
 import { actorDemo } from '@/mocks/sesion'
-import { useMutacion } from '@/api/queryClient'
+import { simulado, useMutacionSimulada } from '@/api/demo'
 import type { ConfiguracionPrivacidad } from '@/types'
 
 export type { CamposPerfil }
@@ -25,7 +25,7 @@ export function usePerfil(id: string | undefined) {
     queryKey: ['perfiles', id],
     enabled: Boolean(id),
     // TODO: S2 — conectar con GET /api/v1/perfiles/:id
-    queryFn: () => obtenerPerfil(id!),
+    queryFn: () => simulado(() => obtenerPerfil(id!), null),
   })
 }
 
@@ -34,13 +34,13 @@ export function useEquipos() {
   return useQuery({
     queryKey: ['perfiles', 'equipos'],
     // TODO: S3 — conectar con GET /api/v1/perfiles?tipo=equipo
-    queryFn: async () => perfilesEquipo,
+    queryFn: () => simulado(async () => perfilesEquipo, []),
   })
 }
 
 // RF-05 · Edicion del perfil propio
 export function useActualizarPerfil() {
-  return useMutacion(({ perfilId, cambios }: { perfilId: string; cambios: CamposPerfil }) =>
+  return useMutacionSimulada(({ perfilId, cambios }: { perfilId: string; cambios: CamposPerfil }) =>
     // TODO: S2 — conectar con PUT /api/v1/perfiles/jugador
     actualizarPerfil(perfilId, cambios, actorDemo()),
   )
@@ -51,14 +51,14 @@ export function useHabilidades() {
   return useQuery({
     queryKey: ['perfiles', 'habilidades'],
     // TODO: S2 — conectar con GET /api/v1/perfiles/habilidades
-    queryFn: listarHabilidades,
+    queryFn: () => simulado(listarHabilidades, []),
     staleTime: Infinity,
   })
 }
 
 // RF-06 · Declarar una habilidad con su nivel
 export function useRegistrarHabilidad() {
-  return useMutacion(
+  return useMutacionSimulada(
     ({ perfilId, habilidadId, nivel }: { perfilId: string; habilidadId: string; nivel: number }) =>
       // TODO: S2 — conectar con POST /api/v1/perfiles/habilidades
       registrarHabilidad(perfilId, habilidadId, nivel, actorDemo()),
@@ -67,7 +67,7 @@ export function useRegistrarHabilidad() {
 
 // RF-06 · Retirar una habilidad declarada
 export function useEliminarHabilidad() {
-  return useMutacion((habilidadJugadorId: string) =>
+  return useMutacionSimulada((habilidadJugadorId: string) =>
     // TODO: S2 — conectar con DELETE /api/v1/perfiles/habilidades/:id
     eliminarHabilidad(habilidadJugadorId, actorDemo()),
   )
@@ -75,7 +75,7 @@ export function useEliminarHabilidad() {
 
 // RF-06 · Endorsement de la habilidad de otro jugador
 export function useEndosarHabilidad() {
-  return useMutacion(
+  return useMutacionSimulada(
     ({ habilidadJugadorId, comentario }: { habilidadJugadorId: string; comentario: string }) =>
       // TODO: S2 — conectar con POST /api/v1/perfiles/endorsements
       endosarHabilidad(habilidadJugadorId, actorDemo(), comentario),
@@ -84,7 +84,7 @@ export function useEndosarHabilidad() {
 
 // RF-02 · Vincular una cuenta de juego por OAuth 2.0
 export function useVincularCuenta() {
-  return useMutacion(
+  return useMutacionSimulada(
     ({
       perfilId,
       plataforma,
@@ -101,7 +101,7 @@ export function useVincularCuenta() {
 
 // RF-02 · Desvincular una cuenta de juego
 export function useDesvincularCuenta() {
-  return useMutacion((cuentaId: string) =>
+  return useMutacionSimulada((cuentaId: string) =>
     // TODO: S2 — conectar con DELETE /api/v1/perfiles/cuentas-gaming/:id
     desvincularCuenta(cuentaId, actorDemo()),
   )
@@ -112,13 +112,13 @@ export function usePrivacidad() {
   return useQuery({
     queryKey: ['perfiles', 'privacidad'],
     // TODO: S2 — conectar con GET /api/v1/usuarios/me/privacidad
-    queryFn: () => obtenerPrivacidad(actorDemo().id),
+    queryFn: () => simulado(() => obtenerPrivacidad(actorDemo().id), null),
   })
 }
 
 // RNF-05 · Actualizar las preferencias de privacidad
 export function useActualizarPrivacidad() {
-  return useMutacion((cambios: Partial<Omit<ConfiguracionPrivacidad, 'usuarioId'>>) => {
+  return useMutacionSimulada((cambios: Partial<Omit<ConfiguracionPrivacidad, 'usuarioId'>>) => {
     const actor = actorDemo()
     // TODO: S2 — conectar con PATCH /api/v1/usuarios/me/privacidad
     return actualizarPrivacidad(actor.id, cambios, actor)

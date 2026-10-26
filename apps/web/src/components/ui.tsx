@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useRef } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 import { Loader2 } from 'lucide-react'
 
@@ -280,24 +280,22 @@ export function Field({
 const baseInput =
   'w-full rounded-lg border border-white/10 bg-surface-900/70 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 transition focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
 
-export function Input({
-  className,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(baseInput, className)} {...props} />
-}
+// Reenvian el ref para que react-hook-form pueda registrar el campo.
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...props }, ref) {
+    return <input ref={ref} className={cn(baseInput, className)} {...props} />
+  },
+)
 
-export function Select({
-  className,
-  children,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select className={cn(baseInput, 'cursor-pointer', className)} {...props}>
-      {children}
-    </select>
-  )
-}
+export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className, children, ...props }, ref) {
+    return (
+      <select ref={ref} className={cn(baseInput, 'cursor-pointer', className)} {...props}>
+        {children}
+      </select>
+    )
+  },
+)
 
 export function Textarea({
   className,

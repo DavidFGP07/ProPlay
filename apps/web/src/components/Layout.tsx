@@ -19,32 +19,33 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { Avatar, Badge, Button, cn } from '@/components/ui'
 import { NotificacionesBell } from '@/components/NotificacionesBell'
+import { AvisoDatosDemo } from '@/components/AvisoDatosDemo'
 import { useEstadoIngesta } from '@/api/estadisticas'
-import type { Usuario } from '@/types'
+import type { Rol } from '@proplay/shared'
 
 interface ItemNav {
   to: string
   label: string
   icono: typeof Home
-  roles?: Usuario['rol'][]
+  roles?: Rol[]
 }
 
 const NAVEGACION: ItemNav[] = [
   { to: '/', label: 'Feed', icono: Home },
-  { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: ['jugador'] },
-  { to: '/explorar', label: 'Explorar talento', icono: Search, roles: ['equipo', 'scout', 'admin'] },
+  { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: ['JUGADOR'] },
+  { to: '/explorar', label: 'Explorar talento', icono: Search, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
-  { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: ['equipo', 'scout', 'admin'] },
-  { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: ['equipo', 'scout', 'admin'] },
+  { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
+  { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
   { to: '/mensajes', label: 'Mensajes', icono: MessageSquare },
-  { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: ['admin'] },
+  { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: ['ADMIN'] },
 ]
 
-const ETIQUETA_ROL: Record<Usuario['rol'], string> = {
-  jugador: 'Jugador',
-  equipo: 'Equipo',
-  scout: 'Scout',
-  admin: 'Administrador',
+const ETIQUETA_ROL: Record<Rol, string> = {
+  JUGADOR: 'Jugador',
+  EQUIPO: 'Equipo',
+  SCOUT: 'Scout',
+  ADMIN: 'Administrador',
 }
 
 export function Layout() {
@@ -66,8 +67,8 @@ export function Layout() {
     (i) => !i.roles || i.roles.includes(usuario.rol),
   )
 
-  const manejarSalir = () => {
-    salir()
+  const manejarSalir = async () => {
+    await salir()
     notificar('Sesion cerrada correctamente.', 'info')
     navegar('/login')
   }
@@ -205,6 +206,7 @@ export function Layout() {
         </header>
 
         <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:py-8">
+          <AvisoDatosDemo />
           <Outlet key={ubicacion.pathname} />
         </main>
       </div>
