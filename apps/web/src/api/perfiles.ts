@@ -15,7 +15,7 @@ import {
 import { perfilesEquipo } from '@/mocks/seed'
 import { actorDemo } from '@/mocks/sesion'
 import { simulado, useMutacionSimulada } from '@/api/demo'
-import type { ConfiguracionPrivacidad } from '@/types'
+import type { ConfiguracionPrivacidad, PlataformaJuego } from '@/mocks/modelos'
 
 export type { CamposPerfil }
 
@@ -91,7 +91,7 @@ export function useVincularCuenta() {
       identificador,
     }: {
       perfilId: string
-      plataforma: 'Riot Games' | 'Steam'
+      plataforma: PlataformaJuego
       identificador: string
     }) =>
       // TODO: S2 — conectar con POST /api/v1/perfiles/cuentas-gaming

@@ -1,4 +1,4 @@
-import type { Estadistica, Oferta, PerfilJugador } from '@/types'
+import type { Estadistica, Oferta, PerfilJugador } from '@/mocks/modelos'
 
 /**
  * Capa de vectorizacion de perfiles.

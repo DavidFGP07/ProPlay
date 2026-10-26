@@ -50,6 +50,7 @@ import {
   type CamposPerfil,
   useVincularCuenta,
 } from '@/api/perfiles'
+import { es } from '@/i18n/es'
 import type {
   ConfiguracionPrivacidad,
   CuentaGaming,
@@ -58,8 +59,9 @@ import type {
   Habilidad,
   HabilidadJugador,
   PerfilJugador,
+  PlataformaJuego,
   Postulacion,
-} from '@/types'
+} from '@/mocks/modelos'
 
 const REGIONES = [
   'Barranquilla',
@@ -518,7 +520,7 @@ function CuentasPanel({
   cuentas: CuentaGaming[]
   onCambio: () => void
 }) {
-  const [plataforma, setPlataforma] = useState<'Riot Games' | 'Steam'>('Riot Games')
+  const [plataforma, setPlataforma] = useState<PlataformaJuego>('RIOT')
   const [identificador, setIdentificador] = useState('')
   const [error, setError] = useState<string | null>(null)
   const vinculacion = useVincularCuenta()
@@ -567,7 +569,7 @@ function CuentasPanel({
                   <Link2 size={16} />
                 </span>
                 <div>
-                  <p className="text-sm font-medium text-slate-100">{c.plataforma}</p>
+                  <p className="text-sm font-medium text-slate-100">{es.plataforma[c.plataforma]}</p>
                   <p className="font-mono text-[11px] text-slate-500">
                     {c.identificadorExterno} · verificada el{' '}
                     {c.fechaVerificacion}
@@ -604,17 +606,17 @@ function CuentasPanel({
           <Select
             value={plataforma}
             onChange={(e) =>
-              setPlataforma(e.target.value as 'Riot Games' | 'Steam')
+              setPlataforma(e.target.value as PlataformaJuego)
             }
           >
-            <option value="Riot Games">Riot Games</option>
-            <option value="Steam">Steam</option>
+            <option value="RIOT">{es.plataforma.RIOT}</option>
+            <option value="STEAM">{es.plataforma.STEAM}</option>
           </Select>
           <Input
             value={identificador}
             onChange={(e) => setIdentificador(e.target.value)}
             placeholder={
-              plataforma === 'Riot Games' ? 'Jugador#TAG' : '76561198...'
+              plataforma === 'RIOT' ? 'Jugador#TAG' : '76561198...'
             }
             disabled={vinculado}
           />
@@ -633,7 +635,7 @@ function CuentasPanel({
           </p>
         )}
         <p className="mt-2 text-[11px] text-slate-600">
-          {plataforma === 'Riot Games'
+          {plataforma === 'RIOT'
             ? 'En el flujo real, este paso redirige al formulario de consentimiento de Riot Games y vuelve con un token de alcance restringido.'
             : 'En el flujo real, este paso redirige a la autorizacion de Steam Web y vuelve con el identificador de la cuenta y sus credenciales de lectura de estadisticas.'}
         </p>
@@ -904,11 +906,11 @@ function PostulacionesPanel({
   postulaciones: PostulacionConOferta[]
 }) {
   const ETIQUETA: Record<Postulacion['estado'], { t: string; tono: 'neutro' | 'violeta' | 'cian' | 'verde' | 'ambar' | 'rojo' }> = {
-    enviada: { t: 'Recibida', tono: 'neutro' },
-    'en-revision': { t: 'En revision', tono: 'cian' },
-    entrevista: { t: 'Entrevista', tono: 'violeta' },
-    aceptada: { t: 'Aceptada', tono: 'verde' },
-    rechazada: { t: 'Rechazada', tono: 'rojo' },
+    ENVIADA: { t: 'Recibida', tono: 'neutro' },
+    EN_REVISION: { t: 'En revision', tono: 'cian' },
+    ENTREVISTA: { t: 'Entrevista', tono: 'violeta' },
+    ACEPTADA: { t: 'Aceptada', tono: 'verde' },
+    RECHAZADA: { t: 'Rechazada', tono: 'rojo' },
   }
 
   return (

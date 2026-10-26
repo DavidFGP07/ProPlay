@@ -108,4 +108,55 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Puente de datos de demostración detrás de `VITE_DEMO_DATA` | Con la bandera encendida, la sesión real se hace pasar por una persona simulada de su mismo rol (`mocks/persona.ts`, único punto de conversión) y el `Layout` muestra el aviso «Datos de demostración». Apagada, los hooks devuelven el vacío que daría la API y sus mutaciones fallan con un aviso: así se ve qué está conectado de verdad y el puente se retira sprint a sprint. |
 | Las pruebas de humo sustituyen el recurso `api/auth` por uno en memoria y fijan `VITE_DEMO_DATA` en `vite.config.ts` | No dependen de una API levantada ni de un `.env` local; cada sesión de prueba usa el nombre de la persona de su rol. |
 | Los textos nuevos van a `src/i18n/es.ts` | CLAUDE.md §6. Los textos heredados del prototipo siguen en el JSX: ver deuda conocida. |
+| Los enums (`Rol`, `CategoriaHabilidad`, `Plataforma`, `EstadoOferta`, `EstadoPostulacion`), `Habilidad` y el usuario (`UsuarioPublico`) del cliente vienen de `@proplay/shared` | CLAUDE.md §3.1. La simulación y sus pruebas usan los mismos valores en mayúscula; la interfaz los muestra con las etiquetas de `i18n/es.ts`, nunca en crudo. |
+| `types/index.ts` pasa a `mocks/modelos.ts` y conserva sólo los modelos de vista del prototipo que aún no tienen contrato | No se fuerzan a la forma de `shared` mientras sus endpoints no existan: cada uno se reconcilia en el sprint que lo conecta (tabla siguiente). Cinco comparten nombre con un tipo de `shared` sin coincidir en forma: `Estadistica`, `Oferta`, `Mensaje`, `Notificacion` y `TipoNotificacion`; ninguna vista importa ambos. |
+
+## Divergencias con `@proplay/shared`
+
+Lista de trabajo: cada entrada dice quién gana y en qué sprint se cierra. Al
+resolver una, bórrala de aquí en el mismo commit.
+
+### 1. Hueco en el diseño: gana el prototipo
+
+Propuestas de ampliación del contrato. **No se aplican** hasta su sprint; ese
+día se añaden a `shared/enums.ts` y a `schema.prisma` en el mismo commit.
+
+| Divergencia | Propuesta | Sprint |
+| --- | --- | --- |
+| Postulación en estado `ENTREVISTA` | El documento contempla «invitar a un tryout»: falta un estado entre `EN_REVISION` y `ACEPTADA` en `EstadoPostulacion`. En el cliente vive como `EstadoPostulacionPrototipo`. | S3 |
+| Notificación de sincronización de estadísticas (`ingesta`) | El worker de ingesta (RF-03) avisa al jugador de que sus datos cambiaron; no hay tipo equivalente en `TIPOS_NOTIFICACION`. | S2 |
+| Preferencias de privacidad (`ConfiguracionPrivacidad`: visibilidad del perfil y de sus secciones) | RNF-05 las exige y no hay esquema ni modelo que las guarde. | S2 |
+| Rango competitivo en `Estadistica` (`rango`) y en `Oferta` (`rangoMinimo`) | `Oferta` ya tiene `rangoMinimo`; la estadística sólo lo tendría dentro de `metricas`. Hace falta como campo para filtrar y comparar. | S2 |
+| `salario` y `requisitos[]` de la oferta | El prototipo los muestra en el detalle; el contrato no los recoge. | S3 |
+
+### 2. Simplificación del prototipo: gana `shared`
+
+El modelo del backend es más completo; el cliente se adapta.
+
+| Divergencia | Adaptación del cliente | Sprint |
+| --- | --- | --- |
+| `Mensaje` emisor → receptor directo frente a `Conversacion` + `Mensaje` | El backend soporta hilos y chats de equipo, que el documento pide. La bandeja pasa a listar conversaciones. | S4 |
+| Campos del perfil del jugador: `biografia`, `horasDisponibles`, `dispuestoARelocalizarse`, `foto` | Se renombran a `bio`, `disponibilidadHoras`, `dispuestoRelocalizar`, `avatarUrl`. | S2 |
+| Vinculación de cuentas tecleando un identificador | El contrato usa OAuth 2.0 (`codigoAutorizacion`): el formulario se sustituye por la redirección a Riot y Steam. | S2 |
+| `Estadistica` con `perfilId`, `fuente: 'api-riot'…` y `ultimaSync` | Pasa a `jugadorId`, `fuente: Plataforma` y `capturadaEn`. | S2 |
+| `Oferta` sin `titulo` y con `experienciaMinima`, `regionPreferida`, `horasSemanales`, `publicadaEn` | Se añade `titulo` y se renombran a `experienciaMinAnios`, `region`, `horasSemana`, `creadoEn`. | S3 |
+| Desglose del matching como lista con la dimensión `blandas` | El contrato lo da como objeto con `habilidadesBlandas`. | S3 |
+| Estado de oferta `en-proceso` | No existe en el contrato (el proceso es de las postulaciones). **Resuelto en este cambio:** la insignia ámbar pasó a `BORRADOR`. | — |
+
+### 3. Preocupación de presentación: no toca el modelo
+
+Campos que la interfaz necesita pero que se derivan de los datos. Los compone
+el adaptador del cliente (`src/api/`); **no deben acabar en Prisma** ni en los
+esquemas de `shared`.
+
+| Divergencia | Se deriva de | Sprint |
+| --- | --- | --- |
+| `titulo`, `detalle` y `enlace` de `Notificacion` | `tipo` + `payload` | S4 |
+| `leida: boolean` de `Notificacion` | `leidaEn !== null` | S4 |
+| Tipos de notificación en minúscula del prototipo (`postulacion`, `endoso`…) | Correspondencia con `NUEVA_POSTULACION`, `ENDORSEMENT_RECIBIDO`… en el adaptador | S4 |
+| `emisorNombre` del mensaje | Participantes de la conversación | S4 |
+| `esCaribe` y `handle` del perfil | `region` y el nombre de usuario | S2 |
+| `tendencia` de la estadística (serie de la sparkline) | Histórico de capturas | S2 |
+| `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 |
+| Etiquetas de enums («Abierta», «Riot Games») | `i18n/es.ts`. **Resuelto en este cambio.** | — |
 

@@ -3,7 +3,7 @@ import { useMutacion } from '@/api/queryClient'
 import { config } from '@/lib/env'
 import { personaDemo } from '@/mocks/persona'
 import { actorDemo, establecerActorDemo } from '@/mocks/sesion'
-import type { Usuario } from '@/types'
+import type { Usuario } from '@/mocks/modelos'
 
 /**
  * Interruptor del puente de datos de demostracion (VITE_DEMO_DATA).

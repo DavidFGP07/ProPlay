@@ -35,12 +35,13 @@ import {
   cn,
 } from '@/components/ui'
 import { useToast } from '@/context/ToastContext'
+import { es } from '@/i18n/es'
 import { useAuth } from '@/context/AuthContext'
 import { useIdentidad } from '@/api/identidad'
 import { useCandidatos, useExplicarMatching, useJugadores } from '@/api/matching'
 import { usePostulaciones, usePostular, useVacante } from '@/api/ofertas'
 import { DIMENSIONES, PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { ExplicacionMatching, Pesos } from '@/types'
+import type { ExplicacionMatching, Pesos } from '@/mocks/modelos'
 
 type Orden = 'puntaje' | 'vectorial' | 'tecnica' | 'experiencia'
 
@@ -182,8 +183,8 @@ export default function OfertaDetallePage() {
                 {oferta.juego}
               </Badge>
               <Badge tono="cian">{oferta.rol}</Badge>
-              <Badge tono={oferta.estado === 'abierta' ? 'verde' : 'neutro'}>
-                {oferta.estado}
+              <Badge tono={oferta.estado === 'ABIERTA' ? 'verde' : 'neutro'}>
+                {es.estadoOferta[oferta.estado]}
               </Badge>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-50">
@@ -257,14 +258,14 @@ export default function OfertaDetallePage() {
                     Postulacion enviada
                   </p>
                   <p className="mt-1 text-[11px] text-slate-500">
-                    Estado actual: {miPostulacion.estado}
+                    Estado actual: {es.estadoPostulacion[miPostulacion.estado]}
                   </p>
                 </div>
               ) : (
                 <Button
                   variante="primario"
                   onClick={() => setModalPostular(true)}
-                  disabled={oferta.estado !== 'abierta'}
+                  disabled={oferta.estado !== 'ABIERTA'}
                 >
                   Postularme
                 </Button>

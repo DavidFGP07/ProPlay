@@ -1,8 +1,38 @@
 /* ============================================================================
- * ProPlay — Modelo de dominio (mapea las entidades del diagrama E-R, Seccion IX)
+ * ProPlay — Modelos del prototipo pendientes de contrato
+ *
+ * Los enums, el usuario y el catalogo de habilidades vienen de
+ * @proplay/shared. El resto son los modelos de vista con los que se construyo
+ * el prototipo de la rama Fronted: su forma aun no coincide con el contrato
+ * de la API y cada uno se reconcilia en el sprint que conecta su endpoint
+ * (ver «Divergencias con @proplay/shared» en docs/decisiones.md). No crees
+ * aqui un tipo que ya exista en @proplay/shared.
  * ==========================================================================*/
 
-export type Rol = 'jugador' | 'equipo' | 'scout' | 'admin'
+import type {
+  CategoriaHabilidad,
+  EstadoOferta,
+  EstadoPostulacion,
+  Habilidad,
+  Plataforma,
+  Rol,
+  UsuarioPublico,
+} from '@proplay/shared'
+
+export type { CategoriaHabilidad, EstadoOferta, Habilidad, Plataforma, Rol }
+
+/** Usuario de la simulacion: es el mismo contrato que devuelve la API. */
+export type Usuario = UsuarioPublico
+
+/**
+ * Propuesta de ampliacion para S3: un estado intermedio entre la revision y
+ * la aceptacion («invitar a un tryout»). Hasta que entre en EstadoPostulacion
+ * y en Prisma, solo existe en el prototipo.
+ */
+export type EstadoPostulacionPrototipo = EstadoPostulacion | 'ENTREVISTA'
+
+/** Plataformas con ingesta de estadisticas (subconjunto del contrato). */
+export type PlataformaJuego = Extract<Plataforma, 'RIOT' | 'STEAM'>
 
 export type Juego =
   | 'League of Legends'
@@ -28,24 +58,6 @@ export type RegionCaribe = Extract<
 
 export type NivelHabilidad = 1 | 2 | 3 | 4 | 5
 
-export type CategoriaHabilidad = 'tecnica' | 'blanda'
-
-export interface Usuario {
-  id: string
-  nombre: string
-  email: string
-  rol: Rol
-  avatar?: string
-  activo: boolean
-  creadoEn: string
-}
-
-export interface Habilidad {
-  id: string
-  nombre: string
-  categoria: CategoriaHabilidad
-}
-
 export interface HabilidadJugador {
   id: string
   perfilId: string
@@ -66,7 +78,7 @@ export interface Endorsement {
 export interface CuentaGaming {
   id: string
   perfilId: string
-  plataforma: 'Riot Games' | 'Steam'
+  plataforma: PlataformaJuego
   identificadorExterno: string
   verificada: boolean
   fechaVerificacion: string
@@ -150,7 +162,7 @@ export interface Oferta {
   experienciaMinima: number
   regionPreferida: Region | 'Cualquiera'
   horasSemanales: number
-  estado: 'abierta' | 'cerrada' | 'en-proceso'
+  estado: EstadoOferta
   publicadaEn: string
   descripcion: string
   salario?: string
@@ -162,7 +174,7 @@ export interface Postulacion {
   id: string
   ofertaId: string
   perfilId: string
-  estado: 'enviada' | 'en-revision' | 'entrevista' | 'rechazada' | 'aceptada'
+  estado: EstadoPostulacionPrototipo
   mensaje: string
   fecha: string
 }

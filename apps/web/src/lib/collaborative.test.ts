@@ -6,7 +6,7 @@ import {
   interaccionesDeEquipo,
   puntajeColaborativo,
 } from '@/lib/collaborative'
-import type { Postulacion } from '@/types'
+import type { Postulacion } from '@/mocks/modelos'
 
 const postulacion = (
   id: string,
@@ -23,10 +23,10 @@ const postulacion = (
 })
 
 const postulaciones = [
-  postulacion('po-1', 'o-01', 'p-01', 'aceptada'),
-  postulacion('po-2', 'o-01', 'p-02', 'entrevista'),
-  postulacion('po-3', 'o-02', 'p-03', 'en-revision'),
-  postulacion('po-4', 'o-02', 'p-04', 'rechazada'),
+  postulacion('po-1', 'o-01', 'p-01', 'ACEPTADA'),
+  postulacion('po-2', 'o-01', 'p-02', 'ENTREVISTA'),
+  postulacion('po-3', 'o-02', 'p-03', 'EN_REVISION'),
+  postulacion('po-4', 'o-02', 'p-04', 'RECHAZADA'),
 ]
 
 const equipos: Record<string, string> = {
@@ -78,9 +78,9 @@ describe('hayHistorialSuficiente', () => {
   it('es verdadero con historial suficiente', () => {
     const inter = construirInteracciones(
       [
-        postulacion('a', 'o-01', 'p-01', 'aceptada'),
-        postulacion('b', 'o-01', 'p-02', 'aceptada'),
-        postulacion('c', 'o-01', 'p-03', 'aceptada'),
+        postulacion('a', 'o-01', 'p-01', 'ACEPTADA'),
+        postulacion('b', 'o-01', 'p-02', 'ACEPTADA'),
+        postulacion('c', 'o-01', 'p-03', 'ACEPTADA'),
       ],
       (id) => equipos[id],
     )
@@ -104,9 +104,9 @@ describe('puntajeColaborativo', () => {
   it(' puntua a los candidatos cuando hay historial suficiente', () => {
     const inter = construirInteracciones(
       [
-        postulacion('a', 'o-01', 'p-01', 'aceptada'),
-        postulacion('b', 'o-01', 'p-02', 'aceptada'),
-        postulacion('c', 'o-01', 'p-03', 'aceptada'),
+        postulacion('a', 'o-01', 'p-01', 'ACEPTADA'),
+        postulacion('b', 'o-01', 'p-02', 'ACEPTADA'),
+        postulacion('c', 'o-01', 'p-03', 'ACEPTADA'),
       ],
       (id) => equipos[id],
     )
@@ -121,9 +121,9 @@ describe('puntajeColaborativo', () => {
   it('devuelve un mapa vacio si no hay embeddings del equipo', () => {
     const inter = construirInteracciones(
       [
-        postulacion('a', 'o-01', 'p-01', 'aceptada'),
-        postulacion('b', 'o-01', 'p-02', 'aceptada'),
-        postulacion('c', 'o-01', 'p-03', 'aceptada'),
+        postulacion('a', 'o-01', 'p-01', 'ACEPTADA'),
+        postulacion('b', 'o-01', 'p-02', 'ACEPTADA'),
+        postulacion('c', 'o-01', 'p-03', 'ACEPTADA'),
       ],
       (id) => equipos[id],
     )

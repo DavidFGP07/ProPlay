@@ -8,7 +8,7 @@ import {
   evaluarDimension,
   normalizarPesos,
 } from '@/lib/matching'
-import type { Oferta, PerfilJugador } from '@/types'
+import type { Oferta, PerfilJugador } from '@/mocks/modelos'
 
 const perfilBase: PerfilJugador = {
   id: 'p-test',
@@ -37,7 +37,7 @@ const ofertaBase: Oferta = {
   experienciaMinima: 2,
   regionPreferida: 'Barranquilla',
   horasSemanales: 24,
-  estado: 'abierta',
+  estado: 'ABIERTA',
   publicadaEn: '2026-10-01',
   descripcion: '',
 }

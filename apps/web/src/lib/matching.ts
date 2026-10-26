@@ -4,7 +4,7 @@ import type {
   Oferta,
   PerfilJugador,
   Pesos,
-} from '@/types'
+} from '@/mocks/modelos'
 
 /**
  * Las cinco dimensiones del motor de matching (Seccion VIII-C del documento).
@@ -80,7 +80,7 @@ export function evaluarDimension(
   ctx: {
     perfil: PerfilJugador
     oferta: Oferta
-    stats: import('@/types').Estadistica[]
+    stats: import('@/mocks/modelos').Estadistica[]
     endorsementCount: number
     skills: { nivel: number; verificada: boolean }[]
   },

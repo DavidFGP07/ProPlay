@@ -13,7 +13,7 @@ import type {
   Postulacion,
   Region,
   Usuario,
-} from '@/types'
+} from '@/mocks/modelos'
 
 /* ============================================================================
  * Datos semilla del prototipo.
@@ -23,8 +23,6 @@ import type {
  * ingesta directa desde la API oficial y no declarados por el jugador (RFC 28).
  * ==========================================================================*/
 
-const iso = (d: string) => new Date(d).toISOString()
-
 /* ------------------------------- Usuarios -------------------------------- */
 
 export const usuarios: Usuario[] = [
@@ -32,63 +30,69 @@ export const usuarios: Usuario[] = [
     id: 'u-admin',
     nombre: 'Andrea Restrepo',
     email: 'admin@proplay.co',
-    rol: 'admin',
+    rol: 'ADMIN',
     activo: true,
-    creadoEn: iso('2026-03-02'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-03-02'),
   },
   {
     id: 'u-equipo-1',
     nombre: 'Carlos Mendoza',
     email: 'carlos@atlanticoesports.co',
-    rol: 'equipo',
+    rol: 'EQUIPO',
     activo: true,
-    creadoEn: iso('2026-03-10'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-03-10'),
   },
   {
     id: 'u-equipo-2',
     nombre: 'Mariana Fuentes',
     email: 'mariana@cartagenovirtual.gg',
-    rol: 'equipo',
+    rol: 'EQUIPO',
     activo: true,
-    creadoEn: iso('2026-04-01'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-04-01'),
   },
   {
     id: 'u-scout-1',
     nombre: 'Julian Ochoa',
     email: 'julian@talenthub.co',
-    rol: 'scout',
+    rol: 'SCOUT',
     activo: true,
-    creadoEn: iso('2026-04-12'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-04-12'),
   },
   {
     id: 'u-scout-2',
     nombre: 'Paula_SYNC',
     email: 'paula@scoutcaribe.co',
-    rol: 'scout',
+    rol: 'SCOUT',
     activo: true,
-    creadoEn: iso('2026-05-03'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-05-03'),
   },
   {
     id: 'u-jugador-1',
     nombre: 'Daniel Ocoro',
     email: 'daniel.ocoro@gmail.com',
-    rol: 'jugador',
+    rol: 'JUGADOR',
     activo: true,
-    creadoEn: iso('2026-03-15'),
+    emailVerificado: true,
+    creadoEn: new Date('2026-03-15'),
   },
 ]
 
 /* ------------------------------ Habilidades ------------------------------ */
 
 export const habilidades: Habilidad[] = [
-  { id: 'h-1', nombre: 'Comunicacion', categoria: 'blanda' },
-  { id: 'h-2', nombre: 'Trabajo en equipo', categoria: 'blanda' },
-  { id: 'h-3', nombre: 'Liderazgo', categoria: 'blanda' },
-  { id: 'h-4', nombre: 'Gestion de presion', categoria: 'blanda' },
-  { id: 'h-5', nombre: 'Mecanica de shoot', categoria: 'tecnica' },
-  { id: 'h-6', nombre: 'Vision de juego', categoria: 'tecnica' },
-  { id: 'h-7', nombre: 'Toma de decisiones', categoria: 'tecnica' },
-  { id: 'h-8', nombre: 'Resistencia mental', categoria: 'blanda' },
+  { id: 'h-1', nombre: 'Comunicacion', categoria: 'BLANDA' },
+  { id: 'h-2', nombre: 'Trabajo en equipo', categoria: 'BLANDA' },
+  { id: 'h-3', nombre: 'Liderazgo', categoria: 'BLANDA' },
+  { id: 'h-4', nombre: 'Gestion de presion', categoria: 'BLANDA' },
+  { id: 'h-5', nombre: 'Mecanica de shoot', categoria: 'TECNICA' },
+  { id: 'h-6', nombre: 'Vision de juego', categoria: 'TECNICA' },
+  { id: 'h-7', nombre: 'Toma de decisiones', categoria: 'TECNICA' },
+  { id: 'h-8', nombre: 'Resistencia mental', categoria: 'BLANDA' },
 ]
 
 /* -------------------------------- Perfiles ------------------------------- */
@@ -582,22 +586,22 @@ for (const perfil of perfilesJugador) {
 /* ------------------------ Cuentas de juego (OAuth 2.0) -------------------- */
 
 export const cuentasGaming: CuentaGaming[] = [
-  { id: 'cg-01', perfilId: 'p-01', plataforma: 'Riot Games', identificadorExterno: 'DanyOcro#CAR', verificada: true, fechaVerificacion: '2026-04-02' },
-  { id: 'cg-02', perfilId: 'p-02', plataforma: 'Riot Games', identificadorExterno: 'SaraP#CTA', verificada: true, fechaVerificacion: '2026-04-11' },
-  { id: 'cg-03', perfilId: 'p-03', plataforma: 'Steam', identificadorExterno: '76561198kevb', verificada: true, fechaVerificacion: '2026-04-14' },
-  { id: 'cg-04', perfilId: 'p-04', plataforma: 'Steam', identificadorExterno: '76561198lfc', verificada: true, fechaVerificacion: '2026-04-18' },
-  { id: 'cg-05', perfilId: 'p-05', plataforma: 'Riot Games', identificadorExterno: 'TatiA#CTA', verificada: true, fechaVerificacion: '2026-05-02' },
-  { id: 'cg-06', perfilId: 'p-06', plataforma: 'Riot Games', identificadorExterno: 'AndresLz#BAQ', verificada: true, fechaVerificacion: '2026-05-06' },
-  { id: 'cg-07', perfilId: 'p-08', plataforma: 'Riot Games', identificadorExterno: 'JMM#CTA', verificada: true, fechaVerificacion: '2026-05-10' },
-  { id: 'cg-08', perfilId: 'p-10', plataforma: 'Steam', identificadorExterno: '76561198marditta', verificada: true, fechaVerificacion: '2026-05-15' },
-  { id: 'cg-09', perfilId: 'p-11', plataforma: 'Riot Games', identificadorExterno: 'GianP#CTA', verificada: true, fechaVerificacion: '2026-05-21' },
-  { id: 'cg-10', perfilId: 'p-12', plataforma: 'Riot Games', identificadorExterno: 'StephiH#BAQ', verificada: true, fechaVerificacion: '2026-06-01' },
-  { id: 'cg-11', perfilId: 'p-13', plataforma: 'Steam', identificadorExterno: '76561198ibras', verificada: true, fechaVerificacion: '2026-06-04' },
-  { id: 'cg-12', perfilId: 'p-16', plataforma: 'Riot Games', identificadorExterno: 'VeroO#BAQ', verificada: true, fechaVerificacion: '2026-06-08' },
-  { id: 'cg-13', perfilId: 'p-17', plataforma: 'Riot Games', identificadorExterno: 'NelsonA#MED', verificada: true, fechaVerificacion: '2026-06-12' },
-  { id: 'cg-14', perfilId: 'p-18', plataforma: 'Riot Games', identificadorExterno: 'BryanO#CLO', verificada: true, fechaVerificacion: '2026-06-19' },
-  { id: 'cg-15', perfilId: 'p-19', plataforma: 'Riot Games', identificadorExterno: 'LauriV#CTA', verificada: true, fechaVerificacion: '2026-07-02' },
-  { id: 'cg-16', perfilId: 'p-20', plataforma: 'Riot Games', identificadorExterno: 'Andrez#BAQ', verificada: true, fechaVerificacion: '2026-07-08' },
+  { id: 'cg-01', perfilId: 'p-01', plataforma: 'RIOT', identificadorExterno: 'DanyOcro#CAR', verificada: true, fechaVerificacion: '2026-04-02' },
+  { id: 'cg-02', perfilId: 'p-02', plataforma: 'RIOT', identificadorExterno: 'SaraP#CTA', verificada: true, fechaVerificacion: '2026-04-11' },
+  { id: 'cg-03', perfilId: 'p-03', plataforma: 'STEAM', identificadorExterno: '76561198kevb', verificada: true, fechaVerificacion: '2026-04-14' },
+  { id: 'cg-04', perfilId: 'p-04', plataforma: 'STEAM', identificadorExterno: '76561198lfc', verificada: true, fechaVerificacion: '2026-04-18' },
+  { id: 'cg-05', perfilId: 'p-05', plataforma: 'RIOT', identificadorExterno: 'TatiA#CTA', verificada: true, fechaVerificacion: '2026-05-02' },
+  { id: 'cg-06', perfilId: 'p-06', plataforma: 'RIOT', identificadorExterno: 'AndresLz#BAQ', verificada: true, fechaVerificacion: '2026-05-06' },
+  { id: 'cg-07', perfilId: 'p-08', plataforma: 'RIOT', identificadorExterno: 'JMM#CTA', verificada: true, fechaVerificacion: '2026-05-10' },
+  { id: 'cg-08', perfilId: 'p-10', plataforma: 'STEAM', identificadorExterno: '76561198marditta', verificada: true, fechaVerificacion: '2026-05-15' },
+  { id: 'cg-09', perfilId: 'p-11', plataforma: 'RIOT', identificadorExterno: 'GianP#CTA', verificada: true, fechaVerificacion: '2026-05-21' },
+  { id: 'cg-10', perfilId: 'p-12', plataforma: 'RIOT', identificadorExterno: 'StephiH#BAQ', verificada: true, fechaVerificacion: '2026-06-01' },
+  { id: 'cg-11', perfilId: 'p-13', plataforma: 'STEAM', identificadorExterno: '76561198ibras', verificada: true, fechaVerificacion: '2026-06-04' },
+  { id: 'cg-12', perfilId: 'p-16', plataforma: 'RIOT', identificadorExterno: 'VeroO#BAQ', verificada: true, fechaVerificacion: '2026-06-08' },
+  { id: 'cg-13', perfilId: 'p-17', plataforma: 'RIOT', identificadorExterno: 'NelsonA#MED', verificada: true, fechaVerificacion: '2026-06-12' },
+  { id: 'cg-14', perfilId: 'p-18', plataforma: 'RIOT', identificadorExterno: 'BryanO#CLO', verificada: true, fechaVerificacion: '2026-06-19' },
+  { id: 'cg-15', perfilId: 'p-19', plataforma: 'RIOT', identificadorExterno: 'LauriV#CTA', verificada: true, fechaVerificacion: '2026-07-02' },
+  { id: 'cg-16', perfilId: 'p-20', plataforma: 'RIOT', identificadorExterno: 'Andrez#BAQ', verificada: true, fechaVerificacion: '2026-07-08' },
 ]
 
 /* ---------------------------- Habilidades y endoses ----------------------- */
@@ -737,7 +741,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 2,
     regionPreferida: 'Barranquilla',
     horasSemanales: 25,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-09-28',
     descripcion:
       'Buscamos mid laner para el roster de Liga Nacional 2026. Requisitos: ranked minimo Platino I, win rate sostenida sobre 55 % y disposicion para scrims tres veces por semana.',
@@ -758,7 +762,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 1,
     regionPreferida: 'Cualquiera',
     horasSemanales: 20,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-04',
     descripcion:
       'Espacio en el roster de duelistas para el circuito regional. Valoramos comunicacion en called de tiempo y trabajo en equipo.',
@@ -772,7 +776,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 1,
     regionPreferida: 'Cartagena',
     horasSemanales: 18,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-09',
     descripcion:
       'Plaza de iniciador con foco en smoked y apertura de espacio. El puesto reporta al IGL y exige coordinacion constante.',
@@ -786,7 +790,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 2,
     regionPreferida: 'Cartagena',
     horasSemanales: 16,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-12',
     descripcion:
       'Buscamos sentinel con vision de mapa y juego macro. La plaza es compatible con jugadores que estan en proceso de formacion.',
@@ -800,7 +804,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 3,
     regionPreferida: 'Santa Marta',
     horasSemanales: 30,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-06',
     descripcion:
       'AWPer titular para la proxima etapa del circuito. Se exige precision sobre 55 % en mapas activos y experiencia en eventos LAN regionales.',
@@ -820,7 +824,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 2,
     regionPreferida: 'Cualquiera',
     horasSemanales: 28,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-11',
     descripcion:
       'Lider de equipo para squad en reconstruccion. Perfil interesante para equipos con foco en estructuras de ronda.',
@@ -834,7 +838,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 2,
     regionPreferida: 'Cualquiera',
     horasSemanales: 15,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-13',
     descripcion:
       'Portero para la rama de Rocket League. Se valoran rotaciones y mecanica de suelo.',
@@ -848,7 +852,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 1,
     regionPreferida: 'Barranquilla',
     horasSemanales: 22,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-15',
     descripcion:
       'Support para la rama academia. Plaza de formacion con mentoria directa y participacion en scrims del roster principal.',
@@ -867,7 +871,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 2,
     regionPreferida: 'Barranquilla',
     horasSemanales: 24,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: '2026-10-16',
     descripcion:
       'Top laner para el roster principal. Buscamos experiencia en split push y comunicacion de oleadas.',
@@ -881,7 +885,7 @@ export const ofertas: Oferta[] = [
     experienciaMinima: 1,
     regionPreferida: 'Cualquiera',
     horasSemanales: 18,
-    estado: 'cerrada',
+    estado: 'CERRADA',
     publicadaEn: '2026-09-20',
     descripcion: 'Plaza de controlador cubierta por un jugador interno del ecosistema.',
   },
@@ -890,14 +894,14 @@ export const ofertas: Oferta[] = [
 /* ------------------------------ Postulaciones ----------------------------- */
 
 export const postulaciones: Postulacion[] = [
-  { id: 'po-01', ofertaId: 'o-01', perfilId: 'p-01', estado: 'en-revision', mensaje: 'Llevo dos anos como mid en Liga Nacional con win rate sobre 57 %.', fecha: '2026-10-02' },
-  { id: 'po-02', ofertaId: 'o-01', perfilId: 'p-16', estado: 'enviada', mensaje: 'Grandmaster con 1.890 partidas en la liga.', fecha: '2026-10-05' },
-  { id: 'po-03', ofertaId: 'o-01', perfilId: 'p-09', estado: 'enviada', mensaje: 'Top laner en busca de proyecto profesional.', fecha: '2026-10-06' },
-  { id: 'po-04', ofertaId: 'o-03', perfilId: 'p-07', estado: 'entrevista', mensaje: 'Sentinel con enfasis en lectura de rotaciones.', fecha: '2026-10-14' },
-  { id: 'po-05', ofertaId: 'o-05', perfilId: 'p-03', estado: 'aceptada', mensaje: 'AWPer con campeon de Copa Norte y 1.580 partidas.', fecha: '2026-10-08' },
-  { id: 'po-06', ofertaId: 'o-06', perfilId: 'p-04', estado: 'en-revision', mensaje: 'IGL con dos anos liderando en nivel FACEIT 10.', fecha: '2026-10-13' },
-  { id: 'po-07', ofertaId: 'o-08', perfilId: 'p-12', estado: 'enviada', mensaje: 'Support con experiencia en academia y voz activa en called.', fecha: '2026-10-09' },
-  { id: 'po-08', ofertaId: 'o-02', perfilId: 'p-02', estado: 'aceptada', mensaje: 'Duelista con dos temporadas en el circuito regional.', fecha: '2026-10-07' },
+  { id: 'po-01', ofertaId: 'o-01', perfilId: 'p-01', estado: 'EN_REVISION', mensaje: 'Llevo dos anos como mid en Liga Nacional con win rate sobre 57 %.', fecha: '2026-10-02' },
+  { id: 'po-02', ofertaId: 'o-01', perfilId: 'p-16', estado: 'ENVIADA', mensaje: 'Grandmaster con 1.890 partidas en la liga.', fecha: '2026-10-05' },
+  { id: 'po-03', ofertaId: 'o-01', perfilId: 'p-09', estado: 'ENVIADA', mensaje: 'Top laner en busca de proyecto profesional.', fecha: '2026-10-06' },
+  { id: 'po-04', ofertaId: 'o-03', perfilId: 'p-07', estado: 'ENTREVISTA', mensaje: 'Sentinel con enfasis en lectura de rotaciones.', fecha: '2026-10-14' },
+  { id: 'po-05', ofertaId: 'o-05', perfilId: 'p-03', estado: 'ACEPTADA', mensaje: 'AWPer con campeon de Copa Norte y 1.580 partidas.', fecha: '2026-10-08' },
+  { id: 'po-06', ofertaId: 'o-06', perfilId: 'p-04', estado: 'EN_REVISION', mensaje: 'IGL con dos anos liderando en nivel FACEIT 10.', fecha: '2026-10-13' },
+  { id: 'po-07', ofertaId: 'o-08', perfilId: 'p-12', estado: 'ENVIADA', mensaje: 'Support con experiencia en academia y voz activa en called.', fecha: '2026-10-09' },
+  { id: 'po-08', ofertaId: 'o-02', perfilId: 'p-02', estado: 'ACEPTADA', mensaje: 'Duelista con dos temporadas en el circuito regional.', fecha: '2026-10-07' },
 ]
 
 /* -------------------------------- Mensajes ------------------------------- */

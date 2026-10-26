@@ -7,7 +7,7 @@ import type {
   PerfilEquipo,
   PerfilJugador,
   ResultadoMatching,
-} from '@/types'
+} from '@/mocks/modelos'
 
 const desglose: DesgloseDimension[] = [
   { key: 'tecnica', valor: 0.82, peso: 0.35, contribucion: 0.287, detalle: 'Win rate 60 % y KDA 4.62.' },
@@ -38,7 +38,7 @@ const oferta: Oferta = {
   experienciaMinima: 2,
   regionPreferida: 'Barranquilla',
   horasSemanales: 25,
-  estado: 'abierta',
+  estado: 'ABIERTA',
   publicadaEn: '2026-09-28',
   descripcion: '',
 }

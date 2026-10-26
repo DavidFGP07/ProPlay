@@ -7,7 +7,7 @@ import {
   vectorizarOferta,
   vectorizarPerfil,
 } from '@/lib/vector'
-import type { Oferta, PerfilJugador } from '@/types'
+import type { Oferta, PerfilJugador } from '@/mocks/modelos'
 
 const perfil: PerfilJugador = {
   id: 'p-01',
@@ -55,7 +55,7 @@ const oferta: Oferta = {
   experienciaMinima: 2,
   regionPreferida: 'Barranquilla',
   horasSemanales: 25,
-  estado: 'abierta',
+  estado: 'ABIERTA',
   publicadaEn: '2026-09-28',
   descripcion: '',
 }

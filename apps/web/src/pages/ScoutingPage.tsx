@@ -24,7 +24,7 @@ import {
 } from '@/components/ui'
 import { useJugadores } from '@/api/matching'
 import { DIMENSIONES } from '@/lib/matching'
-import type { FiltrosBusqueda } from '@/types'
+import type { FiltrosBusqueda } from '@/mocks/modelos'
 
 const JUEGOS = ['Todos', 'League of Legends', 'Valorant', 'Counter-Strike 2', 'Rocket League', 'Dota 2'] as const
 const REGIONES = [

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { accionSimulada, simulado } from '@/api/demo'
 import { explicarMatching, listarJugadores, obtenerRanking, obtenerRecomendaciones } from '@/mocks/api'
-import type { FiltrosBusqueda, Pesos, ResultadoMatching } from '@/types'
+import type { FiltrosBusqueda, Pesos, ResultadoMatching } from '@/mocks/modelos'
 
 // RF-08 · Buscador de talento con filtros
 export function useJugadores(filtros: FiltrosBusqueda = {}) {

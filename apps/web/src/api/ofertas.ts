@@ -12,7 +12,7 @@ import {
 } from '@/mocks/api'
 import { actorDemo } from '@/mocks/sesion'
 import { simulado, useMutacionSimulada } from '@/api/demo'
-import type { Oferta, Postulacion } from '@/types'
+import type { Oferta, Postulacion } from '@/mocks/modelos'
 
 export type { PostulacionConOferta }
 

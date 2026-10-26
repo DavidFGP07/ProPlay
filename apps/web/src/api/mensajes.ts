@@ -27,7 +27,7 @@ export function useContactos() {
     queryFn: () =>
       simulado(async (): Promise<Contacto[]> => {
         // Un jugador escribe a las organizaciones; el resto, a los jugadores.
-        if (actorDemo().rol === 'jugador') {
+        if (actorDemo().rol === 'JUGADOR') {
           return perfilesEquipo.map((e) => ({ id: e.usuarioId, nombre: e.nombre, sub: e.region }))
         }
         return perfilesJugador

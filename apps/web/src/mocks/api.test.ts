@@ -28,10 +28,10 @@ import { usuarios } from '@/mocks/seed'
  * (RNF-04), la trazabilidad (RNF-06) y la privacidad (RNF-05).
  */
 
-const jugador = usuarios.find((u) => u.rol === 'jugador')!
-const equipo = usuarios.find((u) => u.rol === 'equipo')!
-const scout = usuarios.find((u) => u.rol === 'scout')!
-const admin = usuarios.find((u) => u.rol === 'admin')!
+const jugador = usuarios.find((u) => u.rol === 'JUGADOR')!
+const equipo = usuarios.find((u) => u.rol === 'EQUIPO')!
+const scout = usuarios.find((u) => u.rol === 'SCOUT')!
+const admin = usuarios.find((u) => u.rol === 'ADMIN')!
 
 const ofertaVacia = {
   equipoId: 'e-01-team',
@@ -61,7 +61,7 @@ describe('Autenticacion (RF-01)', () => {
       registrarUsuario({
         nombre: 'Prueba',
         email: 'prueba@proplay.co',
-        rol: 'jugador',
+        rol: 'JUGADOR',
         region: 'Cartagena',
         aceptaPrivacidad: false,
       }),
@@ -73,7 +73,7 @@ describe('Autenticacion (RF-01)', () => {
       registrarUsuario({
         nombre: 'Duplicado',
         email: jugador.email,
-        rol: 'jugador',
+        rol: 'JUGADOR',
         region: 'Cartagena',
         aceptaPrivacidad: true,
       }),
@@ -173,7 +173,7 @@ describe('Habilidades y endorsements (RF-06)', () => {
   it('el catalogo de habilidades esta disponible', async () => {
     const catalogo = await listarHabilidades()
     expect(catalogo.length).toBeGreaterThan(0)
-    expect(catalogo.every((h) => h.categoria === 'tecnica' || h.categoria === 'blanda')).toBe(
+    expect(catalogo.every((h) => h.categoria === 'TECNICA' || h.categoria === 'BLANDA')).toBe(
       true,
     )
   })
@@ -188,7 +188,7 @@ describe('Control de acceso por rol (RNF-04)', () => {
 
   it('la organizacion publica una oferta correctamente', async () => {
     const oferta = await crearOferta(ofertaVacia, equipo)
-    expect(oferta.estado).toBe('abierta')
+    expect(oferta.estado).toBe('ABIERTA')
     expect((await listarOfertas()).some((o) => o.id === oferta.id)).toBe(true)
   })
 
@@ -217,7 +217,7 @@ describe('Postulaciones (RF-10)', () => {
   })
 
   it('impide que un equipo se postule a una vacante', async () => {
-    const oferta = (await listarOfertas('abierta'))[0]
+    const oferta = (await listarOfertas('ABIERTA'))[0]
     await expect(postular(oferta.id, 'Prueba', equipo)).rejects.toThrow(
       /Solo los perfiles de jugador/,
     )

@@ -16,7 +16,7 @@ import {
   postulaciones,
   estadisticas,
 } from '@/mocks/seed'
-import type { Oferta } from '@/types'
+import type { Oferta } from '@/mocks/modelos'
 
 const contexto: MatchingContexto = {
   perfiles: perfilesJugador,

@@ -6,7 +6,7 @@ import type {
   PerfilJugador,
   ResultadoMatching,
   Estadistica,
-} from '@/types'
+} from '@/mocks/modelos'
 
 /**
  * Explicador del matching (componente "Explicador" del Nivel 3 del modelo C4).

@@ -1,6 +1,6 @@
 import type { Rol, UsuarioPublico } from '@proplay/shared'
 import { usuarios } from '@/mocks/seed'
-import type { Usuario } from '@/types'
+import type { Usuario } from '@/mocks/modelos'
 
 /**
  * Puente entre la sesion real y la simulacion.

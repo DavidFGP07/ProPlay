@@ -29,6 +29,7 @@ import {
   Textarea,
   cn,
 } from '@/components/ui'
+import { es } from '@/i18n/es'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { useIdentidad } from '@/api/identidad'
@@ -42,7 +43,7 @@ import {
 } from '@/api/ofertas'
 import { useEquipos } from '@/api/perfiles'
 import { PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { Oferta, Postulacion } from '@/types'
+import type { Oferta, Postulacion } from '@/mocks/modelos'
 
 const JUEGOS = [
   'League of Legends',
@@ -87,13 +88,9 @@ const ROLES = [
   'Flex',
 ] as const
 
-const ESTADOS: { v: Postulacion['estado']; l: string }[] = [
-  { v: 'enviada', l: 'Recibida' },
-  { v: 'en-revision', l: 'En revision' },
-  { v: 'entrevista', l: 'Entrevista' },
-  { v: 'aceptada', l: 'Aceptada' },
-  { v: 'rechazada', l: 'Rechazada' },
-]
+const ESTADOS: { v: Postulacion['estado']; l: string }[] = (
+  ['ENVIADA', 'EN_REVISION', 'ENTREVISTA', 'ACEPTADA', 'RECHAZADA'] as const
+).map((v) => ({ v, l: es.estadoPostulacion[v] }))
 
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
@@ -135,7 +132,7 @@ export default function PanelEquipoPage() {
   )
 
   /** Vacante abierta sobre la que se calcula el resumen de recomendaciones. */
-  const abiertaPrincipal = misOfertas.find((o) => o.estado === 'abierta')
+  const abiertaPrincipal = misOfertas.find((o) => o.estado === 'ABIERTA')
 
   // Ranking de la primera vacante abierta de la organizacion, para mostrar
   // los candidatos mejor posicionados sin abrir el detalle.
@@ -241,7 +238,7 @@ export default function PanelEquipoPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label="Vacantes abiertas"
-          value={misOfertas.filter((o) => o.estado === 'abierta').length}
+          value={misOfertas.filter((o) => o.estado === 'ABIERTA').length}
           icono={<Briefcase size={16} />}
           acento="violeta"
         />
@@ -255,7 +252,7 @@ export default function PanelEquipoPage() {
           label="En proceso"
           value={
             postulacionesDeMisOfertas.filter(
-              (p) => p.estado === 'en-revision' || p.estado === 'entrevista',
+              (p) => p.estado === 'EN_REVISION' || p.estado === 'ENTREVISTA',
             ).length
           }
           icono={<Clock size={16} />}
@@ -264,7 +261,7 @@ export default function PanelEquipoPage() {
         <Stat
           label="Coincidencias exitosas"
           value={
-            postulacionesDeMisOfertas.filter((p) => p.estado === 'aceptada').length
+            postulacionesDeMisOfertas.filter((p) => p.estado === 'ACEPTADA').length
           }
           icono={<Target size={16} />}
           acento="verde"
@@ -301,14 +298,14 @@ export default function PanelEquipoPage() {
                     </div>
                     <Badge
                       tono={
-                        o.estado === 'abierta'
+                        o.estado === 'ABIERTA'
                           ? 'verde'
-                          : o.estado === 'en-proceso'
+                          : o.estado === 'BORRADOR'
                             ? 'ambar'
                             : 'neutro'
                       }
                     >
-                      {o.estado}
+                      {es.estadoOferta[o.estado]}
                     </Badge>
                     <Link to={`/vacantes/${o.id}`}>
                       <Button variante="secundario" tamano="sm">
@@ -316,7 +313,7 @@ export default function PanelEquipoPage() {
                         Ranking
                       </Button>
                     </Link>
-                    {o.estado === 'abierta' && puedeGestionar && (
+                    {o.estado === 'ABIERTA' && puedeGestionar && (
                       <Button
                         variante="fantasma"
                         tamano="sm"
@@ -389,7 +386,7 @@ export default function PanelEquipoPage() {
                           </button>
                         ))
                       ) : (
-                        <Badge tono="cian">{p.estado}</Badge>
+                        <Badge tono="cian">{es.estadoPostulacion[p.estado]}</Badge>
                       )}
                     </div>
                   </li>

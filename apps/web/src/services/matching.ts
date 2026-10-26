@@ -28,7 +28,7 @@ import type {
   Pesos,
   Postulacion,
   ResultadoMatching,
-} from '@/types'
+} from '@/mocks/modelos'
 
 /**
  * Orquestador del motor de matching (Nivel 3 del modelo C4).

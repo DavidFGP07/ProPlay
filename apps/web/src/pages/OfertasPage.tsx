@@ -21,6 +21,7 @@ import {
   SectionTitle,
   cn,
 } from '@/components/ui'
+import { es } from '@/i18n/es'
 import { useAuth } from '@/context/AuthContext'
 import { usePostulaciones, useVacantes } from '@/api/ofertas'
 import { useEquipos } from '@/api/perfiles'
@@ -36,7 +37,7 @@ export default function OfertasPage() {
   const [soloAbiertas, setSoloAbiertas] = useState(true)
 
   const filtradas = ofertas.filter((o) => {
-    if (soloAbiertas && o.estado !== 'abierta') return false
+    if (soloAbiertas && o.estado !== 'ABIERTA') return false
     if (!query) return true
     const q = query.toLowerCase()
     return (
@@ -121,14 +122,14 @@ export default function OfertasPage() {
                       </div>
                       <Badge
                         tono={
-                          o.estado === 'abierta'
+                          o.estado === 'ABIERTA'
                             ? 'verde'
-                            : o.estado === 'en-proceso'
+                            : o.estado === 'BORRADOR'
                               ? 'ambar'
                               : 'neutro'
                         }
                       >
-                        {o.estado}
+                        {es.estadoOferta[o.estado]}
                       </Badge>
                     </div>
                   </div>

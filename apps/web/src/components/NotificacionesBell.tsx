@@ -15,7 +15,7 @@ import {
   useMarcarTodasLeidas,
   useNotificaciones,
 } from '@/api/notificaciones'
-import type { Notificacion, TipoNotificacion } from '@/types'
+import type { Notificacion, TipoNotificacion } from '@/mocks/modelos'
 
 const ICONOS: Record<TipoNotificacion, typeof Bell> = {
   postulacion: Briefcase,

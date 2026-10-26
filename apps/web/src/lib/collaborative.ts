@@ -1,4 +1,4 @@
-import type { Postulacion } from '@/types'
+import type { Postulacion } from '@/mocks/modelos'
 import { similitudCoseno } from '@/lib/vector'
 
 /**
@@ -24,11 +24,11 @@ export interface Interaccion {
 }
 
 const PESOS_ESTADO: Record<Postulacion['estado'], number> = {
-  enviada: 0.4,
-  'en-revision': 0.7,
-  entrevista: 0.9,
-  aceptada: 1,
-  rechazada: 0,
+  ENVIADA: 0.4,
+  EN_REVISION: 0.7,
+  ENTREVISTA: 0.9,
+  ACEPTADA: 1,
+  RECHAZADA: 0,
 }
 
 /** Construye la matriz de interacciones a partir de las postulaciones. */

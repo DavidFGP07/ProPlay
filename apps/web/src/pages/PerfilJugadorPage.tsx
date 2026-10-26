@@ -35,7 +35,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useIdentidad } from '@/api/identidad'
 import { useEndosarHabilidad, useHabilidades, usePerfil } from '@/api/perfiles'
 import { DIMENSIONES } from '@/lib/matching'
-import type { HabilidadJugador } from '@/types'
+import { es } from '@/i18n/es'
+import type { HabilidadJugador } from '@/mocks/modelos'
 
 export default function PerfilJugadorPage() {
   const { id } = useParams<{ id: string }>()
@@ -171,7 +172,7 @@ export default function PerfilJugadorPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/8 px-2.5 py-1 text-[11px] text-emerald-300"
                   >
                     <Link2 size={12} />
-                    {c.plataforma}
+                    {es.plataforma[c.plataforma]}
                     <span className="font-mono text-emerald-400/70">{c.identificadorExterno}</span>
                     <CheckCircle2 size={12} />
                   </span>

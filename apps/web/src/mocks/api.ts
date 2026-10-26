@@ -20,7 +20,9 @@ import {
 } from '@/services/matching'
 import { calculoExactoSandbox, generarExplicacion } from '@/services/llm'
 import { esCaribe } from '@/lib/matching'
+import { es } from '@/i18n/es'
 import type {
+  PlataformaJuego,
   AuditLog,
   ConfiguracionPrivacidad,
   CuentaGaming,
@@ -42,7 +44,7 @@ import type {
   ResultadoMatching,
   TipoNotificacion,
   Usuario,
-} from '@/types'
+} from '@/mocks/modelos'
 
 /* ============================================================================
  * Capa de integracion / API.
@@ -289,11 +291,12 @@ export async function registrarUsuario(
     email: datos.email.trim().toLowerCase(),
     rol: datos.rol,
     activo: true,
-    creadoEn: new Date().toISOString(),
+    emailVerificado: false,
+    creadoEn: new Date(),
   }
   usuarios.push(usuario)
 
-  if (datos.rol === 'jugador') {
+  if (datos.rol === 'JUGADOR') {
     perfilesJugador.push({
       id: `p-${Date.now()}`,
       usuarioId: id,
@@ -625,13 +628,13 @@ export async function crearOferta(
   autor: Usuario,
 ): Promise<Oferta> {
   await jitter(520)
-  if (autor.rol !== 'equipo' && autor.rol !== 'admin') {
+  if (autor.rol !== 'EQUIPO' && autor.rol !== 'ADMIN') {
     throw new Error('Solo las organizaciones pueden publicar oportunidades.')
   }
   const nueva: Oferta = {
     ...datos,
     id: `o-${Date.now()}`,
-    estado: 'abierta',
+    estado: 'ABIERTA',
     publicadaEn: new Date().toISOString().slice(0, 10),
   }
   ofertas = [nueva, ...ofertas]
@@ -643,10 +646,10 @@ export async function cerrarOferta(id: string, autor: Usuario) {
   await jitter(320)
   const oferta = ofertas.find((o) => o.id === id)
   if (!oferta) throw new Error('La vacante no existe.')
-  if (autor.rol !== 'admin' && !autorEsDuenhoDeEquipo(autor, oferta.equipoId)) {
+  if (autor.rol !== 'ADMIN' && !autorEsDuenhoDeEquipo(autor, oferta.equipoId)) {
     throw new Error('No puedes cerrar una vacante de otra organizacion.')
   }
-  ofertas = ofertas.map((o) => (o.id === id ? { ...o, estado: 'cerrada' } : o))
+  ofertas = ofertas.map((o) => (o.id === id ? { ...o, estado: 'CERRADA' } : o))
   registrarAuditoria(autor, 'cerrar_oferta', `Oferta ${id}`)
 }
 
@@ -691,7 +694,7 @@ export async function obtenerRecomendaciones(
 ): Promise<RecomendacionOferta[]> {
   await jitter(220, 260)
   sincronizarContexto()
-  const abiertas = ofertas.filter((o) => o.estado === 'abierta')
+  const abiertas = ofertas.filter((o) => o.estado === 'ABIERTA')
   const salida: RecomendacionOferta[] = []
   for (const oferta of abiertas) {
     const { resultados } = calcularRanking(contexto, oferta, {
@@ -732,7 +735,7 @@ export async function explicarMatching(
     jugador,
     equipo,
     stats,
-    cuenta?.plataforma ?? 'la API oficial',
+    cuenta ? es.plataforma[cuenta.plataforma] : 'la API oficial',
   )
   return { ...explicacion, latenciaMs: Math.round(performance.now() - t0) }
 }
@@ -757,7 +760,7 @@ export async function postular(
   autor: Usuario,
 ): Promise<Postulacion> {
   await jitter(380)
-  if (autor.rol !== 'jugador') {
+  if (autor.rol !== 'JUGADOR') {
     throw new Error('Solo los perfiles de jugador pueden postularse a una vacante.')
   }
   const perfil = perfilDeUsuario(autor.id)
@@ -766,7 +769,7 @@ export async function postular(
   }
   const oferta = ofertas.find((o) => o.id === ofertaId)
   if (!oferta) throw new Error('La vacante ya no esta disponible.')
-  if (oferta.estado !== 'abierta') {
+  if (oferta.estado !== 'ABIERTA') {
     throw new Error('La vacante esta cerrada y no admite nuevas postulaciones.')
   }
   if (
@@ -780,7 +783,7 @@ export async function postular(
     id: `po-${Date.now()}`,
     ofertaId,
     perfilId: perfil.id,
-    estado: 'enviada',
+    estado: 'ENVIADA',
     mensaje,
     fecha: new Date().toISOString().slice(0, 10),
   }
@@ -808,7 +811,7 @@ export async function actualizarEstadoPostulacion(
   const postulacion = postulaciones.find((p) => p.id === id)
   if (!postulacion) throw new Error('La postulacion no existe.')
   const oferta = ofertas.find((o) => o.id === postulacion.ofertaId)
-  const esAdmin = autor.rol === 'admin'
+  const esAdmin = autor.rol === 'ADMIN'
   const esDuenho = Boolean(oferta && autorEsDuenhoDeEquipo(autor, oferta.equipoId))
   if (!esAdmin && !esDuenho) {
     throw new Error(
@@ -1012,7 +1015,7 @@ export async function obtenerMetricas(): Promise<MetricasDashboard> {
   }
 
   const aceptadas = postulaciones.filter(
-    (p) => p.estado === 'aceptada' || p.estado === 'entrevista',
+    (p) => p.estado === 'ACEPTADA' || p.estado === 'ENTREVISTA',
   ).length
 
   return {
@@ -1021,7 +1024,7 @@ export async function obtenerMetricas(): Promise<MetricasDashboard> {
     perfilesVerificados: new Set(
       cuentasVivas.filter((c) => c.verificada).map((c) => c.perfilId),
     ).size,
-    ofertasAbiertas: ofertas.filter((o) => o.estado === 'abierta').length,
+    ofertasAbiertas: ofertas.filter((o) => o.estado === 'ABIERTA').length,
     postulacionesTotales: postulaciones.length,
     coincidenciasReportadas: aceptadas,
     tasaActividad: 0.68,
@@ -1061,13 +1064,13 @@ export async function listarCuentasGaming(perfilId: string) {
 
 export async function vincularCuenta(
   perfilId: string,
-  plataforma: 'Riot Games' | 'Steam',
+  plataforma: PlataformaJuego,
   identificador: string,
   autor: Usuario,
 ) {
   await jitter(900, 600)
   if (cuentasVivas.some((c) => c.perfilId === perfilId && c.plataforma === plataforma)) {
-    throw new Error(`Ya tienes una cuenta de ${plataforma} vinculada.`)
+    throw new Error(`Ya tienes una cuenta de ${es.plataforma[plataforma]} vinculada.`)
   }
   if (!identificador.trim()) {
     throw new Error('Ingresa el identificador de tu cuenta de juego.')
