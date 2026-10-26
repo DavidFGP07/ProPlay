@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   PERFIL_VECTOR_DIMENSIONES,

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import type { AuthResponse, LoginInput, RegisterInput, Rol, UsuarioPublico } from "@proplay/shared";
 import { logger } from "../../config/logger";
 import {
