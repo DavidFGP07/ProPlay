@@ -1,13 +1,13 @@
-import globals from "globals";
-import reactHooks from "eslint-plugin-react-hooks";
-import base from "../../eslint.config.base.mjs";
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import base from '../../eslint.config.base.mjs'
 
 export default [
   ...base,
-  { ignores: ["dist/**"] },
+  { ignores: ['dist/**'] },
   {
-    files: ["src/**/*.{ts,tsx}"],
-    plugins: { "react-hooks": reactHooks },
+    files: ['src/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: { ecmaFeatures: { jsx: true } },
@@ -16,4 +16,4 @@ export default [
       ...reactHooks.configs.recommended.rules,
     },
   },
-];
+]

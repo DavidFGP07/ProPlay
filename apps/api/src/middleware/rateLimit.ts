@@ -1,5 +1,8 @@
+import type { Request } from "express";
 import rateLimit, { type Options } from "express-rate-limit";
+import { REFRESH_COOKIE_NAME } from "@proplay/shared";
 import { env } from "../config/env";
+import { verificarRefreshToken } from "../utils/jwt";
 
 /**
  * Límite de peticiones. En tests se desactiva para que las pruebas de
@@ -24,7 +27,7 @@ export const limiteGlobal = rateLimit({
   limit: 300,
 });
 
-/** Límite estricto para las rutas de autenticación (fuerza bruta). */
+/** Límite estricto para registro e inicio de sesión (fuerza bruta). */
 export const limiteAuth = rateLimit({
   ...respuestaLimite,
   windowMs: 15 * 60 * 1000,
@@ -34,6 +37,42 @@ export const limiteAuth = rateLimit({
     error: {
       code: "TOO_MANY_REQUESTS",
       message: "Demasiados intentos de autenticación, espera unos minutos",
+    },
+  },
+});
+
+/**
+ * Clave del límite de /auth/refresh: el usuario dueño del refresh token.
+ *
+ * El access token vive en memoria en el cliente, así que cada recarga de la
+ * página gasta un refresco: contar por IP bloquearía entre sí a quienes
+ * comparten red (una universidad, un café). El token rota en cada uso, de modo
+ * que tampoco sirve como clave; el sujeto verificado sí. Sin un token válido
+ * se cuenta por IP, para que inundar con tokens falsos siga teniendo techo.
+ */
+export function claveRefresh(req: Request): string {
+  const cookies = req.cookies as Record<string, string | undefined> | undefined;
+  const token = cookies?.[REFRESH_COOKIE_NAME];
+  if (token) {
+    try {
+      return `usuario:${verificarRefreshToken(token).sub}`;
+    } catch {
+      // Token inválido o expirado: cae al límite por IP.
+    }
+  }
+  return `ip:${req.ip ?? "desconocida"}`;
+}
+
+/** Límite propio de /auth/refresh: holgado y por usuario (ver claveRefresh). */
+export const limiteRefresh = rateLimit({
+  ...respuestaLimite,
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  keyGenerator: claveRefresh,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Demasiadas renovaciones de sesión, espera unos minutos",
     },
   },
 });

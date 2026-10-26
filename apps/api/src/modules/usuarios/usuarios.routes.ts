@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
 import { rbac } from "../../middleware/rbac";
-import { limiteAuth } from "../../middleware/rateLimit";
+import { limiteAuth, limiteRefresh } from "../../middleware/rateLimit";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./usuarios.controller";
 import {
@@ -14,7 +14,8 @@ import {
 
 /**
  * Rutas de autenticación: /api/v1/auth
- * Llevan un límite de peticiones más estricto que el resto de la API.
+ * Registro e inicio de sesión llevan un límite estricto contra la fuerza
+ * bruta; el refresco, uno propio por usuario (middleware/rateLimit.ts).
  */
 export const authRouter = Router();
 
@@ -25,7 +26,7 @@ authRouter.post(
   controlador.registrar,
 );
 authRouter.post("/login", limiteAuth, validate(loginSchema), controlador.login);
-authRouter.post("/refresh", limiteAuth, controlador.refrescar);
+authRouter.post("/refresh", limiteRefresh, controlador.refrescar);
 authRouter.post("/logout", controlador.logout);
 authRouter.get("/me", auth, controlador.yo);
 

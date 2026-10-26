@@ -1,20 +1,24 @@
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui";
+import { Link } from 'react-router-dom'
+import { Compass } from 'lucide-react'
+import { Button, Card, EmptyState } from '@/components/ui'
+import { es } from '@/i18n/es'
 
-export function NoEncontradaPage() {
+/** 404 · Vista publica: responde igual con o sin sesion. */
+export default function NoEncontradaPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="text-6xl font-bold text-primario-300">404</p>
-      <h1 className="text-xl font-semibold text-white">
-        Esta página no existe
-      </h1>
-      <p className="max-w-sm text-sm text-slate-400">
-        Puede que el enlace esté mal escrito o que la sección todavía no forme
-        parte de este esqueleto.
-      </p>
-      <Link to="/app">
-        <Button>Volver al inicio</Button>
-      </Link>
-    </div>
-  );
+    <main className="grid min-h-screen place-items-center p-6">
+      <Card className="w-full max-w-md">
+        <EmptyState
+          icono={<Compass size={22} />}
+          titulo={es.noEncontrada.titulo}
+          descripcion={es.noEncontrada.detalle}
+          action={
+            <Link to="/">
+              <Button>{es.noEncontrada.volver}</Button>
+            </Link>
+          }
+        />
+      </Card>
+    </main>
+  )
 }
