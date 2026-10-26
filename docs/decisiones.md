@@ -102,8 +102,8 @@ del proyecto se anotan igual, para que el registro esté completo.
 | `services/matching.ts` y `services/llm.ts` siguen en `services/` | Son el motor de matching y el explicador simulados; sólo los usa el mock. Se retiran cuando los módulos `matching` (S3) y la IA generativa (S4) vivan en el backend. |
 | La autenticación del prototipo (sesión en `localStorage`, acceso sólo con correo) se sustituye por la de `main`: `api/client.ts` con su interceptor JWT y el `AuthContext` | La interfaz es la del prototipo; la lógica de sesión es la que ya funciona contra la API. Token en memoria, refresco con la cookie `httpOnly`. |
 | El login y el registro validan con `loginSchema` y `registerSchema` de `@proplay/shared` mediante `react-hook-form` | Mismo esquema en cliente y servidor (CLAUDE.md §3.1). `Input` y `Select` de `components/ui.tsx` reenvían el `ref` para poder registrarse. |
-| La aceptación del aviso de privacidad se valida en el cliente extendiendo `registerSchema`, pero no se persiste | **S1** · El contrato de registro no la recibe todavía. Hay que añadir el campo al esquema compartido y guardarlo con su fecha (RNF-05, Ley 1581). |
-| El registro ya no pide la región ni ofrece el rol administrador | **S2** · La región es un dato del perfil y se captura en el onboarding; `ADMIN` no es registrable (`ROLES_REGISTRABLES`). |
+| La aceptación del aviso de privacidad se valida en el cliente extendiendo `registerSchema`, pero no se persiste | El contrato de registro no la recibe todavía. Ver «Pendientes»: persistirla y crear `/legal/privacidad` (S1). |
+| El registro ya no pide la región ni ofrece el rol administrador | La región es un dato del perfil, no de la cuenta (ver «Pendientes», S2); `ADMIN` no es registrable (`ROLES_REGISTRABLES`). |
 | Las cuentas de demostración del login son las del seed de la API y sólo aparecen en modo desarrollo | Son cuentas reales de la base local; en producción no se exponen. La lista vive en `api/cuentasSemilla.ts`, junto a la contraseña del seed. |
 | Puente de datos de demostración detrás de `VITE_DEMO_DATA` | Con la bandera encendida, la sesión real se hace pasar por una persona simulada de su mismo rol (`mocks/persona.ts`, único punto de conversión) y el `Layout` muestra el aviso «Datos de demostración». Apagada, los hooks devuelven el vacío que daría la API y sus mutaciones fallan con un aviso: así se ve qué está conectado de verdad y el puente se retira sprint a sprint. |
 | Las pruebas de humo sustituyen el recurso `api/auth` por uno en memoria y fijan `VITE_DEMO_DATA` en `vite.config.ts` | No dependen de una API levantada ni de un `.env` local; cada sesión de prueba usa el nombre de la persona de su rol. |
@@ -113,7 +113,22 @@ del proyecto se anotan igual, para que el registro esté completo.
 | ESLint del cliente con la configuración base del monorepo y las reglas de `react-hooks` | El prototipo no traía linter. Sólo marcó un `prefer-const` en la simulación, corregido. |
 | El control de acceso se declara una vez por área en el enrutador, con rutas de layout sin path (`router/areas.ts`) | Las once URLs del prototipo no cambian; el menú lateral lee las mismas listas de roles, así que vista, menú y guarda no pueden discrepar. |
 | La 404 es una vista pública, fuera del `Layout` | Responde igual con o sin sesión; antes cualquier ruta desconocida redirigía al feed. |
+| `/auth/refresh` tiene un limitador propio: 60 peticiones cada 15 minutos por usuario | El access token vive en memoria y cada recarga gasta un refresco: compartir el límite de 10 del login cerraba la sesión. Se cuenta por el sujeto del refresh token (rota en cada uso, así que su valor no sirve de clave) y no por IP, para que una red compartida no bloquee a todos; sin token válido, por IP. Registro y login conservan `limiteAuth`. |
 | Node 22 fijado con `.nvmrc` y `engines`; el CI lee la versión de `.nvmrc` | Una sola fuente para la versión; la imagen de la API (`apps/api/Dockerfile`) usa la misma mayor, `node:22-alpine`. |
+
+## Pendientes
+
+Trabajo identificado durante la integración que no entra en este cambio. Cada
+entrada dice en qué sprint se cierra; al resolverla, bórrala en el mismo commit.
+
+| Pendiente | Por qué | Sprint |
+| --- | --- | --- |
+| Persistir la aceptación del aviso de privacidad con su fecha y la versión del aviso, y crear la vista `/legal/privacidad` | Hoy el registro exige aceptar un documento que no existe y la aceptación no se guarda (RNF-05, Ley 1581). Requiere el campo en `registerSchema`, el modelo en Prisma y la vista pública del inventario. | S1 |
+| Hacer público `/jugador/:id`, sin guarda de sesión | Es la vitrina del jugador y el argumento central del proyecto: un perfil verificable que se comparte por enlace. El inventario ya lo marca como público; hoy está dentro del área privada. | S1 |
+| Vista de cuenta y ajustes para equipo, scout y administrador | Sólo el jugador tiene vista propia (`/mi-perfil`): el resto no puede cambiar su nombre ni su contraseña. La API ya expone `PATCH /usuarios/me`; falta el endpoint de cambio de contraseña aunque `cambiarPasswordSchema` existe en `shared`. Añadir la vista al inventario de CLAUDE.md §5, que hoy sólo la lista para el jugador. | S1 |
+| Alta del primer administrador en producción y procedimiento de promoción | El seed crea `admin@proplay.gg` con la contraseña de demostración, válido sólo en desarrollo (el seed nunca debe correr en producción). `ADMIN` no es registrable y el único rastro de cómo se asigna es un comentario en `shared/enums.ts` («se asigna a mano»); `POST /admin/usuarios/rol` responde 501. Definir el arranque (un script de una sola vez) y documentarlo en el README; el endpoint de promoción con su traza en `AuditLog` llega con el módulo `admin`. | S1 (arranque) · S4 (endpoint) |
+| La imagen de producción de la API no arranca: falta el binario nativo de `bcrypt` | `npm ci --omit=dev --ignore-scripts` omite el script de instalación de `bcrypt`, que es el que descarga su binario; al primer `require` falla con `Cannot find module …bcrypt_lib.node`. Ocurre igual con `node:20-alpine`: es anterior a la integración. | S1 |
+| Definir dónde se captura la región del jugador | El registro dejó de pedirla y no hay onboarding. Es insumo de la dimensión geográfica del matching: tiene que existir antes de que el S3 la necesite. | S2 |
 
 ## Deuda conocida
 
@@ -123,7 +138,6 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Los textos visibles de las vistas heredadas del prototipo siguen en el JSX, no en `src/i18n/es.ts` (CLAUDE.md §6). Los textos nuevos ya van al archivo de traducciones. | Vista a vista, al conectar cada una |
 | Los cuatro estados transversales (cargando, vacío, error con reintento, sin permiso) no son todavía componentes compartidos: cada vista del prototipo resuelve los suyos y ninguna muestra el estado de error. | S1, junto con el resto de la fundación |
 | Las vistas del prototipo no llevan el identificador `RF-xx` del requisito que realizan (CLAUDE.md §3.6); sí lo llevan los hooks de `src/api/`. | Vista a vista |
-| El perfil público del jugador (`/jugador/:id`) exige sesión, aunque el inventario lo describe como compartible sin sesión. | S2 |
 
 ## Divergencias con `@proplay/shared`
 
