@@ -165,7 +165,7 @@ que falta una, dilo y la añadimos. Las rutas marcadas `—` todavía no existen
 | Perfil público del jugador (compartible, sin sesión) | `/jugador/:id` | RF-05 |
 | Perfil público de la organización | — | RF-07 |
 | Aviso de privacidad y términos (Ley 1581) | — | RNF-05 |
-| 404 | — | — |
+| 404 | `*` (cualquier ruta desconocida) | — |
 
 ### Jugador
 

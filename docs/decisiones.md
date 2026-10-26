@@ -110,6 +110,20 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Los textos nuevos van a `src/i18n/es.ts` | CLAUDE.md §6. Los textos heredados del prototipo siguen en el JSX: ver deuda conocida. |
 | Los enums (`Rol`, `CategoriaHabilidad`, `Plataforma`, `EstadoOferta`, `EstadoPostulacion`), `Habilidad` y el usuario (`UsuarioPublico`) del cliente vienen de `@proplay/shared` | CLAUDE.md §3.1. La simulación y sus pruebas usan los mismos valores en mayúscula; la interfaz los muestra con las etiquetas de `i18n/es.ts`, nunca en crudo. |
 | `types/index.ts` pasa a `mocks/modelos.ts` y conserva sólo los modelos de vista del prototipo que aún no tienen contrato | No se fuerzan a la forma de `shared` mientras sus endpoints no existan: cada uno se reconcilia en el sprint que lo conecta (tabla siguiente). Cinco comparten nombre con un tipo de `shared` sin coincidir en forma: `Estadistica`, `Oferta`, `Mensaje`, `Notificacion` y `TipoNotificacion`; ninguna vista importa ambos. |
+| ESLint del cliente con la configuración base del monorepo y las reglas de `react-hooks` | El prototipo no traía linter. Sólo marcó un `prefer-const` en la simulación, corregido. |
+| El control de acceso se declara una vez por área en el enrutador, con rutas de layout sin path (`router/areas.ts`) | Las once URLs del prototipo no cambian; el menú lateral lee las mismas listas de roles, así que vista, menú y guarda no pueden discrepar. |
+| La 404 es una vista pública, fuera del `Layout` | Responde igual con o sin sesión; antes cualquier ruta desconocida redirigía al feed. |
+| Node 22 fijado con `.nvmrc` y `engines`; el CI lee la versión de `.nvmrc` | Una sola fuente para la versión. **Pendiente de decidir:** la imagen de la API (`apps/api/Dockerfile`) sigue sobre `node:20-alpine`. |
+
+## Deuda conocida
+
+| Deuda | Cuándo |
+| --- | --- |
+| `components/ui.tsx` es un único archivo con todos los componentes de interfaz. Partirlo en `components/ui/`, uno por archivo, mejora el mantenimiento sin bloquear nada. | Cuando se toque el sistema de diseño |
+| Los textos visibles de las vistas heredadas del prototipo siguen en el JSX, no en `src/i18n/es.ts` (CLAUDE.md §6). Los textos nuevos ya van al archivo de traducciones. | Vista a vista, al conectar cada una |
+| Los cuatro estados transversales (cargando, vacío, error con reintento, sin permiso) no son todavía componentes compartidos: cada vista del prototipo resuelve los suyos y ninguna muestra el estado de error. | S1, junto con el resto de la fundación |
+| Las vistas del prototipo no llevan el identificador `RF-xx` del requisito que realizan (CLAUDE.md §3.6); sí lo llevan los hooks de `src/api/`. | Vista a vista |
+| El perfil público del jugador (`/jugador/:id`) exige sesión, aunque el inventario lo describe como compartible sin sesión. | S2 |
 
 ## Divergencias con `@proplay/shared`
 

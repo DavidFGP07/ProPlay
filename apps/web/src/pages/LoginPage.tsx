@@ -25,6 +25,7 @@ import { Button, Field, Input, Select, cn } from '@/components/ui'
 import { mensajeDeError } from '@/api/client'
 import { CUENTAS_SEMILLA, PASSWORD_SEMILLA } from '@/api/cuentasSemilla'
 import { config } from '@/lib/env'
+import { es } from '@/i18n/es'
 
 const CUENTAS_DEMO: { rol: Rol; descripcion: string }[] = [
   { rol: 'JUGADOR', descripcion: 'Perfil, postulaciones y endoses' },
@@ -243,7 +244,7 @@ export default function LoginPage() {
                 <Select {...formRegistro.register('rol')}>
                   {(['JUGADOR', 'EQUIPO', 'SCOUT'] satisfies RolRegistrable[]).map((r) => (
                     <option key={r} value={r}>
-                      {ETIQUETA_ROL[r]}
+                      {es.rol[r]}
                     </option>
                   ))}
                 </Select>
@@ -341,12 +342,6 @@ export default function LoginPage() {
       </div>
     </div>
   )
-}
-
-const ETIQUETA_ROL: Record<RolRegistrable, string> = {
-  JUGADOR: 'Jugador',
-  EQUIPO: 'Equipo',
-  SCOUT: 'Scout',
 }
 
 function ErrorCampo({ mensaje }: { mensaje?: string }) {

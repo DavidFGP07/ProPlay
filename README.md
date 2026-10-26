@@ -37,7 +37,7 @@ La API se sirve bajo `/api/v1`. Documentación ampliada en
 
 | Herramienta | Versión | Para qué |
 | --- | --- | --- |
-| Node.js | 20 LTS o superior | ejecutar api y web |
+| Node.js | 22 (fijado en `.nvmrc`) | ejecutar api y web |
 | npm | 10 o superior | workspaces del monorepo |
 | Docker + Docker Compose | cualquiera reciente | Postgres 16 con pgvector y Redis 7 |
 
@@ -141,7 +141,7 @@ Todos se ejecutan desde la raíz del monorepo.
 | `npm run build` | Compila `shared`, luego `api`, luego `web` |
 | `npm run lint` | ESLint en los tres workspaces |
 | `npm run typecheck` | `tsc --noEmit` en los tres workspaces |
-| `npm test` | Pruebas de integración de la API (Vitest + supertest) |
+| `npm test` | Pruebas de integración de la API (Vitest + supertest) y pruebas del cliente (Vitest + Testing Library) |
 | `npm run db:migrate` | `prisma migrate dev` (desarrollo) |
 | `npm run db:deploy` | `prisma migrate deploy` (producción y CI) |
 | `npm run db:seed` | Carga los datos de prueba (idempotente) |

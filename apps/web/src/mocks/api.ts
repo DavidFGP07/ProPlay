@@ -76,7 +76,7 @@ const jitter = (base: number, rango = 180) =>
 let ofertas: Oferta[] = [...ofertasSeed]
 let postulaciones: Postulacion[] = [...postulacionesSeed]
 let mensajes: Mensaje[] = [...mensajesSeed]
-let estadisticasVivas: Estadistica[] = [...estadisticas]
+const estadisticasVivas: Estadistica[] = [...estadisticas]
 let cuentasVivas: CuentaGaming[] = [...cuentasGaming]
 let habilidadesJugadorVivas: HabilidadJugador[] = [...habilidadesJugador]
 let endorsementsVivas: Endorsement[] = [...endorsements]

@@ -1,10 +1,12 @@
 import { Suspense, lazy } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import type { ComponentType, LazyExoticComponent } from 'react'
+import type { Rol } from '@proplay/shared'
 import { Layout } from '@/components/Layout'
 import { useAuth } from '@/context/AuthContext'
 import LoginPage from '@/pages/LoginPage'
-import type { Rol } from '@proplay/shared'
+import NoEncontradaPage from '@/pages/NoEncontradaPage'
+import { AREAS } from '@/router/areas'
 
 /**
  * Carga diferida por ruta. Cada pantalla se descarga solo cuando se visita,
@@ -23,16 +25,10 @@ const MensajesPage = lazy(() => import('@/pages/MensajesPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
 
 /**
- * Guarda de rutas. Se usa como ruta padre (con Outlet) o como envoltorio de
- * una pantalla concreta (con children) cuando el permiso depende del rol.
+ * Guarda de rutas. Es una ruta de layout sin path: sin roles exige sesion; con
+ * roles, delimita un area completa (RNF-04). Las vistas no comprueban el rol.
  */
-function Privado({
-  roles,
-  children,
-}: {
-  roles?: Rol[]
-  children?: ReactNode
-}) {
+function Privado({ roles }: { roles?: readonly Rol[] }) {
   const { usuario, cargando } = useAuth()
   // Mientras se recupera la sesion no se decide nada: evita mandar al login a
   // quien tiene una cookie de refresco valida.
@@ -51,7 +47,7 @@ function Privado({
       </div>
     )
   }
-  return children ? <>{children}</> : <Outlet />
+  return <Outlet />
 }
 
 function Cargando() {
@@ -68,6 +64,15 @@ function Cargando() {
   )
 }
 
+/** Pantalla diferida con su esqueleto de carga. */
+function diferida(Pantalla: LazyExoticComponent<ComponentType>) {
+  return (
+    <Suspense fallback={<Cargando />}>
+      <Pantalla />
+    </Suspense>
+  )
+}
+
 export default function App() {
   const { usuario, cargando } = useAuth()
 
@@ -75,105 +80,41 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Publicas */}
       <Route
         path="/login"
         element={usuario ? <Navigate to="/" replace /> : <LoginPage />}
       />
+
       <Route element={<Privado />}>
         <Route element={<Layout />}>
-          <Route
-            index
-            element={
-              <Suspense fallback={<Cargando />}>
-                <FeedPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="explorar"
-            element={
-              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
-                <Suspense fallback={<Cargando />}>
-                  <ScoutingPage />
-                </Suspense>
-              </Privado>
-            }
-          />
-          <Route
-            path="vacantes"
-            element={
-              <Suspense fallback={<Cargando />}>
-                <OfertasPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="vacantes/:id"
-            element={
-              <Suspense fallback={<Cargando />}>
-                <OfertaDetallePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="panel-equipo"
-            element={
-              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
-                <Suspense fallback={<Cargando />}>
-                  <PanelEquipoPage />
-                </Suspense>
-              </Privado>
-            }
-          />
-          <Route
-            path="jugador/:id"
-            element={
-              <Suspense fallback={<Cargando />}>
-                <PerfilJugadorPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="mi-perfil"
-            element={
-              <Privado roles={['JUGADOR']}>
-                <Suspense fallback={<Cargando />}>
-                  <MiPerfilPage />
-                </Suspense>
-              </Privado>
-            }
-          />
-          <Route
-            path="dashboard"
-            element={
-              <Privado roles={['EQUIPO', 'SCOUT', 'ADMIN']}>
-                <Suspense fallback={<Cargando />}>
-                  <DashboardPage />
-                </Suspense>
-              </Privado>
-            }
-          />
-          <Route
-            path="mensajes"
-            element={
-              <Suspense fallback={<Cargando />}>
-                <MensajesPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="admin"
-            element={
-              <Privado roles={['ADMIN']}>
-                <Suspense fallback={<Cargando />}>
-                  <AdminPage />
-                </Suspense>
-              </Privado>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Comunes a todos los roles */}
+          <Route index element={diferida(FeedPage)} />
+          <Route path="vacantes" element={diferida(OfertasPage)} />
+          <Route path="vacantes/:id" element={diferida(OfertaDetallePage)} />
+          <Route path="jugador/:id" element={diferida(PerfilJugadorPage)} />
+          <Route path="mensajes" element={diferida(MensajesPage)} />
+
+          {/* Area del jugador */}
+          <Route element={<Privado roles={AREAS.jugador} />}>
+            <Route path="mi-perfil" element={diferida(MiPerfilPage)} />
+          </Route>
+
+          {/* Area de equipo y scout */}
+          <Route element={<Privado roles={AREAS.equipo} />}>
+            <Route path="explorar" element={diferida(ScoutingPage)} />
+            <Route path="panel-equipo" element={diferida(PanelEquipoPage)} />
+            <Route path="dashboard" element={diferida(DashboardPage)} />
+          </Route>
+
+          {/* Area de administracion */}
+          <Route element={<Privado roles={AREAS.admin} />}>
+            <Route path="admin" element={diferida(AdminPage)} />
+          </Route>
         </Route>
       </Route>
+
+      <Route path="*" element={<NoEncontradaPage />} />
     </Routes>
   )
 }

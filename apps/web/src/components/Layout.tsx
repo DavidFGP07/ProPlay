@@ -21,32 +21,27 @@ import { Avatar, Badge, Button, cn } from '@/components/ui'
 import { NotificacionesBell } from '@/components/NotificacionesBell'
 import { AvisoDatosDemo } from '@/components/AvisoDatosDemo'
 import { useEstadoIngesta } from '@/api/estadisticas'
+import { AREAS } from '@/router/areas'
+import { es } from '@/i18n/es'
 import type { Rol } from '@proplay/shared'
 
 interface ItemNav {
   to: string
   label: string
   icono: typeof Home
-  roles?: Rol[]
+  roles?: readonly Rol[]
 }
 
 const NAVEGACION: ItemNav[] = [
   { to: '/', label: 'Feed', icono: Home },
-  { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: ['JUGADOR'] },
-  { to: '/explorar', label: 'Explorar talento', icono: Search, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
+  { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: AREAS.jugador },
+  { to: '/explorar', label: 'Explorar talento', icono: Search, roles: AREAS.equipo },
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
-  { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
-  { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: ['EQUIPO', 'SCOUT', 'ADMIN'] },
+  { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: AREAS.equipo },
+  { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: AREAS.equipo },
   { to: '/mensajes', label: 'Mensajes', icono: MessageSquare },
-  { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: ['ADMIN'] },
+  { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: AREAS.admin },
 ]
-
-const ETIQUETA_ROL: Record<Rol, string> = {
-  JUGADOR: 'Jugador',
-  EQUIPO: 'Equipo',
-  SCOUT: 'Scout',
-  ADMIN: 'Administrador',
-}
 
 export function Layout() {
   const { usuario, salir } = useAuth()
@@ -188,7 +183,7 @@ export function Layout() {
               <div className="hidden leading-tight sm:block">
                 <p className="text-xs font-medium text-slate-200">{usuario.nombre}</p>
                 <Badge tono="violeta" className="mt-0.5 !px-1.5 !py-0 !text-[10px]">
-                  {ETIQUETA_ROL[usuario.rol]}
+                  {es.rol[usuario.rol]}
                 </Badge>
               </div>
             </div>
