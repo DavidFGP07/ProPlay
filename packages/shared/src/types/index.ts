@@ -27,6 +27,7 @@ export type {
   PerfilEquipoInput,
   PerfilEquipoRespuesta,
   PerfilJugadorInput,
+  PerfilJugadorPublico,
   PerfilJugadorRespuesta,
   PerfilPropioResponse,
   UbicacionJugadorInput,

@@ -54,7 +54,6 @@ export const perfilJugadorSchema = z
   .object({
     bio: z.string().max(1000).optional(),
     ...camposUbicacion,
-    fechaNacimiento: z.coerce.date().optional(),
     disponibilidadHoras: z.number().int().min(0).max(80).optional(),
     avatarUrl: z.string().url().optional(),
   })
@@ -65,7 +64,6 @@ export const perfilEquipoSchema = z.object({
   descripcion: z.string().max(1000).optional(),
   sitioWeb: z.string().url().optional(),
   logoUrl: z.string().url().optional(),
-  region: z.string().max(60).optional(),
 });
 
 export const habilidadSchema = z.object({
@@ -96,7 +94,6 @@ export const perfilJugadorRespuestaSchema = z.object({
   bio: z.string().nullable(),
   pais: z.enum(PAISES).nullable(),
   departamento: z.enum(DEPARTAMENTOS).nullable(),
-  fechaNacimiento: z.coerce.date().nullable(),
   disponibilidadHoras: z.number().int().nullable(),
   dispuestoRelocalizar: z.boolean(),
   avatarUrl: z.string().nullable(),
@@ -112,10 +109,39 @@ export const perfilEquipoRespuestaSchema = z.object({
   descripcion: z.string().nullable(),
   sitioWeb: z.string().nullable(),
   logoUrl: z.string().nullable(),
-  region: z.string().nullable(),
   creadoEn: z.coerce.date(),
   actualizadoEn: z.coerce.date(),
 });
+
+/**
+ * Perfil público del jugador (`GET /perfiles/:id`, sin sesión): la vitrina que
+ * se comparte por enlace (RF-05). Es una **lista blanca**, no el perfil privado
+ * menos algunos campos: todo lo que no esté aquí no sale. Nunca el correo, el
+ * id de la cuenta, las fechas de aceptación ni datos que el matching usa en
+ * privado (disponibilidad, disposición a relocalizarse). Ubicación como máximo
+ * a nivel de departamento; la macrorregión la deriva el cliente.
+ */
+export const perfilJugadorPublicoSchema = z.object({
+  /** Id de `PerfilJugador`, no el de la cuenta. */
+  id: z.string(),
+  nombre: z.string(),
+  bio: z.string().nullable(),
+  pais: z.enum(PAISES).nullable(),
+  departamento: z.enum(DEPARTAMENTOS).nullable(),
+  avatarUrl: z.string().nullable(),
+  /** Sólo plataforma y fecha: nunca el identificador externo ni los tokens. */
+  cuentasVerificadas: z.array(
+    z.object({
+      plataforma: z.enum(PLATAFORMAS),
+      verificadaEn: z.coerce.date(),
+    }),
+  ),
+});
+
+/** Claves que puede llevar la respuesta pública: las pruebas comparan contra esta lista. */
+export const CAMPOS_PERFIL_JUGADOR_PUBLICO = Object.keys(
+  perfilJugadorPublicoSchema.shape,
+) as (keyof z.infer<typeof perfilJugadorPublicoSchema>)[];
 
 /**
  * Respuesta de `GET /perfiles/me`: el perfil que corresponde al rol. El scout
@@ -132,6 +158,7 @@ export type PerfilJugadorInput = z.infer<typeof perfilJugadorSchema>;
 export type PerfilJugadorRespuesta = z.infer<typeof perfilJugadorRespuestaSchema>;
 export type PerfilEquipoRespuesta = z.infer<typeof perfilEquipoRespuestaSchema>;
 export type PerfilPropioResponse = z.infer<typeof perfilPropioResponseSchema>;
+export type PerfilJugadorPublico = z.infer<typeof perfilJugadorPublicoSchema>;
 export type PerfilEquipoInput = z.infer<typeof perfilEquipoSchema>;
 export type Habilidad = z.infer<typeof habilidadSchema>;
 export type AsignarHabilidadInput = z.infer<typeof asignarHabilidadSchema>;
