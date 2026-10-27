@@ -8,7 +8,7 @@
 export {
   actualizarUsuarioSchema,
   authResponseSchema,
-  cambiarPasswordSchema,
+  cambioContrasenaSchema,
   listarUsuariosQuerySchema,
   loginSchema,
   meResponseSchema,
