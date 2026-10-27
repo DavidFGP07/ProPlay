@@ -139,9 +139,20 @@ Tres puntos que es fácil romper:
 1. **`PerfilVector` es una entidad propia**, 1:1 con `PerfilJugador`, con
    `embedding vector(64)`, `version` y `calculadoEn`. Separarla permite recalcular los
    vectores al cambiar la versión del modelo sin tocar el perfil.
-2. **El índice HNSW sobre `PerfilVector.embedding` es obligatorio**, no opcional. Va en una
-   migración SQL manual junto a `CREATE EXTENSION IF NOT EXISTS vector;`. Sin él no se
-   cumple RNF-01 (percentil 95 por debajo de 2 s).
+2. **El índice HNSW sobre `PerfilVector.embedding` es obligatorio**, no opcional. Sin él no
+   se cumple RNF-01 (percentil 95 por debajo de 2 s). Es
+   `"PerfilVector_embedding_hnsw_idx"` (`vector_cosine_ops`, para consultas con `<=>`) y
+   vive en la migración manual `20261027153113_indice_hnsw_perfil_vector`.
+
+   **Prisma no lo conoce y lo borra si te descuidas.** Prisma no modela índices HNSW (ni
+   siquiera admite declararlos en `schema.prisma`), así que lo ve como deriva: toda
+   migración nueva que generes incluirá `DROP INDEX "PerfilVector_embedding_hnsw_idx";`.
+   Para cambiar el esquema:
+   - Genera siempre con `npx prisma migrate dev --create-only --name <nombre>`, nunca con
+     `migrate dev` a secas (ese aplica la migración y borra el índice en tu base al momento).
+   - Abre el `migration.sql` generado y **elimina el `DROP INDEX` del índice HNSW** antes de
+     aplicarla con `npm run db:migrate` y de commitearla.
+   - No uses `prisma db push`: borra el índice sin dejar migración.
 3. **Los tokens de `CuentaGaming` se guardan cifrados** con AES-256-GCM usando
    `ENCRYPTION_KEY`. Nunca en claro. Es RNF-03.
 
