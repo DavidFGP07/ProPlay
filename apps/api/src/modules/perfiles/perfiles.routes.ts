@@ -18,14 +18,14 @@ import {
  */
 export const perfilesRouter = Router();
 
-// TODO: Devolver el perfil (jugador o equipo) del usuario autenticado.
+// RF-05 · Perfil propio (jugador o equipo) del usuario autenticado
 perfilesRouter.get(
   "/me",
   auth,
   controlador.obtenerPropio,
 );
 
-// TODO: Actualizar el PerfilJugador del usuario autenticado.
+// RF-05 · Edición del perfil del jugador, con su ubicación (insumo de RF-09)
 perfilesRouter.put(
   "/jugador",
   auth,
