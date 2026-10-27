@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   loginSchema,
   registerSchema,
   type LoginInput,
+  type RegisterInput,
   type Rol,
   type RolRegistrable,
 } from '@proplay/shared'
@@ -35,17 +35,13 @@ const CUENTAS_DEMO: { rol: Rol; descripcion: string }[] = [
 ]
 
 /**
- * El aviso de privacidad es requisito del registro (RNF-05). El contrato de
- * la API aun no lo recibe, asi que se valida aqui sobre el esquema compartido.
+ * El registro valida con el esquema compartido, que ya exige aceptar el aviso
+ * de privacidad y declarar la mayoria de edad (RNF-05).
  */
-const esquemaRegistro = registerSchema.extend({
-  aceptaPrivacidad: z.literal(true, {
-    errorMap: () => ({
-      message: 'Debes aceptar el aviso de privacidad para continuar (Ley 1581 de 2012).',
-    }),
-  }),
-})
-type FormularioRegistro = z.input<typeof esquemaRegistro>
+type FormularioRegistro = Omit<RegisterInput, 'aceptaPrivacidad' | 'declaraMayorEdad'> & {
+  aceptaPrivacidad: boolean
+  declaraMayorEdad: boolean
+}
 
 type Modo = 'entrar' | 'registrar'
 
@@ -61,8 +57,15 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
   const formRegistro = useForm<FormularioRegistro>({
-    resolver: zodResolver(esquemaRegistro),
-    defaultValues: { nombre: '', email: '', password: '', rol: 'JUGADOR' },
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      nombre: '',
+      email: '',
+      password: '',
+      rol: 'JUGADOR',
+      aceptaPrivacidad: false,
+      declaraMayorEdad: false,
+    },
   })
   const form = modo === 'entrar' ? formEntrar : formRegistro
   const errores = form.formState.errors
@@ -82,8 +85,7 @@ export default function LoginPage() {
   const alRegistrar = formRegistro.handleSubmit(async (datos) => {
     setError(null)
     try {
-      const { nombre, email, password, rol } = esquemaRegistro.parse(datos)
-      await registrar({ nombre, email, password, rol })
+      await registrar(registerSchema.parse(datos))
       navegar('/')
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos crear tu cuenta.'))
@@ -268,6 +270,23 @@ export default function LoginPage() {
             )}
             {modo === 'registrar' && (
               <ErrorCampo mensaje={formRegistro.formState.errors.aceptaPrivacidad?.message} />
+            )}
+
+            {modo === 'registrar' && (
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/8 bg-white/3 px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 accent-[#7c4df5]"
+                  aria-invalid={Boolean(formRegistro.formState.errors.declaraMayorEdad)}
+                  {...formRegistro.register('declaraMayorEdad')}
+                />
+                <span className="text-[11px] leading-relaxed text-slate-400">
+                  {es.registro.mayorEdad}
+                </span>
+              </label>
+            )}
+            {modo === 'registrar' && (
+              <ErrorCampo mensaje={formRegistro.formState.errors.declaraMayorEdad?.message} />
             )}
 
             {error && (

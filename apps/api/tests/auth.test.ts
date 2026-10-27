@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { API_PREFIX, REFRESH_COOKIE_NAME } from "@proplay/shared";
 import {
+  CONSENTIMIENTO,
   app,
   cerrarConexiones,
   emailDePrueba,
@@ -36,6 +37,7 @@ describe(`${API_PREFIX}/auth`, () => {
           password,
           nombre: "Jugador de Prueba",
           rol: "JUGADOR",
+          ...CONSENTIMIENTO,
         });
 
       expect(respuesta.status).toBe(201);
@@ -65,6 +67,7 @@ describe(`${API_PREFIX}/auth`, () => {
           password,
           nombre: "Otro Jugador",
           rol: "JUGADOR",
+          ...CONSENTIMIENTO,
         });
 
       expect(respuesta.status).toBe(409);
@@ -84,6 +87,43 @@ describe(`${API_PREFIX}/auth`, () => {
       expect(campos).toContain("email");
       expect(campos).toContain("password");
       expect(campos).toContain("rol");
+      expect(campos).toContain("aceptaPrivacidad");
+      expect(campos).toContain("declaraMayorEdad");
+    });
+
+    it("exige aceptar el aviso de privacidad (RNF-05)", async () => {
+      const respuesta = await request(app)
+        .post(`${API_PREFIX}/auth/register`)
+        .send({
+          email: emailDePrueba("sin-aviso"),
+          password,
+          nombre: "Sin Aviso",
+          rol: "JUGADOR",
+          aceptaPrivacidad: false,
+          declaraMayorEdad: true,
+        });
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.details.campos).toEqual([
+        expect.objectContaining({ campo: "aceptaPrivacidad" }),
+      ]);
+    });
+
+    it("exige declarar la mayoría de edad", async () => {
+      const respuesta = await request(app)
+        .post(`${API_PREFIX}/auth/register`)
+        .send({
+          email: emailDePrueba("sin-mayoria"),
+          password,
+          nombre: "Sin Mayoria",
+          rol: "JUGADOR",
+          aceptaPrivacidad: true,
+        });
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.details.campos).toEqual([
+        expect.objectContaining({ campo: "declaraMayorEdad" }),
+      ]);
     });
   });
 
@@ -94,6 +134,7 @@ describe(`${API_PREFIX}/auth`, () => {
         password,
         nombre: "Equipo de Prueba",
         rol: "EQUIPO",
+        ...CONSENTIMIENTO,
       });
     });
 

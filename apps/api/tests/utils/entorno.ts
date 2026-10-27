@@ -16,6 +16,9 @@ export const app: Express = crearApp();
 /** Prefijo con el que se identifican y limpian los usuarios de prueba. */
 export const PREFIJO_PRUEBA = "test-integracion";
 
+/** Casillas obligatorias del registro (RNF-05): aviso aceptado y mayoría de edad. */
+export const CONSENTIMIENTO = { aceptaPrivacidad: true, declaraMayorEdad: true } as const;
+
 export function emailDePrueba(etiqueta: string): string {
   return `${PREFIJO_PRUEBA}+${etiqueta}-${randomBytes(4).toString("hex")}@proplay.test`;
 }

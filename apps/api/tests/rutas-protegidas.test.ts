@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { API_PREFIX } from "@proplay/shared";
 import {
+  CONSENTIMIENTO,
   app,
   cerrarConexiones,
   emailDePrueba,
@@ -21,7 +22,7 @@ describe("Rutas protegidas", () => {
     await limpiarUsuariosDePrueba();
     const registro = await request(app)
       .post(`${API_PREFIX}/auth/register`)
-      .send({ email, password, nombre: "Jugador RBAC", rol: "JUGADOR" });
+      .send({ email, password, nombre: "Jugador RBAC", rol: "JUGADOR", ...CONSENTIMIENTO });
     accessToken = registro.body.accessToken;
   });
 
