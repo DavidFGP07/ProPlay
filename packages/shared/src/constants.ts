@@ -22,7 +22,8 @@ export const MAX_PAGE_SIZE = 100;
 /**
  * Versión vigente del aviso de privacidad y los términos de uso (RNF-05).
  * El servidor guarda esta versión al registrar la aceptación; nunca una que
- * envíe el cliente. Súbela cada vez que cambie el texto del aviso.
+ * envíe el cliente. Súbela cada vez que cambie el texto del aviso, a partir
+ * de su primera publicación (antes, el texto se corrige sin subirla).
  */
 export const VERSION_AVISO_PRIVACIDAD = "1.0";
 

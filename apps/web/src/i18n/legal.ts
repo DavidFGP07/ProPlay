@@ -54,7 +54,7 @@ export const legal = {
           parrafos: ['Recogemos solo los datos necesarios para prestar el servicio:'],
           lista: [
             'Datos de la cuenta: nombre, correo electrónico, rol (jugador, equipo o scout) y contraseña, que guardamos cifrada con una función de hash y nunca en claro.',
-            'Datos de tu perfil que tú mismo registras: biografía, región, disponibilidad, habilidades y experiencia.',
+            'Datos de tu perfil que tú mismo registras: biografía, ubicación (país y, en Colombia, departamento; nunca tu ciudad ni tu dirección), disposición a relocalizarte, disponibilidad, habilidades y experiencia.',
             'Si vinculas tu cuenta de League of Legends, los datos que nos entrega la API oficial de Riot Games: tu identificador de jugador, tu rango, tu historial de partidas y las estadísticas de esas partidas.',
             'Datos técnicos de uso, como registros de acceso y de auditoría, para la seguridad del servicio.',
           ],
@@ -72,7 +72,7 @@ export const legal = {
         {
           titulo: '4. Quién ve tus datos',
           parrafos: [
-            'Tu perfil público de jugador (nombre, región, estadísticas y habilidades) es visible para cualquier persona que tenga el enlace, para que puedas compartirlo como carta de presentación.',
+            'Tu perfil público de jugador (nombre, ubicación por país y departamento, estadísticas y habilidades) es visible para cualquier persona que tenga el enlace, para que puedas compartirlo como carta de presentación.',
             'Los equipos y scouts registrados pueden ver los perfiles de jugadores, su compatibilidad con sus ofertas y las postulaciones que reciben. Tu correo electrónico y tu contraseña nunca son públicos.',
           ],
         },
