@@ -41,7 +41,7 @@ export function useEquipos() {
 // RF-05 · Edicion del perfil propio
 export function useActualizarPerfil() {
   return useMutacionSimulada(({ perfilId, cambios }: { perfilId: string; cambios: CamposPerfil }) =>
-    // TODO: S2 — conectar con PUT /api/v1/perfiles/jugador
+    // TODO: S2 — conectar con PATCH /api/v1/perfiles/jugador
     actualizarPerfil(perfilId, cambios, actorDemo()),
   )
 }

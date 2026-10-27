@@ -7,7 +7,10 @@ import type {
 } from "@proplay/shared";
 import { NotFoundError } from "../../utils/errors";
 import * as repositorio from "./perfiles.repository";
-import type { PerfilJugadorInput } from "./perfiles.schema";
+import {
+  ubicacionJugadorSchema,
+  type PerfilJugadorInput,
+} from "./perfiles.schema";
 
 /**
  * Lógica de negocio del módulo `perfiles`: Perfiles de jugador y de equipo, habilidades, endorsements y cuentas gaming.
@@ -29,9 +32,11 @@ function aRespuestaEquipo(
 }
 
 /**
- * Perfil del usuario autenticado. El registro crea el perfil del jugador y el
- * del equipo en la misma transacción que la cuenta; el scout y el
- * administrador no tienen perfil.
+ * Perfil del usuario autenticado. El scout y el administrador no tienen perfil
+ * y reciben `{ tipo: null, perfil: null }` con 200, no un 404: así una vista
+ * común que lo pida no lo trata como error ni lo reintenta. El registro crea el
+ * perfil del jugador y el del equipo en la misma transacción que la cuenta, así
+ * que si falta es una inconsistencia y sí responde 404.
  */
 export async function obtenerPropio(
   usuarioId: string,
@@ -39,19 +44,26 @@ export async function obtenerPropio(
 ): Promise<PerfilPropioResponse> {
   if (rol === "JUGADOR") {
     const perfil = await repositorio.buscarJugadorPorUsuario(usuarioId);
-    if (perfil) return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
-  } else if (rol === "EQUIPO") {
-    const perfil = await repositorio.buscarEquipoPorUsuario(usuarioId);
-    if (perfil) return { tipo: "EQUIPO", perfil: aRespuestaEquipo(perfil) };
+    if (!perfil) throw new NotFoundError("Este usuario no tiene perfil");
+    return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
   }
-  throw new NotFoundError("Este usuario no tiene perfil");
+  if (rol === "EQUIPO") {
+    const perfil = await repositorio.buscarEquipoPorUsuario(usuarioId);
+    if (!perfil) throw new NotFoundError("Este usuario no tiene perfil");
+    return { tipo: "EQUIPO", perfil: aRespuestaEquipo(perfil) };
+  }
+  return { tipo: null, perfil: null };
 }
 
 /**
  * Actualización parcial del perfil del jugador: sólo cambian los campos
- * enviados. Cuando llega el país, el departamento se guarda con él (nulo si
- * no se envía), para que nunca quede un departamento de Colombia junto a otro
- * país; el esquema ya garantiza que la pareja es coherente.
+ * enviados. La ubicación se valida contra el país resultante:
+ * - Si llega el país, el esquema ya comprobó la pareja; el departamento se
+ *   guarda con él (nulo si no se envía), para que nunca quede un departamento
+ *   de Colombia junto a otro país.
+ * - Si llega sólo el departamento, se comprueba contra el país guardado con la
+ *   misma regla de `ubicacionJugadorSchema`. Su ZodError sale como 422, igual
+ *   que los del middleware validate().
  */
 export async function actualizarJugador(
   usuarioId: string,
@@ -59,6 +71,13 @@ export async function actualizarJugador(
 ): Promise<PerfilPropioResponse> {
   const existente = await repositorio.buscarJugadorPorUsuario(usuarioId);
   if (!existente) throw new NotFoundError("Este usuario no tiene perfil");
+
+  if (datos.pais === undefined && datos.departamento !== undefined) {
+    ubicacionJugadorSchema.parse({
+      pais: existente.pais,
+      departamento: datos.departamento,
+    });
+  }
 
   const cambios =
     datos.pais === undefined

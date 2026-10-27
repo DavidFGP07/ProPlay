@@ -26,7 +26,7 @@ perfilesRouter.get(
 );
 
 // RF-05 · Edición del perfil del jugador, con su ubicación (insumo de RF-09)
-perfilesRouter.put(
+perfilesRouter.patch(
   "/jugador",
   auth,
   rbac("JUGADOR"),
@@ -35,7 +35,7 @@ perfilesRouter.put(
 );
 
 // TODO: Actualizar el PerfilEquipo del usuario autenticado.
-perfilesRouter.put(
+perfilesRouter.patch(
   "/equipo",
   auth,
   rbac("EQUIPO"),

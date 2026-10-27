@@ -19,25 +19,17 @@ const camposUbicacion = {
 };
 
 /**
- * País y departamento viajan juntos: con `pais = "CO"` el departamento es
- * obligatorio; con otro país, o sin país, no se admite. Un departamento sin
- * país se rechaza para no depender del país que ya esté guardado.
+ * Coherencia de país y departamento: con `pais = "CO"` el departamento es
+ * obligatorio; con otro país, o sin país, no se admite. Si el cuerpo trae sólo
+ * el departamento, aquí no se puede comprobar: el servidor lo valida contra el
+ * país guardado con este mismo esquema.
  */
 function validarUbicacion(
   datos: { pais?: string | null; departamento?: string | null },
   ctx: z.RefinementCtx,
 ) {
   const { pais, departamento } = datos;
-  if (pais === undefined) {
-    if (departamento !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["pais"],
-        message: "Indica el país junto con el departamento",
-      });
-    }
-    return;
-  }
+  if (pais === undefined) return;
   if (pais === PAIS_CON_DEPARTAMENTO && !departamento) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -125,10 +117,14 @@ export const perfilEquipoRespuestaSchema = z.object({
   actualizadoEn: z.coerce.date(),
 });
 
-/** Respuesta de `GET /perfiles/me`: el perfil que corresponde al rol. */
+/**
+ * Respuesta de `GET /perfiles/me`: el perfil que corresponde al rol. El scout
+ * y el administrador no tienen perfil y reciben `{ tipo: null, perfil: null }`.
+ */
 export const perfilPropioResponseSchema = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("JUGADOR"), perfil: perfilJugadorRespuestaSchema }),
   z.object({ tipo: z.literal("EQUIPO"), perfil: perfilEquipoRespuestaSchema }),
+  z.object({ tipo: z.null(), perfil: z.null() }),
 ]);
 
 export type UbicacionJugadorInput = z.infer<typeof ubicacionJugadorSchema>;

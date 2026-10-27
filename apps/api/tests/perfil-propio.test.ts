@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
-import { API_PREFIX, type RolRegistrable } from "@proplay/shared";
+import {
+  API_PREFIX,
+  perfilPropioResponseSchema,
+  type RolRegistrable,
+} from "@proplay/shared";
 import {
   CONSENTIMIENTO,
   app,
@@ -10,7 +14,7 @@ import {
 } from "./utils/entorno";
 
 /**
- * RF-05 · Perfil propio: GET /perfiles/me y PUT /perfiles/jugador, con la
+ * RF-05 · Perfil propio: GET /perfiles/me y PATCH /perfiles/jugador, con la
  * ubicación del jugador (insumo de la dimensión geográfica de RF-09).
  */
 const RUTA_ME = `${API_PREFIX}/perfiles/me`;
@@ -36,7 +40,7 @@ function obtener(token: string) {
 
 function actualizar(token: string, cuerpo: Record<string, unknown>) {
   return request(app)
-    .put(RUTA_JUGADOR)
+    .patch(RUTA_JUGADOR)
     .set("Authorization", `Bearer ${token}`)
     .send(cuerpo);
 }
@@ -85,16 +89,17 @@ describe(`GET ${RUTA_ME}`, () => {
     expect(respuesta.body.perfil.nombreOrg).toBe("Cuenta de Prueba");
   });
 
-  it("responde 404 al scout, que no tiene perfil", async () => {
+  it("responde 200 con perfil nulo al scout, que no tiene perfil", async () => {
     const token = await registrar("me-scout", "SCOUT");
     const respuesta = await obtener(token);
 
-    expect(respuesta.status).toBe(404);
-    expect(respuesta.body.error.code).toBe("NOT_FOUND");
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body).toEqual({ tipo: null, perfil: null });
+    expect(perfilPropioResponseSchema.safeParse(respuesta.body).success).toBe(true);
   });
 });
 
-describe(`PUT ${RUTA_JUGADOR}`, () => {
+describe(`PATCH ${RUTA_JUGADOR}`, () => {
   let token: string;
 
   beforeAll(async () => {
@@ -108,12 +113,27 @@ describe(`PUT ${RUTA_JUGADOR}`, () => {
   });
 
   it("exige sesión y rol de jugador", async () => {
-    const sinSesion = await request(app).put(RUTA_JUGADOR).send({ pais: "MX" });
+    const sinSesion = await request(app).patch(RUTA_JUGADOR).send({ pais: "MX" });
     expect(sinSesion.status).toBe(401);
 
     const equipo = await registrar("put-equipo", "EQUIPO");
     const respuesta = await actualizar(equipo, { pais: "MX" });
     expect(respuesta.status).toBe(403);
+  });
+
+  it("las actualizaciones parciales van por PATCH: PUT ya no existe y el equipo sigue en 501", async () => {
+    const put = await request(app)
+      .put(RUTA_JUGADOR)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ pais: "MX" });
+    expect(put.status).toBe(404);
+
+    const equipo = await registrar("patch-equipo", "EQUIPO");
+    const respuesta = await request(app)
+      .patch(`${API_PREFIX}/perfiles/equipo`)
+      .set("Authorization", `Bearer ${equipo}`)
+      .send({ nombreOrg: "Equipo de Prueba" });
+    expect(respuesta.status).toBe(501);
   });
 
   it("guarda país, departamento y disposición a relocalizarse", async () => {
@@ -166,10 +186,43 @@ describe(`PUT ${RUTA_JUGADOR}`, () => {
     expect(respuesta.body.perfil).not.toHaveProperty("region");
   });
 
+  it("con país guardado CO acepta sólo el departamento", async () => {
+    await actualizar(token, { pais: "CO", departamento: "ATLANTICO" });
+    const respuesta = await actualizar(token, { departamento: "SUCRE" });
+
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body.perfil).toMatchObject({ pais: "CO", departamento: "SUCRE" });
+  });
+
+  it.each([
+    ["MX", { departamento: "BOLIVAR" }],
+    ["sin país", { departamento: "BOLIVAR" }],
+    ["CO, al quitarle el departamento", { departamento: null }],
+  ])(
+    "con país guardado %s rechaza sólo el departamento con 422 y no cambia nada",
+    async (guardado, cuerpo) => {
+      const ubicacion =
+        guardado === "MX"
+          ? { pais: "MX" }
+          : guardado === "sin país"
+            ? { pais: null }
+            : { pais: "CO", departamento: "MAGDALENA" };
+      await actualizar(token, ubicacion);
+      const antes = (await obtener(token)).body.perfil;
+
+      const respuesta = await actualizar(token, cuerpo);
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.code).toBe("VALIDATION_ERROR");
+      expect(camposConError(respuesta.body)).toContain("departamento");
+
+      const despues = (await obtener(token)).body.perfil;
+      expect(despues).toEqual(antes);
+    },
+  );
+
   it.each([
     ["Colombia sin departamento", { pais: "CO" }, "departamento"],
     ["departamento fuera de Colombia", { pais: "MX", departamento: "ATLANTICO" }, "departamento"],
-    ["departamento sin país", { departamento: "BOLIVAR" }, "pais"],
     ["país como texto libre", { pais: "Colombia" }, "pais"],
     ["departamento fuera del catálogo", { pais: "CO", departamento: "BARRANQUILLA" }, "departamento"],
   ])("rechaza %s con 422 y no cambia nada", async (_caso, cuerpo, campo) => {

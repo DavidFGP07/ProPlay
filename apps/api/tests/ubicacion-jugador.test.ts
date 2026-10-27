@@ -43,6 +43,7 @@ describe("ubicacionJugadorSchema", () => {
     ["borrar la ubicación", { pais: null, departamento: null }],
     ["sólo la disposición a relocalizarse", { dispuestoRelocalizar: true }],
     ["sin ubicación", {}],
+    ["sólo el departamento (el servidor lo valida contra el país guardado)", { departamento: "BOLIVAR" }],
   ])("acepta %s", (_caso, datos) => {
     expect(ubicacionJugadorSchema.safeParse(datos).success).toBe(true);
   });
@@ -51,7 +52,6 @@ describe("ubicacionJugadorSchema", () => {
     ["Colombia sin departamento", { pais: "CO" }, "departamento"],
     ["Colombia con departamento nulo", { pais: "CO", departamento: null }, "departamento"],
     ["departamento fuera de Colombia", { pais: "MX", departamento: "ATLANTICO" }, "departamento"],
-    ["departamento sin país", { departamento: "BOLIVAR" }, "pais"],
     ["país como texto libre", { pais: "Colombia" }, "pais"],
     ["país en minúsculas", { pais: "co", departamento: "BOLIVAR" }, "pais"],
     ["departamento fuera del catálogo", { pais: "CO", departamento: "BARRANQUILLA" }, "departamento"],

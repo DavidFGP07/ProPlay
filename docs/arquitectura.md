@@ -96,7 +96,7 @@ flowchart TB
 | Módulo | Responsabilidad | Estado |
 | --- | --- | --- |
 | `usuarios` | Registro, login, refresco de sesión, `/me`, gestión de cuentas y auditoría de acceso | **Implementado** |
-| `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | `GET /me` y `PUT /jugador` implementados; el resto, andamiaje (501) |
+| `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | `GET /me` y `PATCH /jugador` implementados; el resto, andamiaje (501) |
 | `estadisticas` | Métricas por jugador, juego y periodo; sincronización con las plataformas externas | Andamiaje (501) |
 | `scouting` | Búsqueda y descubrimiento de jugadores con filtros de juego, rol, región y rendimiento; búsquedas guardadas | Andamiaje (501) |
 | `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Andamiaje (501), con `calcularCompatibilidad` firmada |

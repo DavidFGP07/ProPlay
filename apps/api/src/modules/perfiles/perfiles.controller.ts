@@ -22,7 +22,7 @@ export const obtenerPropio = asyncHandler(async (req, res) => {
 });
 
 /**
- * PUT /api/v1/perfiles/jugador
+ * PATCH /api/v1/perfiles/jugador
  * Actualización parcial del perfil del jugador autenticado.
  */
 export const actualizarJugador = asyncHandler<PeticionCon<PerfilJugadorInput>>(
@@ -33,7 +33,7 @@ export const actualizarJugador = asyncHandler<PeticionCon<PerfilJugadorInput>>(
 );
 
 /**
- * PUT /api/v1/perfiles/equipo
+ * PATCH /api/v1/perfiles/equipo
  * TODO: Actualizar el PerfilEquipo del usuario autenticado.
  */
 export const actualizarEquipo = asyncHandler(async (req, res) => {

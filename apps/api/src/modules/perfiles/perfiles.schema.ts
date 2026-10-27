@@ -7,6 +7,7 @@
  */
 export {
   perfilJugadorSchema,
+  ubicacionJugadorSchema,
   perfilEquipoSchema,
   asignarHabilidadSchema,
   crearEndorsementSchema,
