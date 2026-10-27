@@ -21,7 +21,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { Button, Field, Input, Select, cn } from '@/components/ui'
+import { Button, ErrorCampo, Field, Input, Select, cn } from '@/components/ui'
 import { mensajeDeError } from '@/api/client'
 import { CUENTAS_SEMILLA, PASSWORD_SEMILLA } from '@/api/cuentasSemilla'
 import { config } from '@/lib/env'
@@ -341,14 +341,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
-}
-
-function ErrorCampo({ mensaje }: { mensaje?: string }) {
-  if (!mensaje) return null
-  return (
-    <span role="alert" className="mt-1 block text-[11px] text-rose-300">
-      {mensaje}
-    </span>
   )
 }

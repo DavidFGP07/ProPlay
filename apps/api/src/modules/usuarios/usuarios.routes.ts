@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
 import { rbac } from "../../middleware/rbac";
-import { limiteAuth, limiteRefresh } from "../../middleware/rateLimit";
+import { limiteAuth, limiteCambioContrasena, limiteRefresh } from "../../middleware/rateLimit";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./usuarios.controller";
 import {
   actualizarUsuarioSchema,
+  cambioContrasenaSchema,
   listarUsuariosQuerySchema,
   loginSchema,
   paginacionQuerySchema,
@@ -47,5 +48,13 @@ usuariosRouter.patch(
   auth,
   validate(actualizarUsuarioSchema),
   controlador.actualizarPropio,
+);
+// RF-01 · Cambio de contraseña
+usuariosRouter.patch(
+  "/me/contrasena",
+  auth,
+  limiteCambioContrasena,
+  validate(cambioContrasenaSchema),
+  controlador.cambiarContrasena,
 );
 usuariosRouter.get("/:id", auth, controlador.obtener);

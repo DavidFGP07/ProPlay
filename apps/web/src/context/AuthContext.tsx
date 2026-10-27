@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { LoginInput, RegisterInput, Rol, UsuarioPublico } from '@proplay/shared'
+import type {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  Rol,
+  UsuarioPublico,
+} from '@proplay/shared'
 import { authApi } from '@/api/auth'
 import { guardarAccessToken, registrarCierreDeSesion } from '@/api/client'
 import { sincronizarSesionDemo } from '@/api/demo'
@@ -21,6 +27,10 @@ interface AuthContextValue {
   registrar: (datos: RegisterInput) => Promise<UsuarioPublico>
   salir: () => Promise<void>
   puede: (...roles: Rol[]) => boolean
+  /** Refleja en la sesión los datos de cuenta que devolvió la API. */
+  actualizarUsuario: (usuario: UsuarioPublico) => void
+  /** Adopta la sesión nueva que emite la API tras un cambio de credenciales. */
+  renovarSesion: (respuesta: AuthResponse) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -101,9 +111,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [usuario],
   )
 
+  const renovarSesion = useCallback(
+    (respuesta: AuthResponse) => {
+      guardarAccessToken(respuesta.accessToken)
+      setUsuario(respuesta.usuario)
+    },
+    [setUsuario],
+  )
+
   const value = useMemo(
-    () => ({ usuario, cargando, entrar, registrar, salir, puede }),
-    [usuario, cargando, entrar, registrar, salir, puede],
+    () => ({
+      usuario,
+      cargando,
+      entrar,
+      registrar,
+      salir,
+      puede,
+      actualizarUsuario: setUsuario,
+      renovarSesion,
+    }),
+    [usuario, cargando, entrar, registrar, salir, puede, setUsuario, renovarSesion],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

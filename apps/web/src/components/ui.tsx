@@ -287,6 +287,16 @@ export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTML
   },
 )
 
+/** Mensaje de error de un campo de formulario, anunciado a lectores de pantalla. */
+export function ErrorCampo({ mensaje }: { mensaje?: string }) {
+  if (!mensaje) return null
+  return (
+    <span role="alert" className="mt-1 block text-[11px] text-rose-300">
+      {mensaje}
+    </span>
+  )
+}
+
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...props }, ref) {
     return (

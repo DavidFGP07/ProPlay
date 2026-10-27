@@ -10,3 +10,9 @@ export const AREAS = {
   equipo: ['EQUIPO', 'SCOUT', 'ADMIN'],
   admin: ['ADMIN'],
 } as const satisfies Record<string, readonly Rol[]>
+
+/**
+ * Rutas que solo consumen endpoints reales. El aviso «Datos de demostracion»
+ * no se muestra en ellas; al conectar una vista de verdad, se añade aqui.
+ */
+export const RUTAS_SIN_DATOS_DEMO: readonly string[] = ['/cuenta']

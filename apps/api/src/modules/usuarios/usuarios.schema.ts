@@ -20,6 +20,7 @@ export {
 
 export type {
   ActualizarUsuarioInput,
+  CambioContrasenaInput,
   AuthResponse,
   LoginInput,
   MeResponse,

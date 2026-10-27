@@ -14,6 +14,7 @@ import {
   listarUsuariosQuerySchema,
   paginacionQuerySchema,
   type ActualizarUsuarioInput,
+  type CambioContrasenaInput,
   type LoginInput,
   type RegisterInput,
 } from "./usuarios.schema";
@@ -95,4 +96,13 @@ export const actualizarPropio = asyncHandler<
   if (!req.usuario) throw new UnauthorizedError();
   const usuario = await servicio.actualizar(req.usuario.id, req.body);
   res.status(200).json({ usuario });
+});
+
+/** Cambio de contraseña: revoca las demás sesiones y renueva la actual. */
+export const cambiarContrasena = asyncHandler<
+  PeticionCon<CambioContrasenaInput>
+>(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  const sesion = await servicio.cambiarContrasena(req.usuario.id, req.body);
+  enviarSesion(res, sesion);
 });

@@ -126,7 +126,6 @@ entrada dice en qué sprint se cierra; al resolverla, bórrala en el mismo commi
 | --- | --- | --- |
 | Persistir la aceptación del aviso de privacidad con su fecha y la versión del aviso, y crear la vista `/legal/privacidad` | Hoy el registro exige aceptar un documento que no existe y la aceptación no se guarda (RNF-05, Ley 1581). Requiere el campo en `registerSchema`, el modelo en Prisma y la vista pública del inventario. | S1 |
 | Hacer público `/jugador/:id`, sin guarda de sesión | Es la vitrina del jugador y el argumento central del proyecto: un perfil verificable que se comparte por enlace. El inventario ya lo marca como público; hoy está dentro del área privada. | S1 |
-| Vista de cuenta y ajustes para equipo, scout y administrador | Sólo el jugador tiene vista propia (`/mi-perfil`): el resto no puede cambiar su nombre ni su contraseña. La API ya expone `PATCH /usuarios/me`; falta el endpoint de cambio de contraseña aunque `cambiarPasswordSchema` existe en `shared`. Añadir la vista al inventario de CLAUDE.md §5, que hoy sólo la lista para el jugador. | S1 |
 | Alta del primer administrador en producción y procedimiento de promoción | El seed crea `admin@proplay.gg` con la contraseña de demostración, válido sólo en desarrollo (el seed nunca debe correr en producción). `ADMIN` no es registrable y el único rastro de cómo se asigna es un comentario en `shared/enums.ts` («se asigna a mano»); `POST /admin/usuarios/rol` responde 501. Definir el arranque (un script de una sola vez) y documentarlo en el README; el endpoint de promoción con su traza en `AuditLog` llega con el módulo `admin`. | S1 (arranque) · S4 (endpoint) |
 | Definir dónde se captura la región del jugador | El registro dejó de pedirla y no hay onboarding. Es insumo de la dimensión geográfica del matching: tiene que existir antes de que el S3 la necesite. | S2 |
 
@@ -188,9 +187,17 @@ esquemas de `shared`.
 | `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 |
 | Etiquetas de enums («Abierta», «Riot Games») | `i18n/es.ts`. **Resuelto en este cambio.** | — |
 
-
 ## Correcciones
 
 | Corrección | Detalle |
 | --- | --- |
 | El índice HNSW sobre `PerfilVector.embedding` no existió hasta la migración `20261027153113_indice_hnsw_perfil_vector` | `CLAUDE.md` §4 lo declaraba obligatorio y el plan de implementación lo daba por creado, pero la migración de pgvector sólo añadía la extensión y la columna, y dejaba un índice `ivfflat` como `TODO` comentado. Se crea `"PerfilVector_embedding_hnsw_idx"` con `vector_cosine_ops`, la métrica coseno del recuperador (`ORDER BY embedding <=> $1`). El `TODO` sigue en `20260910145700_pgvector_perfil_vector` porque esa migración ya está aplicada y editarla cambiaría su checksum; queda obsoleto. Prisma no puede declarar el índice: `CLAUDE.md` §4 explica cómo evitar que una migración futura lo borre. |
+
+## Cuenta y sesiones
+
+| Decisión | Justificación |
+| --- | --- |
+| Cambiar la contraseña revoca las demás sesiones mediante `Usuario.credencialesCambiadasEn` | Los refresh tokens son JWT sin estado y no se guardan, así que no hay lista que revocar. `/auth/refresh` rechaza los emitidos antes del último cambio de credenciales, comparando en segundos (`iat < floor(credencialesCambiadasEn / 1000)`) para que el token de la propia respuesta siga valiendo; esa respuesta trae una sesión nueva y quien cambia la contraseña sigue dentro. Los access tokens ya emitidos valen hasta caducar (15 minutos como máximo). |
+| Una contraseña actual incorrecta responde `400 CONTRASENA_ACTUAL_INVALIDA`, no `401` | El interceptor del cliente trata cualquier `401` como sesión caducada: refresca, reintenta y cierra la sesión. Con un `401`, equivocarse de contraseña al cambiarla expulsaría al usuario. |
+| `PATCH /usuarios/me` deja de aceptar `activo` | Suspender o reactivar una cuenta no es una edición propia: cualquier usuario podía suspenderse y uno suspendido con un access token vigente podía reactivarse. Queda para el módulo `admin`; si llega, el campo se descarta. |
+| Lista de rutas sin datos de demostración (`RUTAS_SIN_DATOS_DEMO` en `router/areas.ts`) | El aviso «Datos de demostración» lo pinta el `Layout` para todas las vistas; las que sólo consumen endpoints reales, como `/cuenta`, se declaran ahí y no lo muestran. Al conectar cada vista de verdad, se añade su ruta. |
