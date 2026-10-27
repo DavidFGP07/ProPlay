@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
-import { API_PREFIX, type RolRegistrable } from "@proplay/shared";
+import {
+  API_PREFIX,
+  perfilPropioResponseSchema,
+  type RolRegistrable,
+} from "@proplay/shared";
 import {
   CONSENTIMIENTO,
   app,
@@ -85,12 +89,13 @@ describe(`GET ${RUTA_ME}`, () => {
     expect(respuesta.body.perfil.nombreOrg).toBe("Cuenta de Prueba");
   });
 
-  it("responde 404 al scout, que no tiene perfil", async () => {
+  it("responde 200 con perfil nulo al scout, que no tiene perfil", async () => {
     const token = await registrar("me-scout", "SCOUT");
     const respuesta = await obtener(token);
 
-    expect(respuesta.status).toBe(404);
-    expect(respuesta.body.error.code).toBe("NOT_FOUND");
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body).toEqual({ tipo: null, perfil: null });
+    expect(perfilPropioResponseSchema.safeParse(respuesta.body).success).toBe(true);
   });
 });
 
@@ -166,10 +171,43 @@ describe(`PUT ${RUTA_JUGADOR}`, () => {
     expect(respuesta.body.perfil).not.toHaveProperty("region");
   });
 
+  it("con país guardado CO acepta sólo el departamento", async () => {
+    await actualizar(token, { pais: "CO", departamento: "ATLANTICO" });
+    const respuesta = await actualizar(token, { departamento: "SUCRE" });
+
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body.perfil).toMatchObject({ pais: "CO", departamento: "SUCRE" });
+  });
+
+  it.each([
+    ["MX", { departamento: "BOLIVAR" }],
+    ["sin país", { departamento: "BOLIVAR" }],
+    ["CO, al quitarle el departamento", { departamento: null }],
+  ])(
+    "con país guardado %s rechaza sólo el departamento con 422 y no cambia nada",
+    async (guardado, cuerpo) => {
+      const ubicacion =
+        guardado === "MX"
+          ? { pais: "MX" }
+          : guardado === "sin país"
+            ? { pais: null }
+            : { pais: "CO", departamento: "MAGDALENA" };
+      await actualizar(token, ubicacion);
+      const antes = (await obtener(token)).body.perfil;
+
+      const respuesta = await actualizar(token, cuerpo);
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.code).toBe("VALIDATION_ERROR");
+      expect(camposConError(respuesta.body)).toContain("departamento");
+
+      const despues = (await obtener(token)).body.perfil;
+      expect(despues).toEqual(antes);
+    },
+  );
+
   it.each([
     ["Colombia sin departamento", { pais: "CO" }, "departamento"],
     ["departamento fuera de Colombia", { pais: "MX", departamento: "ATLANTICO" }, "departamento"],
-    ["departamento sin país", { departamento: "BOLIVAR" }, "pais"],
     ["país como texto libre", { pais: "Colombia" }, "pais"],
     ["departamento fuera del catálogo", { pais: "CO", departamento: "BARRANQUILLA" }, "departamento"],
   ])("rechaza %s con 422 y no cambia nada", async (_caso, cuerpo, campo) => {
