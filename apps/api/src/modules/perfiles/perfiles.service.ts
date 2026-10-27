@@ -1,20 +1,71 @@
+import type {
+  Pais,
+  PerfilEquipoRespuesta,
+  PerfilJugadorRespuesta,
+  PerfilPropioResponse,
+  Rol,
+} from "@proplay/shared";
+import { NotFoundError } from "../../utils/errors";
 import * as repositorio from "./perfiles.repository";
+import type { PerfilJugadorInput } from "./perfiles.schema";
 
 /**
  * Lógica de negocio del módulo `perfiles`: Perfiles de jugador y de equipo, habilidades, endorsements y cuentas gaming.
  *
- * Andamiaje: cada función delega en el repositorio, que todavía lanza
- * NotImplementedError (501).
+ * Andamiaje: las funciones que conservan su TODO delegan en el repositorio,
+ * que todavía lanza NotImplementedError (501).
  */
 
-/** TODO: Devolver el perfil (jugador o equipo) del usuario autenticado. */
-export async function obtenerPropio(datos?: unknown) {
-  return repositorio.obtenerPropio(datos);
+function aRespuestaJugador(
+  perfil: repositorio.PerfilJugadorDb,
+): PerfilJugadorRespuesta {
+  return { ...perfil, pais: perfil.pais as Pais | null };
 }
 
-/** TODO: Actualizar el PerfilJugador del usuario autenticado. */
-export async function actualizarJugador(datos?: unknown) {
-  return repositorio.actualizarJugador(datos);
+function aRespuestaEquipo(
+  perfil: repositorio.PerfilEquipoDb,
+): PerfilEquipoRespuesta {
+  return perfil;
+}
+
+/**
+ * Perfil del usuario autenticado. El registro crea el perfil del jugador y el
+ * del equipo en la misma transacción que la cuenta; el scout y el
+ * administrador no tienen perfil.
+ */
+export async function obtenerPropio(
+  usuarioId: string,
+  rol: Rol,
+): Promise<PerfilPropioResponse> {
+  if (rol === "JUGADOR") {
+    const perfil = await repositorio.buscarJugadorPorUsuario(usuarioId);
+    if (perfil) return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
+  } else if (rol === "EQUIPO") {
+    const perfil = await repositorio.buscarEquipoPorUsuario(usuarioId);
+    if (perfil) return { tipo: "EQUIPO", perfil: aRespuestaEquipo(perfil) };
+  }
+  throw new NotFoundError("Este usuario no tiene perfil");
+}
+
+/**
+ * Actualización parcial del perfil del jugador: sólo cambian los campos
+ * enviados. Cuando llega el país, el departamento se guarda con él (nulo si
+ * no se envía), para que nunca quede un departamento de Colombia junto a otro
+ * país; el esquema ya garantiza que la pareja es coherente.
+ */
+export async function actualizarJugador(
+  usuarioId: string,
+  datos: PerfilJugadorInput,
+): Promise<PerfilPropioResponse> {
+  const existente = await repositorio.buscarJugadorPorUsuario(usuarioId);
+  if (!existente) throw new NotFoundError("Este usuario no tiene perfil");
+
+  const cambios =
+    datos.pais === undefined
+      ? datos
+      : { ...datos, departamento: datos.departamento ?? null };
+  const perfil = await repositorio.actualizarJugador(usuarioId, cambios);
+  return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
 }
 
 /** TODO: Actualizar el PerfilEquipo del usuario autenticado. */

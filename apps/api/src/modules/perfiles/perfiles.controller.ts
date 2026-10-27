@@ -1,26 +1,36 @@
+import type { Request } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./perfiles.service";
+import type { PerfilJugadorInput } from "./perfiles.schema";
 
 /**
  * Controladores del módulo `perfiles`: sólo traducen entre HTTP y el
- * servicio. Andamiaje: todos responden 501 NOT_IMPLEMENTED por ahora.
+ * servicio. Andamiaje: los que conservan su TODO responden 501.
  */
+
+/** Petición cuyo body ya validó el middleware validate() con su esquema Zod. */
+type PeticionCon<Body> = Request<Record<string, string>, unknown, Body>;
 
 /**
  * GET /api/v1/perfiles/me
- * TODO: Devolver el perfil (jugador o equipo) del usuario autenticado.
+ * Perfil del usuario autenticado según su rol.
  */
 export const obtenerPropio = asyncHandler(async (req, res) => {
-  res.json(await servicio.obtenerPropio(req.body ?? req.validado));
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.obtenerPropio(req.usuario.id, req.usuario.rol));
 });
 
 /**
  * PUT /api/v1/perfiles/jugador
- * TODO: Actualizar el PerfilJugador del usuario autenticado.
+ * Actualización parcial del perfil del jugador autenticado.
  */
-export const actualizarJugador = asyncHandler(async (req, res) => {
-  res.json(await servicio.actualizarJugador(req.body ?? req.validado));
-});
+export const actualizarJugador = asyncHandler<PeticionCon<PerfilJugadorInput>>(
+  async (req, res) => {
+    if (!req.usuario) throw new UnauthorizedError();
+    res.status(200).json(await servicio.actualizarJugador(req.usuario.id, req.body));
+  },
+);
 
 /**
  * PUT /api/v1/perfiles/equipo

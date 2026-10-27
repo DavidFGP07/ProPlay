@@ -1,25 +1,74 @@
+import type { Prisma } from "@prisma/client";
+import { prisma } from "../../config/prisma";
 import { NotImplementedError } from "../../utils/errors";
 
 /**
- * Acceso a datos del módulo `perfiles`.
- *
- * Andamiaje: cuando se implemente, este archivo será el ÚNICO del módulo que
- * importe `prisma` desde ../../config/prisma. Ni el controlador ni el servicio
- * pueden tocar Prisma directamente.
+ * Único punto de acceso a Prisma para el módulo `perfiles`.
+ * Ni el controlador ni el servicio hablan con la base de datos directamente.
  */
 
-/** TODO: Devolver el perfil (jugador o equipo) del usuario autenticado. */
-export async function obtenerPropio(_datos?: unknown): Promise<never> {
-  throw new NotImplementedError(
-    "perfiles.repository.obtenerPropio todavía no consulta la base de datos",
-  );
+/** Campos del perfil del jugador que puede ver su dueño. */
+const seleccionJugador = {
+  id: true,
+  usuarioId: true,
+  bio: true,
+  pais: true,
+  departamento: true,
+  fechaNacimiento: true,
+  disponibilidadHoras: true,
+  dispuestoRelocalizar: true,
+  avatarUrl: true,
+  creadoEn: true,
+  actualizadoEn: true,
+} satisfies Prisma.PerfilJugadorSelect;
+
+/** Campos del perfil del equipo que puede ver su dueño. */
+const seleccionEquipo = {
+  id: true,
+  usuarioId: true,
+  nombreOrg: true,
+  descripcion: true,
+  sitioWeb: true,
+  logoUrl: true,
+  region: true,
+  creadoEn: true,
+  actualizadoEn: true,
+} satisfies Prisma.PerfilEquipoSelect;
+
+export type PerfilJugadorDb = Prisma.PerfilJugadorGetPayload<{
+  select: typeof seleccionJugador;
+}>;
+export type PerfilEquipoDb = Prisma.PerfilEquipoGetPayload<{
+  select: typeof seleccionEquipo;
+}>;
+
+export async function buscarJugadorPorUsuario(
+  usuarioId: string,
+): Promise<PerfilJugadorDb | null> {
+  return prisma.perfilJugador.findUnique({
+    where: { usuarioId },
+    select: seleccionJugador,
+  });
 }
 
-/** TODO: Actualizar el PerfilJugador del usuario autenticado. */
-export async function actualizarJugador(_datos?: unknown): Promise<never> {
-  throw new NotImplementedError(
-    "perfiles.repository.actualizarJugador todavía no consulta la base de datos",
-  );
+export async function buscarEquipoPorUsuario(
+  usuarioId: string,
+): Promise<PerfilEquipoDb | null> {
+  return prisma.perfilEquipo.findUnique({
+    where: { usuarioId },
+    select: seleccionEquipo,
+  });
+}
+
+export async function actualizarJugador(
+  usuarioId: string,
+  datos: Prisma.PerfilJugadorUpdateInput,
+): Promise<PerfilJugadorDb> {
+  return prisma.perfilJugador.update({
+    where: { usuarioId },
+    data: datos,
+    select: seleccionJugador,
+  });
 }
 
 /** TODO: Actualizar el PerfilEquipo del usuario autenticado. */
