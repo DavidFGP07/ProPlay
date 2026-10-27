@@ -18,7 +18,7 @@ export type {
 
 export type {
   ActualizarUsuarioInput,
-  CambiarPasswordInput,
+  CambioContrasenaInput,
 } from "../schemas/usuario";
 
 export type {
