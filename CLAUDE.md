@@ -306,9 +306,9 @@ Un commit por bloque de trabajo coherente.
 
 ## 9. Estado actual
 
-**Backend.** Sólo el módulo `usuarios` está implementado. Los demás (`perfiles`,
-`estadisticas`, `scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`)
-tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
+**Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me` y
+`PUT /perfiles/jugador`. Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
+`scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
 
