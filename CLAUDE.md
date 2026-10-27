@@ -20,7 +20,8 @@ Dos decisiones definen el producto y no se negocian:
 
 Si una decisión técnica contradice alguna de las dos, está mal.
 
-El diseño completo está en `docs/ProPlay.pdf`. Secciones útiles: **VII** requisitos
+El diseño completo está en el documento del proyecto (versión vigente: `ProPlay_v5.pdf`).
+Todavía no está en el repositorio; cuando se suba irá en `docs/ProPlay.pdf`. Secciones útiles: **VII** requisitos
 (RF-01…RF-14, RNF-01…RNF-08), **VIII** arquitectura C4 y fórmula del puntaje, **IX** modelo
 entidad-relación, **XIII** plan de sprints. Cuando el código y el documento no coincidan,
 manda el documento, salvo que haya una entrada en `docs/decisiones.md` que lo justifique.
@@ -42,11 +43,17 @@ la carpeta de un workspace: usa `npm install <paquete> -w api`.
 ```bash
 docker compose up -d        # Postgres 16 + pgvector, Redis 7
 npm install                 # desde la raíz
-npm run db:migrate && npm run db:seed
+npm run db:deploy           # aplica las migraciones existentes
+npm run db:seed             # cuentas de prueba (contraseña ProPlay123)
 npm run dev                 # API en :3000, cliente en :5173
-npm test
-npm run lint && npm run typecheck
+npm run verify              # guarda del índice HNSW, lint, typecheck y pruebas
 ```
+
+- `db:deploy` aplica migraciones; `db:migrate` (`prisma migrate dev`) es sólo para **crear**
+  una migración nueva y tiene sus reglas en §4. Nunca lo uses para ponerte al día.
+- El cliente de Prisma de `node_modules` es compartido por todas las ramas. Al cambiar a una
+  rama con otro `schema.prisma`, ejecuta `npm run db:generate` y `npm run db:deploy`; si
+  no, la API falla con `P2022` (pide columnas que tu base no tiene).
 
 ---
 
@@ -235,7 +242,8 @@ vista.
 ## 6. Estilo
 
 - TypeScript en modo `strict` en los tres workspaces. Nada de `@ts-ignore`.
-- `npm run lint` y `npm run typecheck` tienen que pasar antes de commitear.
+- `npm run verify` tiene que pasar antes de empujar: guarda del índice HNSW, lint,
+  typecheck y pruebas de los tres workspaces. Es lo mismo que comprueba el CI.
 - **Tailwind 4**, con los tokens declarados en `@theme` dentro de `index.css`. La paleta es
   `brand`, `accent` y `surface`. No metas colores en clases arbitrarias ni valores
   hexadecimales sueltos en el JSX.
@@ -311,8 +319,19 @@ sustituye el stub del repository por Prisma real: **no cambies la estructura de 
 
 **Frontend.** El cliente proviene del prototipo de la rama `Fronted`, integrado en
 `apps/web`. Su capa de datos es una simulación en memoria aislada en `src/mocks/` detrás de
-hooks de TanStack Query. Sólo la autenticación habla con la API real. Cada hook simulado
-lleva `// TODO: Sx — conectar con GET /api/v1/...` indicando el sprint que lo conecta.
+hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con GET /api/v1/...`
+indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
+(nombre y contraseña) y el registro con su aceptación; `/legal/privacidad` es texto estático.
+
+El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
+las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo
+rol (`src/mocks/persona.ts`) y el `Layout` lo avisa con «Datos de demostración». Con la
+bandera apagada sólo se ve lo real. Al conectar una vista de verdad, retira su hook del
+puente y añade su ruta a `RUTAS_SIN_DATOS_DEMO` en `src/router/areas.ts`.
+
+**Integración continua.** El CI de GitHub corre en cada pull request y en `main` lo mismo
+que `npm run verify` más el build, contra un Postgres y un Redis limpios. Un PR no se
+fusiona con el CI en rojo.
 
 **Plan.** Cuatro sprints de dos semanas. S1 fundación y acceso · S2 perfil verificable
 (ingesta desde Riot, solo League of Legends) · S3 motor de matching · S4 IA generativa, cierre y validación.
