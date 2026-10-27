@@ -62,6 +62,9 @@ model Usuario {
   rol             Rol      @default(JUGADOR)
   emailVerificado Boolean  @default(false)
   activo          Boolean  @default(true)
+  /// Último cambio de contraseña: los refresh tokens emitidos antes de esta
+  /// fecha quedan revocados.
+  credencialesCambiadasEn DateTime?
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
 
