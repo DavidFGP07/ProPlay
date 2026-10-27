@@ -26,7 +26,7 @@
     "db:reset": "npm run db:reset -w api",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "verify": "npm run lint && npm run typecheck && npm test"
+    "verify": "npm run check:indice-hnsw -w api && npm run lint && npm run typecheck && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

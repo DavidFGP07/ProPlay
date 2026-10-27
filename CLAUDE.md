@@ -153,6 +153,10 @@ Tres puntos que es fácil romper:
    - Abre el `migration.sql` generado y **elimina el `DROP INDEX` del índice HNSW** antes de
      aplicarla con `npm run db:migrate` y de commitearla.
    - No uses `prisma db push`: borra el índice sin dejar migración.
+   - Lo vigila `npm run check:indice-hnsw -w api`, dentro de `npm run verify` y del CI:
+     falla si una migración contiene ese `DROP INDEX`, salvo que el mismo archivo vuelva a
+     crear el índice con `USING hnsw` después del borrado. La prueba
+     `apps/api/tests/indice-hnsw.test.ts` confirma que el índice existe tras migrar.
 3. **Los tokens de `CuentaGaming` se guardan cifrados** con AES-256-GCM usando
    `ENCRYPTION_KEY`. Nunca en claro. Es RNF-03.
 
