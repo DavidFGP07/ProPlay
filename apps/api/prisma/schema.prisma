@@ -65,6 +65,12 @@ model Usuario {
   /// Último cambio de contraseña: los refresh tokens emitidos antes de esta
   /// fecha quedan revocados.
   credencialesCambiadasEn DateTime?
+  /// Autorización del tratamiento de datos (RNF-05, Ley 1581): versión del
+  /// aviso de privacidad aceptada y cuándo. Nulos en cuentas anteriores a ella.
+  avisoPrivacidadVersion    String?
+  avisoPrivacidadAceptadoEn DateTime?
+  /// Cuándo declaró el usuario ser mayor de 18 años al registrarse.
+  declaraMayorEdadEn        DateTime?
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
 
