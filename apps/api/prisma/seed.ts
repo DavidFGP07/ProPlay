@@ -3,6 +3,8 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import {
   PERFIL_VECTOR_DIMENSIONES,
   PERFIL_VECTOR_VERSION,
+  type Departamento,
+  type Pais,
 } from "@proplay/shared";
 
 /**
@@ -57,8 +59,28 @@ const JUEGOS = [
   { nombre: "Dota 2", roles: ["CARRY", "MID", "OFFLANE", "SOPORTE"], fuente: "STEAM" as const },
 ];
 
-const REGIONES = ["LAN", "LAS", "NA", "EU", "BR"];
-const PAISES = ["Colombia", "México", "Argentina", "España", "Chile", "Perú"];
+/**
+ * Ubicación de los 15 jugadores, en orden: mayoría del Caribe colombiano (el
+ * piloto), algunos del resto del país y uno de fuera, para cubrir los tres
+ * niveles de la dimensión geográfica.
+ */
+const UBICACIONES: { pais: Pais; departamento: Departamento | null }[] = [
+  { pais: "CO", departamento: "ATLANTICO" },
+  { pais: "CO", departamento: "BOLIVAR" },
+  { pais: "CO", departamento: "MAGDALENA" },
+  { pais: "CO", departamento: "ATLANTICO" },
+  { pais: "CO", departamento: "CESAR" },
+  { pais: "CO", departamento: "ANTIOQUIA" },
+  { pais: "CO", departamento: "CORDOBA" },
+  { pais: "CO", departamento: "ATLANTICO" },
+  { pais: "CO", departamento: "SUCRE" },
+  { pais: "CO", departamento: "BOGOTA_DC" },
+  { pais: "CO", departamento: "LA_GUAJIRA" },
+  { pais: "CO", departamento: "BOLIVAR" },
+  { pais: "CO", departamento: "VALLE_DEL_CAUCA" },
+  { pais: "CO", departamento: "SAN_ANDRES" },
+  { pais: "MX", departamento: null },
+];
 
 const EQUIPOS = [
   {
@@ -206,14 +228,16 @@ async function main() {
       },
     });
 
+    // La ubicación también va en `update`: las bases anteriores a la migración
+    // de ubicación tienen `pais` vacío y el seed lo repone.
+    const ubicacion = UBICACIONES[indice % UBICACIONES.length]!;
     const jugador = await prisma.perfilJugador.upsert({
       where: { usuarioId: usuario.id },
-      update: {},
+      update: { ...ubicacion },
       create: {
         usuarioId: usuario.id,
         bio: `${rol} de ${juego.nombre} buscando equipo competitivo.`,
-        region: REGIONES[indice % REGIONES.length]!,
-        pais: PAISES[indice % PAISES.length]!,
+        ...ubicacion,
         fechaNacimiento: new Date(1998 + (indice % 8), indice % 12, 1 + (indice % 27)),
         disponibilidadHoras: 15 + (indice % 4) * 5,
         dispuestoRelocalizar: indice % 3 === 0,

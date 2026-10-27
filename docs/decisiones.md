@@ -126,7 +126,8 @@ entrada dice en qué sprint se cierra; al resolverla, bórrala en el mismo commi
 | --- | --- | --- |
 | Hacer público `/jugador/:id`, sin guarda de sesión | Es la vitrina del jugador y el argumento central del proyecto: un perfil verificable que se comparte por enlace. El inventario ya lo marca como público; hoy está dentro del área privada. | S1 |
 | Alta del primer administrador en producción y procedimiento de promoción | El seed crea `admin@proplay.gg` con la contraseña de demostración, válido sólo en desarrollo (el seed nunca debe correr en producción). `ADMIN` no es registrable y el único rastro de cómo se asigna es un comentario en `shared/enums.ts` («se asigna a mano»); `POST /admin/usuarios/rol` responde 501. Definir el arranque (un script de una sola vez) y documentarlo en el README; el endpoint de promoción con su traza en `AuditLog` llega con el módulo `admin`. | S1 (arranque) · S4 (endpoint) |
-| Definir dónde se captura la región del jugador | El registro dejó de pedirla y no hay onboarding. Es insumo de la dimensión geográfica del matching: tiene que existir antes de que el S3 la necesite. | S2 |
+| Catálogo de ubicación para `Oferta` y `PerfilEquipo`, con «sin restricción» | Su `region` sigue siendo texto libre y el seed la llena con regiones de servidor (LAN, LAS…), como hacía `PerfilJugador`. La dimensión geográfica compara al jugador con la **oferta** (bootcamp presencial o remoto), así que la oferta necesita el mismo `pais` + `departamento` y un valor que no restrinja; también `crearOfertaSchema` y `listarOfertasQuerySchema`. | S3 |
+| Puntuación de la dimensión geográfica cuando el jugador no tiene ubicación | `pais` y `departamento` son anulables y las cuentas anteriores a la tarea 1.5 no la tienen. Hay que decidir el valor (neutro, mínimo o excluir la dimensión y renormalizar los pesos) antes de implementar `calcularCompatibilidad`. | S3 |
 
 ## Deuda conocida
 
@@ -163,6 +164,7 @@ El modelo del backend es más completo; el cliente se adapta.
 | --- | --- | --- |
 | `Mensaje` emisor → receptor directo frente a `Conversacion` + `Mensaje` | El backend soporta hilos y chats de equipo, que el documento pide. La bandeja pasa a listar conversaciones. | S4 |
 | Campos del perfil del jugador: `biografia`, `horasDisponibles`, `dispuestoARelocalizarse`, `foto` | Se renombran a `bio`, `disponibilidadHoras`, `dispuestoRelocalizar`, `avatarUrl`. | S2 |
+| `region` del perfil del jugador como ciudad (`Barranquilla`, `Cartagena`…) | Pasa a `pais` (ISO 3166-1 alfa-2) + `departamento` (`ATLANTICO`, `BOLIVAR`…). Las 8 ciudades del prototipo caen en 8 departamentos distintos. | S2 |
 | Vinculación de cuentas tecleando un identificador | El contrato usa OAuth 2.0 (`codigoAutorizacion`): el formulario se sustituye por la redirección a Riot y Steam. | S2 |
 | `Estadistica` con `perfilId`, `fuente: 'api-riot'…` y `ultimaSync` | Pasa a `jugadorId`, `fuente: Plataforma` y `capturadaEn`. | S2 |
 | `Oferta` sin `titulo` y con `experienciaMinima`, `regionPreferida`, `horasSemanales`, `publicadaEn` | Se añade `titulo` y se renombran a `experienciaMinAnios`, `region`, `horasSemana`, `creadoEn`. | S3 |
@@ -181,7 +183,7 @@ esquemas de `shared`.
 | `leida: boolean` de `Notificacion` | `leidaEn !== null` | S4 |
 | Tipos de notificación en minúscula del prototipo (`postulacion`, `endoso`…) | Correspondencia con `NUEVA_POSTULACION`, `ENDORSEMENT_RECIBIDO`… en el adaptador | S4 |
 | `emisorNombre` del mensaje | Participantes de la conversación | S4 |
-| `esCaribe` y `handle` del perfil | `region` y el nombre de usuario | S2 |
+| `esCaribe` y `handle` del perfil | `MACROREGION_POR_DEPARTAMENTO[departamento] === "CARIBE"` y el nombre de usuario | S2 |
 | `tendencia` de la estadística (serie de la sparkline) | Histórico de capturas | S2 |
 | `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 |
 | Etiquetas de enums («Abierta», «Riot Games») | `i18n/es.ts`. **Resuelto en este cambio.** | — |
@@ -209,3 +211,14 @@ esquemas de `shared`.
 | El registro queda restringido a mayores de 18 años mediante una declaración obligatoria. La autorización del representante legal pasa a trabajo futuro | La Ley 1581 da tratamiento especial a los datos de menores; recoger la autorización de su representante exige un flujo propio. La casilla «Declaro que soy mayor de 18 años» es obligatoria (`registerSchema`) y su fecha se guarda en `Usuario.declaraMayorEdadEn`. |
 | La aceptación del aviso se guarda en `Usuario` (`avisoPrivacidadVersion`, `avisoPrivacidadAceptadoEn`, `declaraMayorEdadEn`) y en la traza `USUARIO_REGISTRADO` de `AuditLog`, en la misma transacción que crea el usuario. La versión vigente es `VERSION_AVISO_PRIVACIDAD` en `@proplay/shared` | Sin entidad nueva: el modelo sigue con las 15 del documento. La traza, con la versión en `metadata`, es el rastro histórico, y al ir en la transacción no puede quedar un usuario sin prueba de su autorización (Decreto 1377 de 2013). El servidor guarda la versión vigente e ignora cualquiera que envíe el cliente. El texto vive en `apps/web/src/i18n/legal.ts`; al cambiarlo se sube la versión. **Trabajo futuro:** volver a pedir la aceptación cuando cambie la versión. Las cuentas anteriores a esta tarea tienen las columnas vacías. |
 
+## Ubicación del jugador
+
+| Decisión | Justificación |
+| --- | --- |
+| La ubicación geográfica del jugador es **país + departamento**: `PerfilJugador.pais` (`CHAR(2)`, ISO 3166-1 alfa-2) y `PerfilJugador.departamento` (enum `Departamento`), éste sólo cuando el país es Colombia. Sustituye a `PerfilJugador.region` | La fórmula de la dimensión geográfica (prototipo y `docs/arquitectura.md`) tiene tres niveles: misma ubicación, misma macrorregión y otra, más la disposición a relocalizarse. El departamento basta para los tres; la ciudad sería un dato personal más sin mejorar el cálculo (Ley 1581), y la zona horaria se deduce del país. `region` mezclaba conceptos: el seed guardaba regiones de servidor (LAN, LAS…) y el prototipo, ciudades. La región de servidor sale de la cuenta vinculada (S2). |
+| Catálogo: `DEPARTAMENTOS` es enum en `shared` y en Prisma (33 valores); `PAISES` es una constante de `shared` validada con Zod, no enum de Prisma; `MACROREGION_POR_DEPARTAMENTO` deriva la macrorregión y no se guarda | Los departamentos son un conjunto cerrado y estable: que la base lo garantice compensa. La lista ISO es larga y la mantiene un tercero. La macrorregión es función del departamento: guardarla permitiría incoherencias. Nada de texto libre; las etiquetas visibles van al i18n del cliente. |
+| Un departamento que abarca varias regiones naturales cuenta en una sola, como en las regiones administrativas de planificación (Cauca, Chocó, Nariño y Valle del Cauca, Pacífica; Antioquia, Andina). San Andrés cuenta como Caribe y no hay macrorregión Insular | Para el piloto, centrado en el Caribe colombiano, el archipiélago es parte del segmento Caribe. Con San Andrés en Caribe, ningún departamento quedaba Insular. |
+| País y departamento viajan juntos en el contrato (`ubicacionJugadorSchema`, incluido en `perfilJugadorSchema`): con `CO` el departamento es obligatorio, con otro país no se admite, y un departamento sin país se rechaza. `null` borra la ubicación | Así una actualización parcial nunca depende del país ya guardado para saber si el departamento es válido. |
+| La ubicación se captura en la edición del perfil (`PUT /perfiles/jugador`), no en el registro ni en un onboarding | El registro dejó de pedirla porque es un dato del perfil, no de la cuenta; pedirla allí añade fricción al alta y no cubre a los jugadores ya registrados. El onboarding es una vista cuyo contenido principal es vincular la cuenta de Riot (S2). El endpoint es el primero del módulo `perfiles`, que la tarea siguiente completa. |
+| El filtro de ubicación del buscador de talento (`busquedaJugadoresSchema`) pasa de `region` a `pais` + `departamento` | Filtraba una columna que deja de existir. El endpoint sigue en 501. |
+| La migración `ubicacion_perfil_jugador` descarta los valores de `pais` (`USING NULL`) en vez de convertirlos | Eran texto libre del seed («Colombia»); truncarlos a dos caracteres daría códigos falsos. Cada base local debe ejecutar `npm run db:deploy` y `npm run db:seed`, que repone la ubicación de los 15 jugadores. |

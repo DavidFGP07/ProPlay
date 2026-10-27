@@ -25,7 +25,11 @@ export type {
   AsignarHabilidadInput,
   Habilidad,
   PerfilEquipoInput,
+  PerfilEquipoRespuesta,
   PerfilJugadorInput,
+  PerfilJugadorRespuesta,
+  PerfilPropioResponse,
+  UbicacionJugadorInput,
   VincularCuentaGamingInput,
 } from "../schemas/perfil";
 

@@ -69,3 +69,45 @@ export const TIPOS_NOTIFICACION = [
   "ENDORSEMENT_RECIBIDO",
 ] as const;
 export type TipoNotificacion = (typeof TIPOS_NOTIFICACION)[number];
+
+/**
+ * Departamentos de Colombia (32 más Bogotá D. C.), insumo de la dimensión
+ * geográfica del matching. Sólo se usan con `pais = "CO"`; fuera de Colombia la
+ * ubicación es sólo el país. Las etiquetas visibles viven en el i18n del cliente.
+ */
+export const DEPARTAMENTOS = [
+  "AMAZONAS",
+  "ANTIOQUIA",
+  "ARAUCA",
+  "ATLANTICO",
+  "BOGOTA_DC",
+  "BOLIVAR",
+  "BOYACA",
+  "CALDAS",
+  "CAQUETA",
+  "CASANARE",
+  "CAUCA",
+  "CESAR",
+  "CHOCO",
+  "CORDOBA",
+  "CUNDINAMARCA",
+  "GUAINIA",
+  "GUAVIARE",
+  "HUILA",
+  "LA_GUAJIRA",
+  "MAGDALENA",
+  "META",
+  "NARINO",
+  "NORTE_DE_SANTANDER",
+  "PUTUMAYO",
+  "QUINDIO",
+  "RISARALDA",
+  "SAN_ANDRES",
+  "SANTANDER",
+  "SUCRE",
+  "TOLIMA",
+  "VALLE_DEL_CAUCA",
+  "VAUPES",
+  "VICHADA",
+] as const;
+export type Departamento = (typeof DEPARTAMENTOS)[number];

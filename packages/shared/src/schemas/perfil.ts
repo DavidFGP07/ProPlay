@@ -1,16 +1,72 @@
 import { z } from "zod";
-import { CATEGORIAS_HABILIDAD, PLATAFORMAS } from "../enums";
-import { NIVEL_HABILIDAD_MAX, NIVEL_HABILIDAD_MIN } from "../constants";
+import { CATEGORIAS_HABILIDAD, DEPARTAMENTOS, PLATAFORMAS } from "../enums";
+import {
+  NIVEL_HABILIDAD_MAX,
+  NIVEL_HABILIDAD_MIN,
+  PAIS_CON_DEPARTAMENTO,
+  PAISES,
+} from "../constants";
 
-export const perfilJugadorSchema = z.object({
-  bio: z.string().max(1000).optional(),
-  region: z.string().max(60).optional(),
-  pais: z.string().max(60).optional(),
-  fechaNacimiento: z.coerce.date().optional(),
-  disponibilidadHoras: z.number().int().min(0).max(80).optional(),
+/**
+ * Ubicación geográfica del jugador, insumo de la dimensión geográfica del
+ * matching. No es la región de servidor del juego, que sale de la cuenta
+ * vinculada. `null` borra el dato.
+ */
+const camposUbicacion = {
+  pais: z.enum(PAISES).nullable().optional(),
+  departamento: z.enum(DEPARTAMENTOS).nullable().optional(),
   dispuestoRelocalizar: z.boolean().optional(),
-  avatarUrl: z.string().url().optional(),
-});
+};
+
+/**
+ * País y departamento viajan juntos: con `pais = "CO"` el departamento es
+ * obligatorio; con otro país, o sin país, no se admite. Un departamento sin
+ * país se rechaza para no depender del país que ya esté guardado.
+ */
+function validarUbicacion(
+  datos: { pais?: string | null; departamento?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  const { pais, departamento } = datos;
+  if (pais === undefined) {
+    if (departamento !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pais"],
+        message: "Indica el país junto con el departamento",
+      });
+    }
+    return;
+  }
+  if (pais === PAIS_CON_DEPARTAMENTO && !departamento) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["departamento"],
+      message: "Selecciona el departamento",
+    });
+  }
+  if (pais !== PAIS_CON_DEPARTAMENTO && departamento) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["departamento"],
+      message: "El departamento sólo aplica a Colombia",
+    });
+  }
+}
+
+export const ubicacionJugadorSchema = z
+  .object(camposUbicacion)
+  .superRefine(validarUbicacion);
+
+export const perfilJugadorSchema = z
+  .object({
+    bio: z.string().max(1000).optional(),
+    ...camposUbicacion,
+    fechaNacimiento: z.coerce.date().optional(),
+    disponibilidadHoras: z.number().int().min(0).max(80).optional(),
+    avatarUrl: z.string().url().optional(),
+  })
+  .superRefine(validarUbicacion);
 
 export const perfilEquipoSchema = z.object({
   nombreOrg: z.string().min(2).max(120),
@@ -41,7 +97,45 @@ export const vincularCuentaGamingSchema = z.object({
   codigoAutorizacion: z.string().min(1),
 });
 
+/** Perfil del jugador tal como lo devuelve la API a su dueño. */
+export const perfilJugadorRespuestaSchema = z.object({
+  id: z.string(),
+  usuarioId: z.string(),
+  bio: z.string().nullable(),
+  pais: z.enum(PAISES).nullable(),
+  departamento: z.enum(DEPARTAMENTOS).nullable(),
+  fechaNacimiento: z.coerce.date().nullable(),
+  disponibilidadHoras: z.number().int().nullable(),
+  dispuestoRelocalizar: z.boolean(),
+  avatarUrl: z.string().nullable(),
+  creadoEn: z.coerce.date(),
+  actualizadoEn: z.coerce.date(),
+});
+
+/** Perfil del equipo tal como lo devuelve la API a su dueño. */
+export const perfilEquipoRespuestaSchema = z.object({
+  id: z.string(),
+  usuarioId: z.string(),
+  nombreOrg: z.string(),
+  descripcion: z.string().nullable(),
+  sitioWeb: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  region: z.string().nullable(),
+  creadoEn: z.coerce.date(),
+  actualizadoEn: z.coerce.date(),
+});
+
+/** Respuesta de `GET /perfiles/me`: el perfil que corresponde al rol. */
+export const perfilPropioResponseSchema = z.discriminatedUnion("tipo", [
+  z.object({ tipo: z.literal("JUGADOR"), perfil: perfilJugadorRespuestaSchema }),
+  z.object({ tipo: z.literal("EQUIPO"), perfil: perfilEquipoRespuestaSchema }),
+]);
+
+export type UbicacionJugadorInput = z.infer<typeof ubicacionJugadorSchema>;
 export type PerfilJugadorInput = z.infer<typeof perfilJugadorSchema>;
+export type PerfilJugadorRespuesta = z.infer<typeof perfilJugadorRespuestaSchema>;
+export type PerfilEquipoRespuesta = z.infer<typeof perfilEquipoRespuestaSchema>;
+export type PerfilPropioResponse = z.infer<typeof perfilPropioResponseSchema>;
 export type PerfilEquipoInput = z.infer<typeof perfilEquipoSchema>;
 export type Habilidad = z.infer<typeof habilidadSchema>;
 export type AsignarHabilidadInput = z.infer<typeof asignarHabilidadSchema>;
