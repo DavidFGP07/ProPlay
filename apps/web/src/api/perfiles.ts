@@ -1,4 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { PerfilPropioResponse, UbicacionJugadorInput } from '@proplay/shared'
+import { api } from '@/api/client'
 import {
   actualizarPerfil,
   actualizarPrivacidad,
@@ -18,6 +20,34 @@ import { simulado, useMutacionSimulada } from '@/api/demo'
 import type { ConfiguracionPrivacidad, PlataformaJuego } from '@/mocks/modelos'
 
 export type { CamposPerfil }
+
+const CLAVE_PERFIL_PROPIO = ['perfiles', 'me'] as const
+
+// RF-05 · Perfil propio del usuario en sesion. Habla con la API real, sin puente
+// de demostracion: scout y administrador reciben { tipo: null, perfil: null }.
+export function usePerfilPropio(habilitado = true) {
+  return useQuery({
+    queryKey: CLAVE_PERFIL_PROPIO,
+    enabled: habilitado,
+    queryFn: async () => {
+      const { data } = await api.get<PerfilPropioResponse>('/perfiles/me')
+      return data
+    },
+  })
+}
+
+// RF-05 · RF-09 · Ubicacion del jugador (insumo de la dimension geografica). API real.
+export function useActualizarUbicacion() {
+  const cliente = useQueryClient()
+  return useMutation({
+    mutationFn: async (datos: UbicacionJugadorInput) => {
+      const { data } = await api.patch<PerfilPropioResponse>('/perfiles/jugador', datos)
+      return data
+    },
+    // El PATCH responde con la misma forma que GET /perfiles/me.
+    onSuccess: (data) => cliente.setQueryData(CLAVE_PERFIL_PROPIO, data),
+  })
+}
 
 // RF-05 · Perfil profesional del jugador con estadisticas, cuentas y habilidades
 export function usePerfil(id: string | undefined) {

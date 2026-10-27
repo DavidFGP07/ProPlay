@@ -35,6 +35,7 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import { TarjetaUbicacion } from '@/components/TarjetaUbicacion'
 import { useIdentidad } from '@/api/identidad'
 import { useMarcarTodasLeidas, useNotificaciones } from '@/api/notificaciones'
 import { useMisPostulaciones, type PostulacionConOferta } from '@/api/ofertas'
@@ -62,17 +63,6 @@ import type {
   PlataformaJuego,
   Postulacion,
 } from '@/mocks/modelos'
-
-const REGIONES = [
-  'Barranquilla',
-  'Cartagena',
-  'Santa Marta',
-  'Cúcuta',
-  'Bucaramanga',
-  'Medellín',
-  'Bogotá',
-  'Cali',
-] as const
 
 const ROLES = [
   'Top lane',
@@ -115,16 +105,22 @@ export default function MiPerfilPage() {
 
   if (!usuario) return null
 
+  // Dato real de la cuenta: se muestra aunque el puente de demostracion este
+  // apagado y la vista no tenga nada mas que ensenar.
+  const ubicacion = usuario.rol === 'JUGADOR' ? <TarjetaUbicacion /> : null
+
   if (identidad.isLoading) {
     return (
       <div className="space-y-4">
         <div className="skeleton h-44 rounded-2xl" />
+        {ubicacion}
         <div className="skeleton h-96 rounded-2xl" />
       </div>
     )
   }
 
   if (!perfilId) {
+    if (ubicacion) return <div className="space-y-6">{ubicacion}</div>
     return (
       <Card>
         <EmptyState
@@ -140,6 +136,7 @@ export default function MiPerfilPage() {
     return (
       <div className="space-y-4">
         <div className="skeleton h-44 rounded-2xl" />
+        {ubicacion}
         <div className="skeleton h-96 rounded-2xl" />
       </div>
     )
@@ -212,6 +209,8 @@ export default function MiPerfilPage() {
           </div>
         </div>
       </Card>
+
+      {ubicacion}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
@@ -371,10 +370,8 @@ function DatosPanel({
   onGuardar: (cambios: CamposPerfil) => Promise<void>
 }) {
   const [biografia, setBiografia] = useState(perfil.biografia)
-  const [region, setRegion] = useState(perfil.region)
   const [horas, setHoras] = useState(perfil.horasDisponibles)
   const [anios, setAnios] = useState(perfil.aniosExperiencia)
-  const [relocalizable, setRelocalizable] = useState(perfil.dispuestoARelocalizarse)
   const [roles, setRoles] = useState<string[]>(perfil.rolesPreferidos)
   const [equipos, setEquipos] = useState(perfil.equiposAnteriores.join(', '))
   const [guardando, setGuardando] = useState(false)
@@ -389,10 +386,8 @@ function DatosPanel({
     try {
       await onGuardar({
         biografia: biografia.trim(),
-        region,
         horasDisponibles: horas,
         aniosExperiencia: anios,
-        dispuestoARelocalizarse: relocalizable,
         rolesPreferidos: roles.length ? roles : ['Flex'],
         equiposAnteriores: equipos
           .split(',')
@@ -407,15 +402,6 @@ function DatosPanel({
   return (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Region actual" hint="Ubica tu perfil en el directorio de talento.">
-          <Select value={region} onChange={(e) => setRegion(e.target.value as PerfilJugador['region'])}>
-            {REGIONES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field label="Horas disponibles por semana">
           <Input
             type="number"
@@ -475,23 +461,6 @@ function DatosPanel({
         </div>
       </div>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3">
-        <input
-          type="checkbox"
-          checked={relocalizable}
-          onChange={(e) => setRelocalizable(e.target.checked)}
-          className="mt-0.5 size-4 accent-[#7c4df5]"
-        />
-        <span>
-          <span className="block text-xs font-medium text-slate-200">
-            Dispuesto a relocalizarme
-          </span>
-          <span className="mt-0.5 block text-[11px] text-slate-500">
-            Mejora la dimension geografica del matching: el sistema lo pondera
-            automaticamente cuando el equipo exige una region especifica.
-          </span>
-        </span>
-      </label>
 
       <div className="flex justify-end">
         <Button onClick={guardar} cargando={guardando}>

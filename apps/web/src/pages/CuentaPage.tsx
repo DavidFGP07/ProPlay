@@ -1,20 +1,28 @@
 import { useState } from 'react'
-import { useForm, type FieldValues, type Path, type UseFormSetError } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import axios from 'axios'
-import { CheckCircle2, KeyRound, RotateCcw, UserRound } from 'lucide-react'
+import { KeyRound, UserRound } from 'lucide-react'
 import {
   actualizarUsuarioSchema,
   cambioContrasenaSchema,
   type ActualizarUsuarioInput,
-  type ErrorResponse,
   type UsuarioPublico,
 } from '@proplay/shared'
-import { Button, Card, CardHeader, ErrorCampo, Field, Input, SectionTitle } from '@/components/ui'
+import {
+  Button,
+  Card,
+  CardHeader,
+  ErrorCampo,
+  EstadoEnvio,
+  Field,
+  Input,
+  SectionTitle,
+} from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { useActualizarCuenta, useCambiarContrasena } from '@/api/cuenta'
+import { aplicarErrorApi } from '@/api/errores'
 import { es } from '@/i18n/es'
 
 /**
@@ -27,34 +35,6 @@ const esquemaContrasena = cambioContrasenaSchema
     path: ['confirmacion'],
   })
 type FormularioContrasena = z.input<typeof esquemaContrasena>
-
-/**
- * Lleva los errores de la API al formulario: los de validacion (422) a su
- * campo y el resto a un mensaje general. Devuelve ese mensaje, si lo hay.
- */
-function aplicarErrorApi<T extends FieldValues>(
-  error: unknown,
-  setError: UseFormSetError<T>,
-  porCodigo: Partial<Record<string, { campo: Path<T>; mensaje: string }>> = {},
-): string {
-  if (!axios.isAxiosError<ErrorResponse>(error) || !error.response) {
-    return es.cuenta.errores.generico
-  }
-  const { status, data } = error.response
-  const especifico = data?.error?.code ? porCodigo[data.error.code] : undefined
-  if (especifico) {
-    setError(especifico.campo, { message: especifico.mensaje })
-    return ''
-  }
-  const campos = (data?.error?.details as { campos?: { campo: string; mensaje: string }[] })
-    ?.campos
-  if (status === 422 && campos?.length) {
-    for (const { campo, mensaje } of campos) setError(campo as Path<T>, { message: mensaje })
-    return ''
-  }
-  if (status === 429) return es.cuenta.errores.demasiadosIntentos
-  return es.cuenta.errores.generico
-}
 
 // RF-01 · RNF-05 · Ajustes de cuenta: nombre y contraseña, para los cuatro roles
 export default function CuentaPage() {
@@ -124,7 +104,7 @@ function DatosCuenta({ usuario }: { usuario: UsuarioPublico }) {
           </Field>
         </div>
 
-        <Estado
+        <EstadoEnvio
           exito={exito ? es.cuenta.datos.exito : ''}
           error={errorGeneral}
           onReintentar={() => void enviar()}
@@ -214,7 +194,7 @@ function CambioContrasena() {
           </Field>
         </div>
 
-        <Estado
+        <EstadoEnvio
           exito={exito ? es.cuenta.contrasena.exito : ''}
           error={errorGeneral}
           onReintentar={() => void enviar()}
@@ -228,42 +208,4 @@ function CambioContrasena() {
       </form>
     </Card>
   )
-}
-
-/** Resultado del ultimo envio: exito o error general con reintento. */
-function Estado({
-  exito,
-  error,
-  onReintentar,
-}: {
-  exito: string
-  error: string
-  onReintentar: () => void
-}) {
-  if (error) {
-    return (
-      <div
-        role="alert"
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2"
-      >
-        <p className="text-xs text-rose-300">{error}</p>
-        <Button variante="secundario" tamano="sm" onClick={onReintentar}>
-          <RotateCcw size={13} aria-hidden />
-          {es.cuenta.reintentar}
-        </Button>
-      </div>
-    )
-  }
-  if (exito) {
-    return (
-      <p
-        role="status"
-        className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300"
-      >
-        <CheckCircle2 size={14} aria-hidden />
-        {exito}
-      </p>
-    )
-  }
-  return null
 }
