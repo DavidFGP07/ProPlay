@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useRef } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2, RotateCcw } from 'lucide-react'
+import { es } from '@/i18n/es'
 
 export function cn(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(' ')
@@ -312,6 +313,46 @@ export function Textarea({
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cn(baseInput, 'resize-none', className)} {...props} />
+}
+
+/* -------------------------------- Estados --------------------------------- */
+
+/** Resultado del ultimo envio o de una carga: exito, o error general con reintento. */
+export function EstadoEnvio({
+  exito,
+  error,
+  onReintentar,
+}: {
+  exito: string
+  error: string
+  onReintentar: () => void
+}) {
+  if (error) {
+    return (
+      <div
+        role="alert"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2"
+      >
+        <p className="text-xs text-rose-300">{error}</p>
+        <Button variante="secundario" tamano="sm" onClick={onReintentar}>
+          <RotateCcw size={13} aria-hidden />
+          {es.comun.reintentar}
+        </Button>
+      </div>
+    )
+  }
+  if (exito) {
+    return (
+      <p
+        role="status"
+        className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300"
+      >
+        <CheckCircle2 size={14} aria-hidden />
+        {exito}
+      </p>
+    )
+  }
+  return null
 }
 
 /* --------------------------------- Empty ---------------------------------- */
