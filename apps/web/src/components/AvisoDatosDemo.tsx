@@ -1,16 +1,20 @@
+import { useLocation } from 'react-router-dom'
 import { FlaskConical } from 'lucide-react'
 import { datosDemoActivos, personaActual } from '@/api/demo'
 import { useAuth } from '@/context/AuthContext'
 import { es } from '@/i18n/es'
+import { RUTAS_SIN_DATOS_DEMO } from '@/router/areas'
 
 /**
  * Distintivo de las vistas alimentadas por el puente de datos de
  * demostracion: mientras este activo, el usuario tiene que saber que lo que
- * ve no es suyo. Desaparece al apagar VITE_DEMO_DATA.
+ * ve no es suyo. Desaparece al apagar VITE_DEMO_DATA y en las rutas que ya
+ * solo usan endpoints reales (RUTAS_SIN_DATOS_DEMO).
  */
 export function AvisoDatosDemo() {
   const { usuario } = useAuth()
-  if (!datosDemoActivos || !usuario) return null
+  const { pathname } = useLocation()
+  if (!datosDemoActivos || !usuario || RUTAS_SIN_DATOS_DEMO.includes(pathname)) return null
   const persona = personaActual()
 
   return (

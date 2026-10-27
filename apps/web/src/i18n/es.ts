@@ -16,6 +16,40 @@ export const es = {
     detalle: 'La direccion que buscas no existe o ya no esta disponible.',
     volver: 'Volver al inicio',
   },
+  cuenta: {
+    menu: 'Mi cuenta',
+    titulo: 'Mi cuenta',
+    subtitulo: 'Tus datos de acceso a ProPlay.',
+    reintentar: 'Reintentar',
+    datos: {
+      titulo: 'Datos de la cuenta',
+      subtitulo: 'El correo identifica tu cuenta y no se puede cambiar desde aqui.',
+      nombre: 'Nombre',
+      correo: 'Correo electronico',
+      rol: 'Rol',
+      guardar: 'Guardar nombre',
+      exito: 'Nombre actualizado.',
+      sinCambios: 'No has cambiado el nombre.',
+    },
+    contrasena: {
+      titulo: 'Cambiar contraseña',
+      subtitulo:
+        'Al cambiarla se cierran tus sesiones en otros dispositivos; esta sigue abierta.',
+      actual: 'Contraseña actual',
+      nueva: 'Contraseña nueva',
+      confirmacion: 'Confirma la contraseña nueva',
+      pista: 'Minimo 8 caracteres, con al menos una letra y un numero.',
+      guardar: 'Cambiar contraseña',
+      exito: 'Contraseña actualizada. Cerramos tus sesiones en otros dispositivos.',
+    },
+    errores: {
+      confirmacion: 'Las contraseñas no coinciden',
+      actualInvalida: 'La contraseña actual no es correcta',
+      demasiadosIntentos:
+        'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.',
+      generico: 'No pudimos guardar los cambios. Revisa tu conexion e intentalo de nuevo.',
+    },
+  },
   /** Etiquetas de los enums del contrato: la interfaz nunca muestra el valor crudo. */
   rol: {
     JUGADOR: 'Jugador',

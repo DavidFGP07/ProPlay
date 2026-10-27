@@ -23,6 +23,7 @@ const MiPerfilPage = lazy(() => import('@/pages/MiPerfilPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const MensajesPage = lazy(() => import('@/pages/MensajesPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
+const CuentaPage = lazy(() => import('@/pages/CuentaPage'))
 
 /**
  * Guarda de rutas. Es una ruta de layout sin path: sin roles exige sesion; con
@@ -94,6 +95,8 @@ export default function App() {
           <Route path="vacantes/:id" element={diferida(OfertaDetallePage)} />
           <Route path="jugador/:id" element={diferida(PerfilJugadorPage)} />
           <Route path="mensajes" element={diferida(MensajesPage)} />
+          {/* RF-01 · RNF-05 · Ajustes de cuenta, comunes a los cuatro roles */}
+          <Route path="cuenta" element={diferida(CuentaPage)} />
 
           {/* Area del jugador */}
           <Route element={<Privado roles={AREAS.jugador} />}>

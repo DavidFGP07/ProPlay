@@ -180,7 +180,7 @@ que falta una, dilo y la añadimos. Las rutas marcadas `—` todavía no existen
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 |
 | Mis postulaciones | — | RF-10 |
 | Mensajes | `/mensajes` | RF-12 |
-| Ajustes de cuenta y privacidad | — | RNF-05 |
+| Ajustes de cuenta y privacidad (común a los cuatro roles; hoy nombre y contraseña) | `/cuenta` | RF-01, RNF-05 |
 | Onboarding | — | RF-02, RF-05 |
 
 ### Equipo y scout

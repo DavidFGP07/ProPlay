@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Briefcase,
@@ -10,6 +10,7 @@ import {
   Menu,
   MessageSquare,
   Search,
+  Settings,
   ShieldCheck,
   Target,
   UserRound,
@@ -41,6 +42,8 @@ const NAVEGACION: ItemNav[] = [
   { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: AREAS.equipo },
   { to: '/mensajes', label: 'Mensajes', icono: MessageSquare },
   { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: AREAS.admin },
+  // Sin roles: la vista de cuenta es comun a los cuatro.
+  { to: '/cuenta', label: es.cuenta.menu, icono: Settings },
 ]
 
 export function Layout() {
@@ -178,7 +181,11 @@ export function Layout() {
           <div className="flex flex-1 items-center justify-end gap-2 md:flex-none">
             <NotificacionesBell />
 
-            <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 py-1 pl-1 pr-3">
+            <Link
+              to="/cuenta"
+              aria-label={es.cuenta.menu}
+              className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 py-1 pl-1 pr-3 transition hover:border-brand-500/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
               <Avatar nombre={usuario.nombre} size="sm" />
               <div className="hidden leading-tight sm:block">
                 <p className="text-xs font-medium text-slate-200">{usuario.nombre}</p>
@@ -186,7 +193,7 @@ export function Layout() {
                   {es.rol[usuario.rol]}
                 </Badge>
               </div>
-            </div>
+            </Link>
 
             <Button
               variante="fantasma"
