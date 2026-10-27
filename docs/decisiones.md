@@ -188,3 +188,9 @@ esquemas de `shared`.
 | `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 |
 | Etiquetas de enums («Abierta», «Riot Games») | `i18n/es.ts`. **Resuelto en este cambio.** | — |
 
+
+## Correcciones
+
+| Corrección | Detalle |
+| --- | --- |
+| El índice HNSW sobre `PerfilVector.embedding` no existió hasta la migración `20261027153113_indice_hnsw_perfil_vector` | `CLAUDE.md` §4 lo declaraba obligatorio y el plan de implementación lo daba por creado, pero la migración de pgvector sólo añadía la extensión y la columna, y dejaba un índice `ivfflat` como `TODO` comentado. Se crea `"PerfilVector_embedding_hnsw_idx"` con `vector_cosine_ops`, la métrica coseno del recuperador (`ORDER BY embedding <=> $1`). El `TODO` sigue en `20260910145700_pgvector_perfil_vector` porque esa migración ya está aplicada y editarla cambiaría su checksum; queda obsoleto. Prisma no puede declarar el índice: `CLAUDE.md` §4 explica cómo evitar que una migración futura lo borre. |
