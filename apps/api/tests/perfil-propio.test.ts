@@ -14,7 +14,7 @@ import {
 } from "./utils/entorno";
 
 /**
- * RF-05 · Perfil propio: GET /perfiles/me y PUT /perfiles/jugador, con la
+ * RF-05 · Perfil propio: GET /perfiles/me y PATCH /perfiles/jugador, con la
  * ubicación del jugador (insumo de la dimensión geográfica de RF-09).
  */
 const RUTA_ME = `${API_PREFIX}/perfiles/me`;
@@ -40,7 +40,7 @@ function obtener(token: string) {
 
 function actualizar(token: string, cuerpo: Record<string, unknown>) {
   return request(app)
-    .put(RUTA_JUGADOR)
+    .patch(RUTA_JUGADOR)
     .set("Authorization", `Bearer ${token}`)
     .send(cuerpo);
 }
@@ -99,7 +99,7 @@ describe(`GET ${RUTA_ME}`, () => {
   });
 });
 
-describe(`PUT ${RUTA_JUGADOR}`, () => {
+describe(`PATCH ${RUTA_JUGADOR}`, () => {
   let token: string;
 
   beforeAll(async () => {
@@ -113,12 +113,27 @@ describe(`PUT ${RUTA_JUGADOR}`, () => {
   });
 
   it("exige sesión y rol de jugador", async () => {
-    const sinSesion = await request(app).put(RUTA_JUGADOR).send({ pais: "MX" });
+    const sinSesion = await request(app).patch(RUTA_JUGADOR).send({ pais: "MX" });
     expect(sinSesion.status).toBe(401);
 
     const equipo = await registrar("put-equipo", "EQUIPO");
     const respuesta = await actualizar(equipo, { pais: "MX" });
     expect(respuesta.status).toBe(403);
+  });
+
+  it("las actualizaciones parciales van por PATCH: PUT ya no existe y el equipo sigue en 501", async () => {
+    const put = await request(app)
+      .put(RUTA_JUGADOR)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ pais: "MX" });
+    expect(put.status).toBe(404);
+
+    const equipo = await registrar("patch-equipo", "EQUIPO");
+    const respuesta = await request(app)
+      .patch(`${API_PREFIX}/perfiles/equipo`)
+      .set("Authorization", `Bearer ${equipo}`)
+      .send({ nombreOrg: "Equipo de Prueba" });
+    expect(respuesta.status).toBe(501);
   });
 
   it("guarda país, departamento y disposición a relocalizarse", async () => {

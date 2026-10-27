@@ -53,7 +53,7 @@ export function useCrearOferta() {
 // RF-07 · Cerrar una oferta propia
 export function useCerrarOferta() {
   return useMutacionSimulada((id: string) =>
-    // TODO: S3 — conectar con PUT /api/v1/ofertas/:id
+    // TODO: S3 — conectar con PATCH /api/v1/ofertas/:id
     cerrarOferta(id, actorDemo()),
   )
 }
