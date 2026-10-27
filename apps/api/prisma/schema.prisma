@@ -52,27 +52,63 @@ enum EstadoPostulacion {
   RECHAZADA
 }
 
+enum Departamento {
+  AMAZONAS
+  ANTIOQUIA
+  ARAUCA
+  ATLANTICO
+  BOGOTA_DC
+  BOLIVAR
+  BOYACA
+  CALDAS
+  CAQUETA
+  CASANARE
+  CAUCA
+  CESAR
+  CHOCO
+  CORDOBA
+  CUNDINAMARCA
+  GUAINIA
+  GUAVIARE
+  HUILA
+  LA_GUAJIRA
+  MAGDALENA
+  META
+  NARINO
+  NORTE_DE_SANTANDER
+  PUTUMAYO
+  QUINDIO
+  RISARALDA
+  SAN_ANDRES
+  SANTANDER
+  SUCRE
+  TOLIMA
+  VALLE_DEL_CAUCA
+  VAUPES
+  VICHADA
+}
+
 // ----------------------------- Usuarios ------------------------------------
 
 model Usuario {
-  id              String   @id @default(cuid())
-  email           String   @unique
-  passwordHash    String
-  nombre          String
-  rol             Rol      @default(JUGADOR)
-  emailVerificado Boolean  @default(false)
-  activo          Boolean  @default(true)
+  id                        String    @id @default(cuid())
+  email                     String    @unique
+  passwordHash              String
+  nombre                    String
+  rol                       Rol       @default(JUGADOR)
+  emailVerificado           Boolean   @default(false)
+  activo                    Boolean   @default(true)
   /// Último cambio de contraseña: los refresh tokens emitidos antes de esta
   /// fecha quedan revocados.
-  credencialesCambiadasEn DateTime?
+  credencialesCambiadasEn   DateTime?
   /// Autorización del tratamiento de datos (RNF-05, Ley 1581): versión del
   /// aviso de privacidad aceptada y cuándo. Nulos en cuentas anteriores a ella.
   avisoPrivacidadVersion    String?
   avisoPrivacidadAceptadoEn DateTime?
   /// Cuándo declaró el usuario ser mayor de 18 años al registrarse.
   declaraMayorEdadEn        DateTime?
-  creadoEn        DateTime @default(now())
-  actualizadoEn   DateTime @updatedAt
+  creadoEn                  DateTime  @default(now())
+  actualizadoEn             DateTime  @updatedAt
 
   perfilJugador  PerfilJugador?
   perfilEquipo   PerfilEquipo?
@@ -89,17 +125,19 @@ model Usuario {
 // ----------------------------- Perfiles ------------------------------------
 
 model PerfilJugador {
-  id                   String    @id @default(cuid())
-  usuarioId            String    @unique
+  id                   String        @id @default(cuid())
+  usuarioId            String        @unique
   bio                  String?
-  region               String?
-  pais                 String?
+  /// Ubicación geográfica (dimensión geográfica del matching), no la región de
+  /// servidor del juego. País ISO 3166-1 alfa-2; departamento sólo si es "CO".
+  pais                 String?       @db.Char(2)
+  departamento         Departamento?
   fechaNacimiento      DateTime?
   disponibilidadHoras  Int?
-  dispuestoRelocalizar Boolean   @default(false)
+  dispuestoRelocalizar Boolean       @default(false)
   avatarUrl            String?
-  creadoEn             DateTime  @default(now())
-  actualizadoEn        DateTime  @updatedAt
+  creadoEn             DateTime      @default(now())
+  actualizadoEn        DateTime      @updatedAt
 
   usuario       Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   habilidades   HabilidadJugador[]
@@ -109,7 +147,7 @@ model PerfilJugador {
   postulaciones Postulacion[]
   matchings     Matching[]
 
-  @@index([region])
+  @@index([pais, departamento])
 }
 
 model PerfilEquipo {
@@ -219,8 +257,8 @@ model Estadistica {
 }
 
 model PerfilVector {
-  id          String   @id @default(cuid())
-  jugadorId   String   @unique
+  id          String                     @id @default(cuid())
+  jugadorId   String                     @unique
   /// Vector de características. Se mantiene como Float[] para que Prisma lo
   /// pueda leer y escribir; la columna `embedding` de tipo vector(64) la añade
   /// la migración 20260910000001_pgvector para las búsquedas de similitud.
@@ -229,8 +267,8 @@ model PerfilVector {
   /// 20260910145700_pgvector_perfil_vector. Prisma no la puede leer ni
   /// escribir (Unsupported), pero sí la conoce, así que no genera deriva.
   embedding   Unsupported("vector(64)")?
-  version     Int      @default(1)
-  calculadoEn DateTime @default(now())
+  version     Int                        @default(1)
+  calculadoEn DateTime                   @default(now())
 
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
 }

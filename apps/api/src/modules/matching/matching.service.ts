@@ -1,4 +1,9 @@
-import { PESOS_MATCHING, UMBRAL_MATCH_RELEVANTE } from "@proplay/shared";
+import {
+  PESOS_MATCHING,
+  UMBRAL_MATCH_RELEVANTE,
+  type Departamento,
+  type Pais,
+} from "@proplay/shared";
 import * as repositorio from "./matching.repository";
 import type { DesgloseMatching } from "./matching.schema";
 
@@ -33,8 +38,8 @@ export interface JugadorParaMatching {
   jugadorId: string;
   juego?: string;
   rol?: string | null;
-  region?: string | null;
-  paisId?: string | null;
+  pais?: Pais | null;
+  departamento?: Departamento | null;
   aniosExperiencia?: number;
   disponibilidadHoras?: number | null;
   dispuestoRelocalizar?: boolean;

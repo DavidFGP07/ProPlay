@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { NIVEL_HABILIDAD_MAX, NIVEL_HABILIDAD_MIN } from "../constants";
+import { DEPARTAMENTOS } from "../enums";
+import {
+  NIVEL_HABILIDAD_MAX,
+  NIVEL_HABILIDAD_MIN,
+  PAISES,
+} from "../constants";
 
 export const busquedaJugadoresSchema = z.object({
   juego: z.string().max(60).optional(),
   rol: z.string().max(60).optional(),
-  region: z.string().max(60).optional(),
+  pais: z.enum(PAISES).optional(),
+  departamento: z.enum(DEPARTAMENTOS).optional(),
   kdaMinimo: z.coerce.number().min(0).max(20).optional(),
   winRateMinimo: z.coerce.number().min(0).max(1).optional(),
   nivelMinimo: z.coerce
