@@ -96,11 +96,15 @@ describe('Aplicacion', () => {
     const pestana = screen.getByRole('button', { name: 'Crear cuenta' })
     pestana.click()
 
-    const aviso = await screen.findByText(/aviso de privacidad de ProPlay/i)
-    expect(aviso).toBeInTheDocument()
-    expect(
-      screen.getByText(/Ley 1581 de 2012/i),
-    ).toBeInTheDocument()
+    const aviso = await screen.findByRole('link', { name: /^aviso de privacidad \(se abre/i })
+    expect(aviso).toHaveAttribute('href', '/legal/privacidad#privacidad')
+    expect(aviso).toHaveAttribute('target', '_blank')
+    expect(screen.getByRole('link', { name: /^términos de uso \(se abre/i })).toHaveAttribute(
+      'href',
+      '/legal/privacidad#terminos',
+    )
+    expect(screen.getByText(/Ley 1581 de 2012/i)).toBeInTheDocument()
+    expect(screen.getByText('Declaro que soy mayor de 18 años.')).toBeInTheDocument()
   })
 
   it('el feed del jugador carga con sus metricas y recomendaciones', async () => {

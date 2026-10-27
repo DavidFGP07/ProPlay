@@ -6,6 +6,7 @@ import { Layout } from '@/components/Layout'
 import { useAuth } from '@/context/AuthContext'
 import LoginPage from '@/pages/LoginPage'
 import NoEncontradaPage from '@/pages/NoEncontradaPage'
+import LegalPage from '@/pages/LegalPage'
 import { AREAS } from '@/router/areas'
 
 /**
@@ -86,6 +87,8 @@ export default function App() {
         path="/login"
         element={usuario ? <Navigate to="/" replace /> : <LoginPage />}
       />
+      {/* RNF-05 · Aviso de privacidad y terminos: se lee con o sin sesion */}
+      <Route path="/legal/privacidad" element={<LegalPage />} />
 
       <Route element={<Privado />}>
         <Route element={<Layout />}>
