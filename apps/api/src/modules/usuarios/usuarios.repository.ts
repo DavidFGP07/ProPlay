@@ -67,6 +67,29 @@ export function buscarConPasswordPorId(id: string): Promise<Usuario | null> {
   return prisma.usuario.findUnique({ where: { id } });
 }
 
+/** Datos para validar un refresco: los públicos más el último cambio de credenciales. */
+export function buscarParaRefresco(
+  id: string,
+): Promise<(UsuarioPublicoDb & { credencialesCambiadasEn: Date | null }) | null> {
+  return prisma.usuario.findUnique({
+    where: { id },
+    select: { ...seleccionPublica, credencialesCambiadasEn: true },
+  });
+}
+
+/** Guarda la nueva contraseña y marca el momento del cambio de credenciales. */
+export function cambiarPassword(
+  id: string,
+  passwordHash: string,
+  cambiadasEn: Date,
+): Promise<UsuarioPublicoDb> {
+  return prisma.usuario.update({
+    where: { id },
+    data: { passwordHash, credencialesCambiadasEn: cambiadasEn },
+    select: seleccionPublica,
+  });
+}
+
 export function actualizar(
   id: string,
   datos: Prisma.UsuarioUpdateInput,

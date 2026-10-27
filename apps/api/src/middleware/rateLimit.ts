@@ -76,3 +76,34 @@ export const limiteRefresh = rateLimit({
     },
   },
 });
+
+/**
+ * Clave de los límites de rutas autenticadas: el usuario de la sesión, con el
+ * mismo criterio que claveRefresh (una red compartida no bloquea a todos).
+ * Requiere que el middleware auth vaya antes.
+ */
+export function claveUsuario(req: Request): string {
+  return req.usuario ? `usuario:${req.usuario.id}` : `ip:${req.ip ?? "desconocida"}`;
+}
+
+/**
+ * Configuración del límite de cambio de contraseña: 5 intentos cada 15
+ * minutos por usuario, contra quien prueba contraseñas actuales con una
+ * sesión robada. Se exporta para poder probarla sin el `skip` de los tests.
+ */
+export const opcionesLimiteCambioContrasena: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Demasiados intentos de cambio de contraseña, espera unos minutos",
+    },
+  },
+};
+
+export const limiteCambioContrasena = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimiteCambioContrasena,
+});

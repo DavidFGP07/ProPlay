@@ -14,10 +14,12 @@ export interface PayloadAcceso {
   rol: Rol;
 }
 
-/** Contenido del refresh token: sólo el sujeto y la versión. */
+/** Contenido del refresh token: sólo el sujeto y el tipo. */
 export interface PayloadRefresh {
   sub: string;
   tipo: "refresh";
+  /** Emisión, en segundos desde epoch (lo añade jsonwebtoken al firmar). */
+  iat: number;
 }
 
 const EMISOR = "proplay-api";

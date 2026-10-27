@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { AuthResponse, LoginInput, RegisterInput, Rol, UsuarioPublico } from "@proplay/shared";
 import { logger } from "../../config/logger";
 import {
+  AppError,
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -14,7 +15,7 @@ import {
   verificarRefreshToken,
 } from "../../utils/jwt";
 import * as repositorio from "./usuarios.repository";
-import type { ActualizarUsuarioInput } from "./usuarios.schema";
+import type { ActualizarUsuarioInput, CambioContrasenaInput } from "./usuarios.schema";
 
 /**
  * Lógica de negocio del módulo `usuarios`: registro, autenticación, refresco
@@ -124,7 +125,7 @@ export async function refrescar(refreshToken?: string): Promise<SesionCreada> {
   }
 
   const payload = verificarRefreshToken(refreshToken);
-  const usuario = await repositorio.buscarPorId(payload.sub);
+  const usuario = await repositorio.buscarParaRefresco(payload.sub);
 
   if (!usuario) {
     throw new UnauthorizedError("La cuenta de esta sesión ya no existe");
@@ -132,8 +133,22 @@ export async function refrescar(refreshToken?: string): Promise<SesionCreada> {
   if (!usuario.activo) {
     throw new ForbiddenError("Tu cuenta está suspendida");
   }
+  if (refrescoRevocado(payload.iat, usuario.credencialesCambiadasEn)) {
+    throw new UnauthorizedError("Sesión expirada, vuelve a iniciar sesión");
+  }
 
   return crearSesion(aPublico(usuario));
+}
+
+/**
+ * Un refresh token queda revocado si se emitió antes del último cambio de
+ * credenciales. `iat` va en segundos y la fecha en milisegundos: se compara en
+ * segundos para que el token emitido en la misma respuesta del cambio siga
+ * siendo válido.
+ */
+function refrescoRevocado(iat: number, cambiadasEn: Date | null): boolean {
+  if (!cambiadasEn) return false;
+  return iat < Math.floor(cambiadasEn.getTime() / 1000);
 }
 
 export async function obtenerPorId(id: string): Promise<UsuarioPublico> {
@@ -156,4 +171,42 @@ export async function actualizar(
   await obtenerPorId(id);
   const actualizado = await repositorio.actualizar(id, datos);
   return aPublico(actualizado);
+}
+
+/**
+ * Cambio de la contraseña propia. Revoca todas las sesiones abiertas (los
+ * refresh tokens emitidos antes del cambio) y devuelve una sesión nueva para
+ * quien hizo el cambio, que así sigue dentro.
+ */
+export async function cambiarContrasena(
+  id: string,
+  datos: CambioContrasenaInput,
+): Promise<SesionCreada> {
+  const usuario = await repositorio.buscarConPasswordPorId(id);
+  if (!usuario) {
+    throw new UnauthorizedError("La cuenta de esta sesión ya no existe");
+  }
+  if (!usuario.activo) {
+    throw new ForbiddenError("Tu cuenta está suspendida");
+  }
+
+  const coincide = await bcrypt.compare(datos.contrasenaActual, usuario.passwordHash);
+  if (!coincide) {
+    // 400 y no 401: el cliente trata un 401 como sesión caducada y cerraría
+    // la sesión de quien sólo se equivocó de contraseña.
+    throw new AppError(400, "CONTRASENA_ACTUAL_INVALIDA", "La contraseña actual no es correcta");
+  }
+
+  const passwordHash = await bcrypt.hash(datos.contrasenaNueva, RONDAS_BCRYPT);
+  const actualizado = await repositorio.cambiarPassword(id, passwordHash, new Date());
+
+  await repositorio.registrarAuditoria({
+    usuarioId: id,
+    accion: "CONTRASENA_CAMBIADA",
+    entidad: "Usuario",
+    entidadId: id,
+  });
+  logger.info({ usuarioId: id }, "Contraseña cambiada; sesiones anteriores revocadas");
+
+  return crearSesion(aPublico(actualizado));
 }
