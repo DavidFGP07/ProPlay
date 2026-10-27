@@ -179,7 +179,7 @@ que falta una, dilo y la añadimos. Las rutas marcadas `—` todavía no existen
 | Verificación de correo | — | RF-01 |
 | Perfil público del jugador (compartible, sin sesión) | `/jugador/:id` | RF-05 |
 | Perfil público de la organización | — | RF-07 |
-| Aviso de privacidad y términos (Ley 1581) | — | RNF-05 |
+| Aviso de privacidad y términos (Ley 1581) | `/legal/privacidad` (`#privacidad`, `#terminos`) | RNF-05 |
 | 404 | `*` (cualquier ruta desconocida) | — |
 
 ### Jugador
@@ -315,4 +315,4 @@ hooks de TanStack Query. Sólo la autenticación habla con la API real. Cada hoo
 lleva `// TODO: Sx — conectar con GET /api/v1/...` indicando el sprint que lo conecta.
 
 **Plan.** Cuatro sprints de dos semanas. S1 fundación y acceso · S2 perfil verificable
-(ingesta desde Riot y Steam) · S3 motor de matching · S4 IA generativa, cierre y validación.
+(ingesta desde Riot, solo League of Legends) · S3 motor de matching · S4 IA generativa, cierre y validación.

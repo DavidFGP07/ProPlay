@@ -13,6 +13,22 @@ export const es = {
   },
   registro: {
     mayorEdad: 'Declaro que soy mayor de 18 años.',
+    /** La casilla de aceptacion enlaza los dos documentos (se abren en otra pestaña). */
+    acepto: 'He leído y acepto el',
+    avisoPrivacidad: 'aviso de privacidad',
+    y: 'y los',
+    terminos: 'términos de uso',
+    autorizo:
+      'de ProPlay, y autorizo el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.',
+    nuevaPestana: '(se abre en una pestaña nueva)',
+  },
+  legal: {
+    etiqueta: 'Ley 1581 de 2012',
+    indice: 'Contenido',
+    version: (version: string, vigencia: string) => `Versión ${version} · vigente desde ${vigencia}`,
+    volverLogin: 'Volver al inicio de sesión',
+    volverApp: 'Volver a ProPlay',
+    enlace: 'Aviso de privacidad y términos de uso',
   },
   noEncontrada: {
     titulo: 'Pagina no encontrada',

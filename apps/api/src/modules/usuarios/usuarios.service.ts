@@ -1,5 +1,12 @@
 import bcrypt from "bcryptjs";
-import type { AuthResponse, LoginInput, RegisterInput, Rol, UsuarioPublico } from "@proplay/shared";
+import {
+  VERSION_AVISO_PRIVACIDAD,
+  type AuthResponse,
+  type LoginInput,
+  type RegisterInput,
+  type Rol,
+  type UsuarioPublico,
+} from "@proplay/shared";
 import { logger } from "../../config/logger";
 import {
   AppError,
@@ -64,21 +71,31 @@ export async function registrar(datos: RegisterInput): Promise<SesionCreada> {
   }
 
   const passwordHash = await bcrypt.hash(datos.password, RONDAS_BCRYPT);
-  const creado = await repositorio.crearConPerfil({
-    email: datos.email,
-    passwordHash,
-    nombre: datos.nombre,
-    rol: datos.rol,
-  });
+  // RNF-05 · La versión aceptada es la vigente en el servidor, nunca una que
+  // llegue en la petición. registerSchema ya exige las dos casillas.
+  const aceptadoEn = new Date();
+  const creado = await repositorio.crearConPerfil(
+    {
+      email: datos.email,
+      passwordHash,
+      nombre: datos.nombre,
+      rol: datos.rol,
+      avisoPrivacidadVersion: VERSION_AVISO_PRIVACIDAD,
+      avisoPrivacidadAceptadoEn: aceptadoEn,
+      declaraMayorEdadEn: aceptadoEn,
+    },
+    {
+      accion: "USUARIO_REGISTRADO",
+      entidad: "Usuario",
+      metadata: {
+        rol: datos.rol,
+        avisoPrivacidadVersion: VERSION_AVISO_PRIVACIDAD,
+        declaraMayorEdad: true,
+      },
+    },
+  );
 
   const usuario = aPublico(creado);
-  await repositorio.registrarAuditoria({
-    usuarioId: usuario.id,
-    accion: "USUARIO_REGISTRADO",
-    entidad: "Usuario",
-    entidadId: usuario.id,
-    metadata: { rol: usuario.rol },
-  });
   logger.info({ usuarioId: usuario.id, rol: usuario.rol }, "Usuario registrado");
 
   return crearSesion(usuario);

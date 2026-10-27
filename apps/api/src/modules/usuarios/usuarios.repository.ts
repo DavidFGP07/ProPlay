@@ -28,14 +28,27 @@ export interface DatosNuevoUsuario {
   passwordHash: string;
   nombre: string;
   rol: Rol;
+  /** Autorización del tratamiento de datos (RNF-05). */
+  avisoPrivacidadVersion: string;
+  avisoPrivacidadAceptadoEn: Date;
+  declaraMayorEdadEn: Date;
+}
+
+export interface DatosAuditoria {
+  accion: string;
+  entidad: string;
+  metadata?: Prisma.InputJsonValue;
 }
 
 /**
  * Crea el usuario y, en la misma transacción, el perfil que le corresponde por
- * rol: PerfilJugador para JUGADOR y PerfilEquipo para EQUIPO.
+ * rol (PerfilJugador para JUGADOR, PerfilEquipo para EQUIPO) y la traza de
+ * auditoría del alta. Si la traza falla no queda un usuario sin prueba de su
+ * autorización (Decreto 1377 de 2013).
  */
 export async function crearConPerfil(
   datos: DatosNuevoUsuario,
+  auditoria: DatosAuditoria,
 ): Promise<UsuarioPublicoDb> {
   return prisma.$transaction(async (tx) => {
     const usuario = await tx.usuario.create({
@@ -50,6 +63,16 @@ export async function crearConPerfil(
         data: { usuarioId: usuario.id, nombreOrg: datos.nombre },
       });
     }
+
+    await tx.auditLog.create({
+      data: {
+        usuarioId: usuario.id,
+        accion: auditoria.accion,
+        entidad: auditoria.entidad,
+        entidadId: usuario.id,
+        metadata: auditoria.metadata,
+      },
+    });
 
     return usuario;
   });

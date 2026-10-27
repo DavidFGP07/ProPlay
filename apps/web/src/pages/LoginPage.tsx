@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -26,6 +26,7 @@ import { mensajeDeError } from '@/api/client'
 import { CUENTAS_SEMILLA, PASSWORD_SEMILLA } from '@/api/cuentasSemilla'
 import { config } from '@/lib/env'
 import { es } from '@/i18n/es'
+import { DESCARGO_RIOT } from '@/i18n/legal'
 
 const CUENTAS_DEMO: { rol: Rol; descripcion: string }[] = [
   { rol: 'JUGADOR', descripcion: 'Perfil, postulaciones y endoses' },
@@ -261,10 +262,11 @@ export default function LoginPage() {
                   {...formRegistro.register('aceptaPrivacidad')}
                 />
                 <span className="text-[11px] leading-relaxed text-slate-400">
-                  He leido y acepto el aviso de privacidad de ProPlay, el
-                  tratamiento de mis datos personales conforme a la Ley 1581 de
-                  2012 y el tratamiento de mis estadisticas de juego para construir
-                  mi perfil profesional.
+                  {es.registro.acepto}{' '}
+                  <EnlaceLegal ancla="privacidad">{es.registro.avisoPrivacidad}</EnlaceLegal>{' '}
+                  {es.registro.y}{' '}
+                  <EnlaceLegal ancla="terminos">{es.registro.terminos}</EnlaceLegal>{' '}
+                  {es.registro.autorizo}
                 </span>
               </label>
             )}
@@ -357,8 +359,35 @@ export default function LoginPage() {
                 : 'Creando tu cuenta...'}
             </p>
           )}
+
+          <footer className="mt-8 space-y-2 border-t border-white/8 pt-4">
+            <Link
+              to="/legal/privacidad"
+              className="text-[11px] text-slate-400 underline underline-offset-2 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
+              {es.legal.enlace}
+            </Link>
+            <p className="text-[10px] leading-relaxed text-slate-600" lang="en">
+              {DESCARGO_RIOT}
+            </p>
+          </footer>
         </div>
       </div>
     </div>
+  )
+}
+
+/** Enlace a una seccion del aviso legal, en una pestaña nueva para no perder el formulario. */
+function EnlaceLegal({ ancla, children }: { ancla: 'privacidad' | 'terminos'; children: string }) {
+  return (
+    <a
+      href={`/legal/privacidad#${ancla}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-brand-300 underline underline-offset-2 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+    >
+      {children}
+      <span className="sr-only"> {es.registro.nuevaPestana}</span>
+    </a>
   )
 }
