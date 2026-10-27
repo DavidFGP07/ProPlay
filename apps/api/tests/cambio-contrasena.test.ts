@@ -6,6 +6,7 @@ import { API_PREFIX, REFRESH_COOKIE_NAME } from "@proplay/shared";
 import { prisma } from "../src/config/prisma";
 import { opcionesLimiteCambioContrasena } from "../src/middleware/rateLimit";
 import {
+  CONSENTIMIENTO,
   app,
   cerrarConexiones,
   emailDePrueba,
@@ -36,7 +37,13 @@ async function registrar(etiqueta: string): Promise<Sesion> {
   const email = emailDePrueba(etiqueta);
   const respuesta = await request(app)
     .post(`${API_PREFIX}/auth/register`)
-    .send({ email, password: PASSWORD, nombre: "Cuenta de Prueba", rol: "SCOUT" });
+    .send({
+      email,
+      password: PASSWORD,
+      nombre: "Cuenta de Prueba",
+      rol: "SCOUT",
+      ...CONSENTIMIENTO,
+    });
   expect(respuesta.status).toBe(201);
   return {
     email,

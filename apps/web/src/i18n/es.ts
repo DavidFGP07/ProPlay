@@ -11,6 +11,9 @@ export const es = {
     detalle: (persona: string) =>
       `Lo que ves en esta seccion son datos de ejemplo de ${persona}, no de tu cuenta. Solo tu sesion es real.`,
   },
+  registro: {
+    mayorEdad: 'Declaro que soy mayor de 18 años.',
+  },
   noEncontrada: {
     titulo: 'Pagina no encontrada',
     detalle: 'La direccion que buscas no existe o ya no esta disponible.',

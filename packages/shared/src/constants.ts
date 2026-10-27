@@ -18,6 +18,13 @@ export const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
+/**
+ * Versión vigente del aviso de privacidad y los términos de uso (RNF-05).
+ * El servidor guarda esta versión al registrar la aceptación; nunca una que
+ * envíe el cliente. Súbela cada vez que cambie el texto del aviso.
+ */
+export const VERSION_AVISO_PRIVACIDAD = "1.0";
+
 /** Reglas de contraseña aplicadas en ambos lados. */
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 72; // límite de bcrypt

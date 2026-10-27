@@ -35,6 +35,17 @@ export const registerSchema = z.object({
   rol: z.enum(ROLES_REGISTRABLES, {
     errorMap: () => ({ message: "Selecciona un rol válido" }),
   }),
+  // RNF-05 · Autorización del tratamiento de datos (Ley 1581 de 2012). La
+  // versión aceptada no viaja en la petición: la fija el servidor.
+  aceptaPrivacidad: z.literal(true, {
+    errorMap: () => ({
+      message: "Debes aceptar el aviso de privacidad y los términos de uso para continuar",
+    }),
+  }),
+  // ProPlay es sólo para mayores de 18 años: se declara en el registro.
+  declaraMayorEdad: z.literal(true, {
+    errorMap: () => ({ message: "Debes declarar que eres mayor de 18 años para registrarte" }),
+  }),
 });
 
 export const loginSchema = z.object({
