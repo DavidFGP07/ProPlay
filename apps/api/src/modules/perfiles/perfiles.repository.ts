@@ -33,12 +33,45 @@ const seleccionEquipo = {
   actualizadoEn: true,
 } satisfies Prisma.PerfilEquipoSelect;
 
+/**
+ * Campos del perfil público (lista blanca, RF-05). Sólo las cuentas
+ * verificadas, y de ellas plataforma y fecha: nunca el id externo, el handle
+ * ni los tokens.
+ */
+const seleccionJugadorPublico = {
+  id: true,
+  bio: true,
+  pais: true,
+  departamento: true,
+  avatarUrl: true,
+  usuario: { select: { nombre: true } },
+  cuentasGaming: {
+    where: { verificadaEn: { not: null } },
+    select: { plataforma: true, verificadaEn: true },
+    orderBy: { verificadaEn: "asc" },
+  },
+} satisfies Prisma.PerfilJugadorSelect;
+
 export type PerfilJugadorDb = Prisma.PerfilJugadorGetPayload<{
   select: typeof seleccionJugador;
 }>;
 export type PerfilEquipoDb = Prisma.PerfilEquipoGetPayload<{
   select: typeof seleccionEquipo;
 }>;
+
+export type PerfilJugadorPublicoDb = Prisma.PerfilJugadorGetPayload<{
+  select: typeof seleccionJugadorPublico;
+}>;
+
+/** Perfil público por id de perfil; nulo si no existe o la cuenta está inactiva. */
+export async function buscarJugadorPublico(
+  perfilId: string,
+): Promise<PerfilJugadorPublicoDb | null> {
+  return prisma.perfilJugador.findFirst({
+    where: { id: perfilId, usuario: { activo: true } },
+    select: seleccionJugadorPublico,
+  });
+}
 
 export async function buscarJugadorPorUsuario(
   usuarioId: string,
@@ -101,12 +134,5 @@ export async function endosar(_datos?: unknown): Promise<never> {
 export async function vincularCuenta(_datos?: unknown): Promise<never> {
   throw new NotImplementedError(
     "perfiles.repository.vincularCuenta todavía no consulta la base de datos",
-  );
-}
-
-/** TODO: Devolver el perfil público de un usuario por su id. */
-export async function obtenerPublico(_datos?: unknown): Promise<never> {
-  throw new NotImplementedError(
-    "perfiles.repository.obtenerPublico todavía no consulta la base de datos",
   );
 }

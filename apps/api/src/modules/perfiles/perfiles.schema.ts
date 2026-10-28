@@ -7,6 +7,7 @@
  */
 export {
   perfilJugadorSchema,
+  perfilJugadorPublicoSchema,
   ubicacionJugadorSchema,
   perfilEquipoSchema,
   asignarHabilidadSchema,
@@ -18,6 +19,7 @@ export {
 
 export type {
   PerfilJugadorInput,
+  PerfilJugadorPublico,
   PerfilEquipoInput,
   AsignarHabilidadInput,
   VincularCuentaGamingInput,

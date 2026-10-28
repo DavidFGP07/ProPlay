@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * RF-05 · Contrato del perfil público del jugador: lista blanca de campos.
- * El endpoint que lo sirve llega en el PR siguiente; aquí se fija qué puede
+ * El endpoint lo prueba perfil-publico.test.ts; aquí se fija qué puede
  * salir y que cualquier otra clave se descarta.
  */
 describe("perfilJugadorPublicoSchema", () => {

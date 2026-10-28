@@ -1,6 +1,7 @@
 import type {
   Pais,
   PerfilEquipoRespuesta,
+  PerfilJugadorPublico,
   PerfilJugadorRespuesta,
   PerfilPropioResponse,
   Rol,
@@ -8,6 +9,7 @@ import type {
 import { NotFoundError } from "../../utils/errors";
 import * as repositorio from "./perfiles.repository";
 import {
+  perfilJugadorPublicoSchema,
   ubicacionJugadorSchema,
   type PerfilJugadorInput,
 } from "./perfiles.schema";
@@ -112,7 +114,22 @@ export async function vincularCuenta(datos?: unknown) {
   return repositorio.vincularCuenta(datos);
 }
 
-/** TODO: Devolver el perfil público de un usuario por su id. */
-export async function obtenerPublico(datos?: unknown) {
-  return repositorio.obtenerPublico(datos);
+/**
+ * Perfil público del jugador: sólo los campos de la lista blanca de
+ * `perfilJugadorPublicoSchema`. El repositorio ya selecciona sólo esos; el
+ * parse final descarta cualquier campo que se añada a la consulta por error.
+ * Una cuenta desactivada responde 404, igual que un id que no existe.
+ */
+export async function obtenerPublico(perfilId: string): Promise<PerfilJugadorPublico> {
+  const perfil = await repositorio.buscarJugadorPublico(perfilId);
+  if (!perfil) throw new NotFoundError("Perfil no encontrado");
+  return perfilJugadorPublicoSchema.parse({
+    id: perfil.id,
+    nombre: perfil.usuario.nombre,
+    bio: perfil.bio,
+    pais: perfil.pais,
+    departamento: perfil.departamento,
+    avatarUrl: perfil.avatarUrl,
+    cuentasVerificadas: perfil.cuentasGaming,
+  });
 }
