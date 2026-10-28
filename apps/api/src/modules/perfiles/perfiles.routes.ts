@@ -35,7 +35,8 @@ perfilesRouter.patch(
   controlador.actualizarJugador,
 );
 
-// TODO: Actualizar el PerfilEquipo del usuario autenticado.
+// RF-07 · Edición del perfil de la organización. Sólo el equipo: el scout no
+// tiene perfil propio.
 perfilesRouter.patch(
   "/equipo",
   auth,

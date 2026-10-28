@@ -213,7 +213,7 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF |
 |---|---|---|
-| Panel del equipo | `/panel-equipo` | RF-13 |
+| Panel del equipo (datos de la organización reales; el resto, simulado) | `/panel-equipo` | RF-13, RF-07 |
 | Buscador de talento | `/explorar` | RF-08 |
 | Crear oferta, **con ajuste de los pesos de las cinco dimensiones** | — | RF-07, RF-09 |
 | **Ranking de candidatos con desglose por dimensión** | — | RF-09 |
@@ -310,7 +310,7 @@ que la usen como base.
 ## 9. Estado actual
 
 **Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
-`PATCH /perfiles/jugador` y `GET /perfiles/:id` (perfil público, sin sesión). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
+`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` y `GET /perfiles/:id` (perfil público, sin sesión). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
 `scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
@@ -325,9 +325,11 @@ sustituye el stub del repository por Prisma real: **no cambies la estructura de 
 hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con GET /api/v1/...`
 indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
-sesión) y, en `/mi-perfil`, la cabecera y los datos profesionales; `/legal/privacidad` es texto
+sesión), en `/mi-perfil` la cabecera y los datos profesionales, y en `/panel-equipo` la
+tarjeta «Datos de la organización» (sólo el rol `EQUIPO`); `/legal/privacidad` es texto
 estático. El resto de `/mi-perfil` (cuentas, habilidades, portafolio, postulaciones,
-privacidad y laterales) sigue simulado, con `MarcaDatosDemo` en cada sección.
+privacidad y laterales) y de `/panel-equipo` (indicadores, vacantes, procesos y
+recomendaciones) sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
 las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo

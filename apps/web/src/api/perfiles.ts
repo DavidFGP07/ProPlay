@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   perfilJugadorPublicoSchema,
+  type PerfilEquipoInput,
   type PerfilJugadorInput,
   type PerfilPropioResponse,
 } from '@proplay/shared'
@@ -54,6 +55,19 @@ export function useActualizarPerfilJugador() {
         void cliente.invalidateQueries({ queryKey: ['perfiles', 'publico', data.perfil.id] })
       }
     },
+  })
+}
+
+// RF-07 · Datos de la organizacion: nombre, descripcion y sitio web. API real.
+export function useActualizarPerfilEquipo() {
+  const cliente = useQueryClient()
+  return useMutation({
+    mutationFn: async (datos: PerfilEquipoInput) => {
+      const { data } = await api.patch<PerfilPropioResponse>('/perfiles/equipo', datos)
+      return data
+    },
+    // Misma forma que GET /perfiles/me: la respuesta reemplaza la cache.
+    onSuccess: (data) => cliente.setQueryData(CLAVE_PERFIL_PROPIO, data),
   })
 }
 

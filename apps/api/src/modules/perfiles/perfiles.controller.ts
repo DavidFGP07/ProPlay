@@ -2,7 +2,7 @@ import type { Request } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./perfiles.service";
-import type { PerfilJugadorInput } from "./perfiles.schema";
+import type { PerfilEquipoInput, PerfilJugadorInput } from "./perfiles.schema";
 
 /**
  * Controladores del módulo `perfiles`: sólo traducen entre HTTP y el
@@ -34,11 +34,14 @@ export const actualizarJugador = asyncHandler<PeticionCon<PerfilJugadorInput>>(
 
 /**
  * PATCH /api/v1/perfiles/equipo
- * TODO: Actualizar el PerfilEquipo del usuario autenticado.
+ * Actualización parcial del perfil de la organización autenticada.
  */
-export const actualizarEquipo = asyncHandler(async (req, res) => {
-  res.json(await servicio.actualizarEquipo(req.body ?? req.validado));
-});
+export const actualizarEquipo = asyncHandler<PeticionCon<PerfilEquipoInput>>(
+  async (req, res) => {
+    if (!req.usuario) throw new UnauthorizedError();
+    res.status(200).json(await servicio.actualizarEquipo(req.usuario.id, req.body));
+  },
+);
 
 /**
  * GET /api/v1/perfiles/habilidades

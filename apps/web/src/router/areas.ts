@@ -22,4 +22,5 @@ export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/legal/privacidad',
   '/jugador/:id',
   '/mi-perfil',
+  '/panel-equipo',
 ]

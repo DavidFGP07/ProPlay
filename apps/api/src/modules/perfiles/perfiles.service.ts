@@ -11,6 +11,7 @@ import * as repositorio from "./perfiles.repository";
 import {
   perfilJugadorPublicoSchema,
   ubicacionJugadorSchema,
+  type PerfilEquipoInput,
   type PerfilJugadorInput,
 } from "./perfiles.schema";
 
@@ -92,9 +93,27 @@ export async function actualizarJugador(
   return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
 }
 
-/** TODO: Actualizar el PerfilEquipo del usuario autenticado. */
-export async function actualizarEquipo(datos?: unknown) {
-  return repositorio.actualizarEquipo(datos);
+/**
+ * Actualización parcial del perfil de la organización: un campo ausente no
+ * cambia y `null` lo borra. El esquema ya recortó el nombre y el sitio web y
+ * sólo admite URL http/https. Una descripción en blanco se guarda como
+ * ausente, igual que la presentación del jugador.
+ */
+export async function actualizarEquipo(
+  usuarioId: string,
+  datos: PerfilEquipoInput,
+): Promise<PerfilPropioResponse> {
+  const existente = await repositorio.buscarEquipoPorUsuario(usuarioId);
+  if (!existente) throw new NotFoundError("Este usuario no tiene perfil");
+
+  const cambios = {
+    ...datos,
+    ...(typeof datos.descripcion === "string" && {
+      descripcion: datos.descripcion.trim() || null,
+    }),
+  };
+  const perfil = await repositorio.actualizarEquipo(usuarioId, cambios);
+  return { tipo: "EQUIPO", perfil: aRespuestaEquipo(perfil) };
 }
 
 /** TODO: Devolver el catálogo de habilidades (técnicas y blandas). */
