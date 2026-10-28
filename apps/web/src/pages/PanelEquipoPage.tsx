@@ -216,8 +216,8 @@ export default function PanelEquipoPage() {
           nombreOrg
             ? nombreOrg
             : esScout
-              ? 'Consulta de vacantes y procesos de seleccion del ecosistema.'
-              : 'Gestion de vacantes y procesos de seleccion.'
+              ? 'Consulta de vacantes y procesos de selección del ecosistema.'
+              : 'Gestión de vacantes y procesos de selección.'
         }
         action={
           puedeGestionar ? (
@@ -284,7 +284,7 @@ export default function PanelEquipoPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* ---------------------------- Vacantes ---------------------------- */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
             title={esScout ? 'Vacantes del ecosistema' : 'Mis vacantes'}
             subtitle="Ciclo de vida de la oportunidad publicada."
@@ -302,7 +302,10 @@ export default function PanelEquipoPage() {
               {misOfertas.map((o) => {
                 const n = postulaciones.filter((p) => p.ofertaId === o.id).length
                 return (
-                  <li key={o.id} className="flex items-center gap-3 px-5 py-3.5">
+                  <li
+                    key={o.id}
+                    className="flex flex-col gap-2 px-5 py-3.5 sm:flex-row sm:items-center sm:gap-3"
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-100">
                         {o.rol} · {o.juego}
@@ -311,33 +314,35 @@ export default function PanelEquipoPage() {
                         {n} postulaciones · publicada el {o.publicadaEn}
                       </p>
                     </div>
-                    <Badge
-                      tono={
-                        o.estado === 'ABIERTA'
-                          ? 'verde'
-                          : o.estado === 'BORRADOR'
-                            ? 'ambar'
-                            : 'neutro'
-                      }
-                    >
-                      {es.estadoOferta[o.estado]}
-                    </Badge>
-                    <Link to={`/vacantes/${o.id}`}>
-                      <Button variante="secundario" tamano="sm">
-                        <Sparkles size={12} />
-                        Ranking
-                      </Button>
-                    </Link>
-                    {o.estado === 'ABIERTA' && puedeGestionar && (
-                      <Button
-                        variante="fantasma"
-                        tamano="sm"
-                        onClick={() => cerrar(o.id)}
-                        title="Cerrar vacante"
+                    <div className="flex shrink-0 items-center gap-3">
+                      <Badge
+                        tono={
+                          o.estado === 'ABIERTA'
+                            ? 'verde'
+                            : o.estado === 'BORRADOR'
+                              ? 'ambar'
+                              : 'neutro'
+                        }
                       >
-                        <XCircle size={14} />
-                      </Button>
-                    )}
+                        {es.estadoOferta[o.estado]}
+                      </Badge>
+                      <Link to={`/vacantes/${o.id}`}>
+                        <Button variante="secundario" tamano="sm">
+                          <Sparkles size={12} />
+                          Ranking
+                        </Button>
+                      </Link>
+                      {o.estado === 'ABIERTA' && puedeGestionar && (
+                        <Button
+                          variante="fantasma"
+                          tamano="sm"
+                          onClick={() => cerrar(o.id)}
+                          title="Cerrar vacante"
+                        >
+                          <XCircle size={14} />
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 )
               })}
@@ -346,9 +351,9 @@ export default function PanelEquipoPage() {
         </Card>
 
         {/* ------------------------- Postulaciones ------------------------- */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
-            title={esScout ? 'Procesos de las vacantes' : 'Procesos de seleccion'}
+            title={esScout ? 'Procesos de las vacantes' : 'Procesos de selección'}
             subtitle={
               esScout
                 ? 'Candidatos que se postularon. Solo la organizacion puede avanzar el estado.'

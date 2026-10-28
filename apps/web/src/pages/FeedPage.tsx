@@ -215,7 +215,7 @@ export default function FeedPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* --------------------------- Actividad --------------------------- */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
             title="Actividad reciente del ecosistema"
             subtitle="Eventos generados por la ingesta, los equipos y los endoses de la comunidad."
@@ -266,7 +266,7 @@ export default function FeedPage() {
         </Card>
 
         {/* ------------------------- Distribucion ------------------------- */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader
               title="Talento por region"
