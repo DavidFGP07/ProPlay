@@ -20,10 +20,11 @@ Dos decisiones definen el producto y no se negocian:
 
 Si una decisión técnica contradice alguna de las dos, está mal.
 
-El diseño completo está en el documento del proyecto (versión vigente: `ProPlay_v5.pdf`).
-Todavía no está en el repositorio; cuando se suba irá en `docs/ProPlay.pdf`. Secciones útiles: **VII** requisitos
-(RF-01…RF-14, RNF-01…RNF-08), **VIII** arquitectura C4 y fórmula del puntaje, **IX** modelo
-entidad-relación, **XIII** plan de sprints. Cuando el código y el documento no coincidan,
+El diseño completo está en el documento del proyecto, `docs/ProPlay.pdf` (versión vigente:
+v5; el nombre del archivo es fijo y las versiones quedan en el historial de git). Secciones
+útiles: **VII** requisitos (Tablas III y IV: RF-01…RF-14, RNF-01…RNF-08), **VIII**
+arquitectura C4 y fórmula del puntaje (ecuación 1), **IX** modelo entidad-relación, **XIII**
+plan de sprints. El plan de trabajo por bloques está en `docs/plan-implementacion.md`. Cuando el código y el documento no coincidan,
 manda el documento, salvo que haya una entrada en `docs/decisiones.md` que lo justifique.
 
 ## 2. Estructura
