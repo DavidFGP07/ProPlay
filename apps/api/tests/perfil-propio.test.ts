@@ -166,6 +166,29 @@ describe(`PATCH ${RUTA_JUGADOR}`, () => {
     });
   });
 
+  it("recorta la presentación y guarda una en blanco como nula", async () => {
+    const recortada = await actualizar(token, { bio: "  Jungla de LoL\n" });
+    expect(recortada.status).toBe(200);
+    expect(recortada.body.perfil.bio).toBe("Jungla de LoL");
+
+    const enBlanco = await actualizar(token, { bio: "   " });
+    expect(enBlanco.status).toBe(200);
+    expect(enBlanco.body.perfil.bio).toBeNull();
+
+    await actualizar(token, { bio: "Jungla de LoL" });
+  });
+
+  it("guarda la disponibilidad semanal y rechaza la que pasa de 80 horas", async () => {
+    const valida = await actualizar(token, { disponibilidadHoras: 20 });
+    expect(valida.status).toBe(200);
+    expect(valida.body.perfil.disponibilidadHoras).toBe(20);
+
+    const excesiva = await actualizar(token, { disponibilidadHoras: 81 });
+    expect(excesiva.status).toBe(422);
+    expect(camposConError(excesiva.body)).toContain("disponibilidadHoras");
+    expect((await obtener(token)).body.perfil.disponibilidadHoras).toBe(20);
+  });
+
   it("al cambiar a otro país borra el departamento de Colombia", async () => {
     const respuesta = await actualizar(token, { pais: "MX" });
 

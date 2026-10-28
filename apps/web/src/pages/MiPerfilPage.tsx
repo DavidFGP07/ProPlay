@@ -3,19 +3,23 @@ import { Link } from 'react-router-dom'
 import {
   BadgeCheck,
   Briefcase,
+  Clock,
   Eye,
   EyeOff,
   Gamepad2,
   Link2,
   Lock,
   MapPin,
+  Plane,
   Plus,
+  RotateCcw,
   Save,
   ShieldCheck,
   Sparkles,
   Trash2,
   TrendingUp,
 } from 'lucide-react'
+import { MACROREGION_POR_DEPARTAMENTO, type PerfilJugadorRespuesta } from '@proplay/shared'
 import {
   Avatar,
   Badge,
@@ -23,35 +27,33 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  Field,
   Input,
   Progress,
-  ScoreRing,
   Select,
   Sparkline,
   Tabs,
-  Textarea,
   cn,
 } from '@/components/ui'
+import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
+import { DatosProfesionales } from '@/components/DatosProfesionales'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { TarjetaUbicacion } from '@/components/TarjetaUbicacion'
 import { useIdentidad } from '@/api/identidad'
 import { useMarcarTodasLeidas, useNotificaciones } from '@/api/notificaciones'
 import { useMisPostulaciones, type PostulacionConOferta } from '@/api/ofertas'
 import {
-  useActualizarPerfil,
   useActualizarPrivacidad,
   useDesvincularCuenta,
   useEliminarHabilidad,
   useHabilidades,
   usePerfil,
+  usePerfilPropio,
   usePrivacidad,
   useRegistrarHabilidad,
-  type CamposPerfil,
   useVincularCuenta,
 } from '@/api/perfiles'
 import { es } from '@/i18n/es'
+import { lugar } from '@/lib/ubicacion'
 import type {
   ConfiguracionPrivacidad,
   CuentaGaming,
@@ -64,195 +66,202 @@ import type {
   Postulacion,
 } from '@/mocks/modelos'
 
-const ROLES = [
-  'Top lane',
-  'Jungle',
-  'Mid lane',
-  'Bot lane',
-  'Support',
-  'Duelista',
-  'Iniciador',
-  'Controlador',
-  'Sentinel',
-  'AWPer',
-  'IGL',
-  'Supporto',
-  'Portero',
-  'Carry',
-  'Flex',
-] as const
+const t = es.miPerfil
 
 type Pestana = 'datos' | 'cuentas' | 'habilidades' | 'portafolio' | 'postulaciones' | 'privacidad'
 
+// RF-05 · Mi perfil. La cabecera y los datos profesionales son reales
+// (GET /perfiles/me y PATCH /perfiles/jugador). Cuentas, habilidades,
+// portafolio, postulaciones, privacidad y los laterales dependen de otros
+// modulos: siguen simulados, cada seccion con su marca de demostracion, y
+// desaparecen con el puente apagado.
 export default function MiPerfilPage() {
   const { usuario } = useAuth()
-  const { notificar } = useToast()
-
-  const [pestana, setPestana] = useState<Pestana>('datos')
-
-  const identidad = useIdentidad()
-  const perfilId = identidad.data?.perfilJugadorId
-  const consulta = usePerfil(perfilId)
-  const { data: catalogo = [] } = useHabilidades()
-  const { data: postulaciones = [] } = useMisPostulaciones(perfilId)
-  const { data: config = null } = usePrivacidad()
-  const { data: notificaciones = [] } = useNotificaciones()
-  const edicion = useActualizarPerfil()
-  const privacidad = useActualizarPrivacidad()
-  const marcarTodas = useMarcarTodasLeidas()
-  const datos = consulta.data ?? null
-  const cargando = identidad.isLoading || consulta.isLoading
+  const propio = usePerfilPropio()
 
   if (!usuario) return null
 
-  // Dato real de la cuenta: se muestra aunque el puente de demostracion este
-  // apagado y la vista no tenga nada mas que ensenar.
-  const ubicacion = usuario.rol === 'JUGADOR' ? <TarjetaUbicacion /> : null
-
-  if (identidad.isLoading) {
+  if (propio.isPending) {
     return (
-      <div className="space-y-4">
-        <div className="skeleton h-44 rounded-2xl" />
-        {ubicacion}
+      <div aria-busy="true" aria-label={t.cargando} className="space-y-4">
+        <div className="skeleton h-40 rounded-2xl" />
         <div className="skeleton h-96 rounded-2xl" />
       </div>
     )
   }
 
-  if (!perfilId) {
-    if (ubicacion) return <div className="space-y-6">{ubicacion}</div>
+  if (propio.isError) {
+    return (
+      <Card>
+        <div role="alert">
+          <EmptyState
+            icono={<RotateCcw size={22} />}
+            titulo={t.errorCarga}
+            descripcion={t.errorCargaDetalle}
+            action={
+              <Button variante="secundario" onClick={() => void propio.refetch()}>
+                <RotateCcw size={13} aria-hidden />
+                {es.comun.reintentar}
+              </Button>
+            }
+          />
+        </div>
+      </Card>
+    )
+  }
+
+  if (propio.data.tipo !== 'JUGADOR') {
     return (
       <Card>
         <EmptyState
           icono={<Gamepad2 size={22} />}
-          titulo="Tu cuenta no tiene un perfil de jugador"
-          descripcion="El perfil profesional solo aplica a cuentas de tipo jugador. Como equipo o scout, usa el panel correspondiente."
+          titulo={t.sinPerfil}
+          descripcion={t.sinPerfilDetalle}
         />
       </Card>
     )
   }
 
-  if (cargando || !datos) {
-    return (
-      <div className="space-y-4">
-        <div className="skeleton h-44 rounded-2xl" />
-        {ubicacion}
-        <div className="skeleton h-96 rounded-2xl" />
-      </div>
-    )
-  }
+  return <Perfil nombre={usuario.nombre} perfil={propio.data.perfil} />
+}
 
-  const { perfil, stats, cuentas, skills, endoses } = datos
-  const statsVerificadas = stats.filter((s) => s.fuente.startsWith('api-')).length
-  const confiabilidad = stats.length ? statsVerificadas / stats.length : 0
-  const noLeidas = notificaciones.filter((n) => !n.leida).length
+function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespuesta }) {
+  const { notificar } = useToast()
+  const [pestana, setPestana] = useState<Pestana>('datos')
 
-  const tabs: { id: string; label: string; badge?: number }[] = [
-    { id: 'datos', label: 'Datos profesionales' },
-    { id: 'cuentas', label: 'Cuentas de juego', badge: cuentas.length },
-    { id: 'habilidades', label: 'Habilidades', badge: skills.length },
-    { id: 'portafolio', label: 'Portafolio', badge: perfil.portafolio.length },
-    { id: 'postulaciones', label: 'Postulaciones', badge: postulaciones.length },
-    { id: 'privacidad', label: 'Privacidad' },
+  // Secciones simuladas: con el puente apagado, la consulta no corre o
+  // devuelve null y la vista se queda solo con lo real.
+  const identidad = useIdentidad()
+  const demoId = identidad.data?.perfilJugadorId
+  const { data: demo = null } = usePerfil(demoId)
+  const { data: catalogo = [] } = useHabilidades()
+  const { data: postulaciones = [] } = useMisPostulaciones(demoId)
+  const { data: config = null } = usePrivacidad()
+  const { data: notificaciones = [] } = useNotificaciones()
+  const privacidad = useActualizarPrivacidad()
+  const marcarTodas = useMarcarTodasLeidas()
+
+  const tabs: { id: Pestana; label: string; badge?: number }[] = [
+    { id: 'datos', label: t.pestanaDatos },
+    ...(demo
+      ? [
+          { id: 'cuentas' as const, label: 'Cuentas de juego', badge: demo.cuentas.length },
+          { id: 'habilidades' as const, label: 'Habilidades', badge: demo.skills.length },
+          { id: 'portafolio' as const, label: 'Portafolio', badge: demo.perfil.portafolio.length },
+          { id: 'postulaciones' as const, label: 'Postulaciones', badge: postulaciones.length },
+          { id: 'privacidad' as const, label: 'Privacidad' },
+        ]
+      : []),
   ]
+  const activa = tabs.some((tab) => tab.id === pestana) ? pestana : 'datos'
 
   return (
     <div className="space-y-6">
       {/* ------------------------------ Cabecera ------------------------------ */}
       <Card className="relative overflow-hidden">
-        <div className="grid-bg absolute inset-0 opacity-30" />
-        <div className="absolute -left-16 -top-20 size-64 rounded-full bg-brand-600/20 blur-3xl" />
-        <div className="relative flex flex-wrap items-center gap-6 p-6">
-          <Avatar nombre={perfil.nombre} size="xl" />
+        <div className="grid-bg absolute inset-0 opacity-30" aria-hidden />
+        <div
+          className="absolute -left-16 -top-20 size-64 rounded-full bg-brand-600/20 blur-3xl"
+          aria-hidden
+        />
+        <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+          {perfil.avatarUrl ? (
+            <img
+              src={perfil.avatarUrl}
+              alt=""
+              className="size-24 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <Avatar nombre={nombre} size="xl" />
+          )}
 
-          <div className="min-w-[16rem] flex-1">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-50">
-                {perfil.nombre}
+              <h1 className="text-2xl font-bold tracking-tight break-words text-slate-50">
+                {nombre}
               </h1>
               <Badge tono="violeta">
-                <BadgeCheck size={11} />
-                Perfil profesional
+                <BadgeCheck size={11} aria-hidden />
+                {t.perfilProfesional}
               </Badge>
-              {perfil.esCaribe && <Badge tono="cian">Caribe colombiano</Badge>}
+              {perfil.departamento && (
+                <Badge tono="cian">
+                  {es.macrorregion[MACROREGION_POR_DEPARTAMENTO[perfil.departamento]]}
+                </Badge>
+              )}
             </div>
-            <p className="mt-1 font-mono text-sm text-slate-400">@{perfil.handle}</p>
 
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
               <span className="flex items-center gap-1.5">
-                <MapPin size={13} className="text-slate-500" />
-                {perfil.region}
+                <MapPin size={13} className="text-slate-500" aria-hidden />
+                {perfil.pais ? lugar(perfil.pais, perfil.departamento) : t.sinUbicacion}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Gamepad2 size={13} className="text-slate-500" />
-                {perfil.rolesPreferidos.join(' · ')}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Briefcase size={13} className="text-slate-500" />
-                {perfil.aniosExperiencia} anos de experiencia
-              </span>
+              {perfil.disponibilidadHoras !== null && (
+                <span className="flex items-center gap-1.5">
+                  <Clock size={13} className="text-slate-500" aria-hidden />
+                  {t.horasSemana(perfil.disponibilidadHoras)}
+                </span>
+              )}
+              {perfil.dispuestoRelocalizar && (
+                <span className="flex items-center gap-1.5">
+                  <Plane size={13} className="text-slate-500" aria-hidden />
+                  {t.relocalizable}
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-col items-center gap-3">
-            <ScoreRing
-              valor={confiabilidad}
-              tamano={92}
-              grosor={8}
-              etiqueta="verificacion"
-            />
-            <Link to={`/jugador/${perfil.id}`}>
-              <Button variante="secundario" tamano="sm">
-                Ver como lo ven los equipos
-              </Button>
-            </Link>
-          </div>
+          <Link
+            to={`/jugador/${perfil.id}`}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-lg border border-white/12 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-brand-500/50 hover:bg-white/8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 sm:self-center"
+          >
+            <Eye size={13} aria-hidden />
+            {t.verPublico}
+          </Link>
         </div>
       </Card>
 
-      {ubicacion}
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className={cn('grid gap-6', demo && 'lg:grid-cols-[1fr_320px]')}>
+        <div className="min-w-0 space-y-6">
           <Card>
-            <Tabs tabs={tabs} activa={pestana} onChange={(id) => setPestana(id as Pestana)} />
+            {tabs.length > 1 ? (
+              <Tabs tabs={tabs} activa={activa} onChange={(id) => setPestana(id as Pestana)} />
+            ) : (
+              <CardHeader title={t.pestanaDatos} subtitle={t.datosSubtitulo} />
+            )}
 
             <div className="p-5">
-              {pestana === 'datos' && (
-                <DatosPanel
-                  perfil={perfil}
-                  onGuardar={async (cambios) => {
-                    await edicion.mutateAsync({ perfilId: perfil.id, cambios })
-                    notificar('Perfil actualizado. El vector de perfil se recalculó.')
-                  }}
-                />
-              )}
+              {activa === 'datos' && <DatosProfesionales perfil={perfil} />}
 
-              {pestana === 'cuentas' && (
+              {demo && activa !== 'datos' && <MarcaDatosDemo />}
+
+              {demo && activa === 'cuentas' && (
                 <CuentasPanel
-                  perfilId={perfil.id}
-                  cuentas={cuentas}
+                  perfilId={demo.perfil.id}
+                  cuentas={demo.cuentas}
                   onCambio={() => notificar('Cuentas de juego actualizadas.')}
                 />
               )}
 
-              {pestana === 'habilidades' && (
+              {demo && activa === 'habilidades' && (
                 <HabilidadesPanel
-                  perfilId={perfil.id}
-                  skills={skills}
-                  endoses={endoses}
+                  perfilId={demo.perfil.id}
+                  skills={demo.skills}
+                  endoses={demo.endoses}
                   catalogo={catalogo}
                   onCambio={() => notificar('Habilidades actualizadas.')}
                 />
               )}
 
-              {pestana === 'portafolio' && <PortafolioPanel perfil={perfil} stats={stats} />}
+              {demo && activa === 'portafolio' && (
+                <PortafolioPanel perfil={demo.perfil} stats={demo.stats} />
+              )}
 
-              {pestana === 'postulaciones' && (
+              {demo && activa === 'postulaciones' && (
                 <PostulacionesPanel postulaciones={postulaciones} />
               )}
 
-              {pestana === 'privacidad' && config && (
+              {demo && activa === 'privacidad' && config && (
                 <PrivacidadPanel
                   config={config}
                   onCambio={async (cambios) => {
@@ -265,216 +274,115 @@ export default function MiPerfilPage() {
           </Card>
         </div>
 
-        {/* ------------------------------ Lateral ------------------------------ */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader
-              title="Resumen de evidencia"
-              subtitle="Que parte de tu perfil es verificable."
-              icon={<ShieldCheck size={16} />}
-            />
-            <div className="space-y-4 p-5">
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Datos de la API oficial</span>
-                  <span className="font-mono text-slate-200">
-                    {Math.round(confiabilidad * 100)}%
-                  </span>
-                </div>
-                <Progress valor={confiabilidad} className="mt-1.5" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Habilidades validadas</span>
-                  <span className="font-mono text-slate-200">
-                    {skills.filter((s) => s.verificada).length}/{skills.length}
-                  </span>
-                </div>
-                <Progress
-                  valor={skills.length ? skills.filter((s) => s.verificada).length / skills.length : 0}
-                  className="mt-1.5"
-                  barClassName="bg-gradient-to-r from-emerald-500 to-accent-500"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Cuentas vinculadas</span>
-                  <span className="font-mono text-slate-200">{cuentas.length}/2</span>
-                </div>
-                <Progress
-                  valor={cuentas.length / 2}
-                  className="mt-1.5"
-                  barClassName="bg-gradient-to-r from-cyan-500 to-blue-500"
-                />
-              </div>
-            </div>
-          </Card>
+        {/* ------------------------- Lateral simulado ------------------------- */}
+        {demo && (
+          <div className="space-y-6">
+            <ResumenEvidencia stats={demo.stats} skills={demo.skills} cuentas={demo.cuentas} />
 
-          <Card>
-            <CardHeader
-              title="Notificaciones"
-              subtitle={`${noLeidas} sin leer`}
-              icon={<TrendingUp size={16} />}
-              action={
-                noLeidas > 0 ? (
-                  <Button
-                    variante="fantasma"
-                    tamano="sm"
-                    onClick={() => marcarTodas.mutate()}
-                  >
-                    Marcar leidas
-                  </Button>
-                ) : undefined
-              }
-            />
-            <div className="space-y-2 p-3">
-              {notificaciones.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-slate-500">
-                  Sin eventos por ahora.
-                </p>
-              ) : (
-                notificaciones.slice(0, 6).map((n) => (
-                  <div
-                    key={n.id}
-                    className={cn(
-                      'rounded-lg border px-3 py-2.5',
-                      n.leida
-                        ? 'border-white/6 bg-white/3'
-                        : 'border-brand-500/25 bg-brand-500/8',
-                    )}
-                  >
-                    <p className="text-[11px] font-medium text-slate-200">
-                      {n.titulo}
-                    </p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-                      {n.detalle}
-                    </p>
+            <Card>
+              <CardHeader
+                title="Notificaciones"
+                subtitle={`${notificaciones.filter((n) => !n.leida).length} sin leer`}
+                icon={<TrendingUp size={16} />}
+              />
+              <div className="space-y-2 p-3">
+                <MarcaDatosDemo />
+                {notificaciones.length === 0 ? (
+                  <p className="px-2 py-4 text-center text-xs text-slate-500">
+                    Sin eventos por ahora.
+                  </p>
+                ) : (
+                  notificaciones.slice(0, 6).map((n) => (
+                    <div
+                      key={n.id}
+                      className={cn(
+                        'rounded-lg border px-3 py-2.5',
+                        n.leida
+                          ? 'border-white/6 bg-white/3'
+                          : 'border-brand-500/25 bg-brand-500/8',
+                      )}
+                    >
+                      <p className="text-[11px] font-medium text-slate-200">{n.titulo}</p>
+                      <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+                        {n.detalle}
+                      </p>
+                    </div>
+                  ))
+                )}
+                {notificaciones.some((n) => !n.leida) && (
+                  <div className="flex justify-end">
+                    <Button variante="fantasma" tamano="sm" onClick={() => marcarTodas.mutate()}>
+                      Marcar leidas
+                    </Button>
                   </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-/* ============================== Pestaña: datos ============================= */
+/* =========================== Lateral: evidencia =========================== */
 
-function DatosPanel({
-  perfil,
-  onGuardar,
+function ResumenEvidencia({
+  stats,
+  skills,
+  cuentas,
 }: {
-  perfil: PerfilJugador
-  onGuardar: (cambios: CamposPerfil) => Promise<void>
+  stats: Estadistica[]
+  skills: HabilidadJugador[]
+  cuentas: CuentaGaming[]
 }) {
-  const [biografia, setBiografia] = useState(perfil.biografia)
-  const [horas, setHoras] = useState(perfil.horasDisponibles)
-  const [anios, setAnios] = useState(perfil.aniosExperiencia)
-  const [roles, setRoles] = useState<string[]>(perfil.rolesPreferidos)
-  const [equipos, setEquipos] = useState(perfil.equiposAnteriores.join(', '))
-  const [guardando, setGuardando] = useState(false)
-
-  const alternarRol = (rol: string) =>
-    setRoles((r) =>
-      r.includes(rol) ? r.filter((x) => x !== rol) : [...r, rol],
-    )
-
-  const guardar = async () => {
-    setGuardando(true)
-    try {
-      await onGuardar({
-        biografia: biografia.trim(),
-        horasDisponibles: horas,
-        aniosExperiencia: anios,
-        rolesPreferidos: roles.length ? roles : ['Flex'],
-        equiposAnteriores: equipos
-          .split(',')
-          .map((e) => e.trim())
-          .filter(Boolean),
-      })
-    } finally {
-      setGuardando(false)
-    }
-  }
+  const confiabilidad = stats.length
+    ? stats.filter((s) => s.fuente.startsWith('api-')).length / stats.length
+    : 0
+  const validadas = skills.filter((s) => s.verificada).length
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Horas disponibles por semana">
-          <Input
-            type="number"
-            min={0}
-            max={60}
-            value={horas}
-            onChange={(e) => setHoras(Number(e.target.value))}
+    <Card>
+      <CardHeader
+        title="Resumen de evidencia"
+        subtitle="Que parte de tu perfil es verificable."
+        icon={<ShieldCheck size={16} />}
+      />
+      <div className="space-y-4 p-5">
+        <MarcaDatosDemo />
+        <div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400">Datos de la API oficial</span>
+            <span className="font-mono text-slate-200">{Math.round(confiabilidad * 100)}%</span>
+          </div>
+          <Progress valor={confiabilidad} className="mt-1.5" />
+        </div>
+        <div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400">Habilidades validadas</span>
+            <span className="font-mono text-slate-200">
+              {validadas}/{skills.length}
+            </span>
+          </div>
+          <Progress
+            valor={skills.length ? validadas / skills.length : 0}
+            className="mt-1.5"
+            barClassName="bg-gradient-to-r from-emerald-500 to-accent-500"
           />
-        </Field>
-        <Field label="Anios de experiencia competitiva">
-          <Input
-            type="number"
-            min={0}
-            max={20}
-            value={anios}
-            onChange={(e) => setAnios(Number(e.target.value))}
+        </div>
+        <div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400">Cuentas vinculadas</span>
+            <span className="font-mono text-slate-200">{cuentas.length}/2</span>
+          </div>
+          <Progress
+            valor={cuentas.length / 2}
+            className="mt-1.5"
+            barClassName="bg-gradient-to-r from-cyan-500 to-blue-500"
           />
-        </Field>
-        <Field label="Equipos anteriores" hint="Separados por coma.">
-          <Input
-            value={equipos}
-            onChange={(e) => setEquipos(e.target.value)}
-            placeholder="Lobos del Caribe, Nautilus Gaming"
-          />
-        </Field>
-      </div>
-
-      <Field label="Biografia profesional">
-        <Textarea
-          rows={4}
-          value={biografia}
-          onChange={(e) => setBiografia(e.target.value)}
-          placeholder="Describe tu trayectoria, el juego en el que compites y lo que buscas."
-        />
-      </Field>
-
-      <div>
-        <p className="mb-2 text-xs font-medium text-slate-400">
-          Roles preferidos
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => alternarRol(r)}
-              className={cn(
-                'rounded-full border px-3 py-1 text-[11px] font-medium transition',
-                roles.includes(r)
-                  ? 'border-brand-500/50 bg-brand-500/15 text-brand-200'
-                  : 'border-white/10 bg-white/4 text-slate-400 hover:border-white/20 hover:text-slate-200',
-              )}
-            >
-              {r}
-            </button>
-          ))}
         </div>
       </div>
-
-
-      <div className="flex justify-end">
-        <Button onClick={guardar} cargando={guardando}>
-          <Save size={14} />
-          Guardar cambios
-        </Button>
-      </div>
-
-      <p className="text-[11px] leading-relaxed text-slate-600">
-        Los datos declarados no alimentan el puntaje de compatibilidad como
-        evidencia: el motor los usa solo como contexto, mientras que las
-        estadisticas de juego provienen de la ingesta directa.
-      </p>
-    </div>
+    </Card>
   )
 }
 

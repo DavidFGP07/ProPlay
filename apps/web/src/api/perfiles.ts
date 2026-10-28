@@ -2,12 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   perfilJugadorPublicoSchema,
+  type PerfilJugadorInput,
   type PerfilPropioResponse,
-  type UbicacionJugadorInput,
 } from '@proplay/shared'
 import { api } from '@/api/client'
 import {
-  actualizarPerfil,
   actualizarPrivacidad,
   desvincularCuenta,
   eliminarHabilidad,
@@ -17,14 +16,11 @@ import {
   obtenerPrivacidad,
   registrarHabilidad,
   vincularCuenta,
-  type CamposPerfil,
 } from '@/mocks/api'
 import { perfilesEquipo } from '@/mocks/seed'
 import { actorDemo } from '@/mocks/sesion'
 import { simulado, useMutacionSimulada } from '@/api/demo'
 import type { ConfiguracionPrivacidad, PlataformaJuego } from '@/mocks/modelos'
-
-export type { CamposPerfil }
 
 const CLAVE_PERFIL_PROPIO = ['perfiles', 'me'] as const
 
@@ -41,16 +37,23 @@ export function usePerfilPropio(habilitado = true) {
   })
 }
 
-// RF-05 · RF-09 · Ubicacion del jugador (insumo de la dimension geografica). API real.
-export function useActualizarUbicacion() {
+// RF-05 · RF-09 · Datos profesionales del jugador: presentacion, disponibilidad
+// y ubicacion (insumo de la dimension geografica). API real.
+export function useActualizarPerfilJugador() {
   const cliente = useQueryClient()
   return useMutation({
-    mutationFn: async (datos: UbicacionJugadorInput) => {
+    mutationFn: async (datos: PerfilJugadorInput) => {
       const { data } = await api.patch<PerfilPropioResponse>('/perfiles/jugador', datos)
       return data
     },
-    // El PATCH responde con la misma forma que GET /perfiles/me.
-    onSuccess: (data) => cliente.setQueryData(CLAVE_PERFIL_PROPIO, data),
+    // El PATCH responde con la misma forma que GET /perfiles/me. El perfil
+    // publico propio queda viejo: se invalida para «Ver como lo ven los equipos».
+    onSuccess: (data) => {
+      cliente.setQueryData(CLAVE_PERFIL_PROPIO, data)
+      if (data.tipo === 'JUGADOR') {
+        void cliente.invalidateQueries({ queryKey: ['perfiles', 'publico', data.perfil.id] })
+      }
+    },
   })
 }
 
@@ -71,13 +74,14 @@ export function esNoEncontrado(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404
 }
 
-// RF-05 · Perfil del jugador con estadisticas, cuentas y habilidades de la
-// persona de demostracion: solo lo usa /mi-perfil hasta conectarse a la API.
+// RF-02 · RF-04 · RF-06 · Estadisticas, cuentas y habilidades de la persona de
+// demostracion: las secciones de /mi-perfil que dependen de otros modulos. Los
+// datos profesionales ya salen de usePerfilPropio.
 export function usePerfil(id: string | undefined) {
   return useQuery({
     queryKey: ['perfiles', 'demo', id],
     enabled: Boolean(id),
-    // TODO: S2 — conectar /mi-perfil con GET /api/v1/perfiles/me
+    // TODO: S2 — conectar con GET /api/v1/estadisticas, /perfiles/cuentas-gaming y /perfiles/habilidades
     queryFn: () => simulado(() => obtenerPerfil(id!), null),
   })
 }
@@ -89,14 +93,6 @@ export function useEquipos() {
     // TODO: S3 — conectar con GET /api/v1/perfiles?tipo=equipo
     queryFn: () => simulado(async () => perfilesEquipo, []),
   })
-}
-
-// RF-05 · Edicion del perfil propio
-export function useActualizarPerfil() {
-  return useMutacionSimulada(({ perfilId, cambios }: { perfilId: string; cambios: CamposPerfil }) =>
-    // TODO: S2 — conectar con PATCH /api/v1/perfiles/jugador
-    actualizarPerfil(perfilId, cambios, actorDemo()),
-  )
 }
 
 // RF-06 · Catalogo de habilidades

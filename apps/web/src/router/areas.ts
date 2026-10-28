@@ -12,12 +12,14 @@ export const AREAS = {
 } as const satisfies Record<string, readonly Rol[]>
 
 /**
- * Rutas (patrones de React Router) que solo consumen endpoints reales. El
- * aviso «Datos de demostracion» no se muestra en ellas; al conectar una vista
- * de verdad, se añade aqui.
+ * Rutas (patrones de React Router) sin el aviso de pagina «Datos de
+ * demostracion»: las que solo consumen endpoints reales y las mixtas, que
+ * marcan cada seccion simulada con MarcaDatosDemo. Al conectar una vista de
+ * verdad, se añade aqui.
  */
 export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/cuenta',
   '/legal/privacidad',
   '/jugador/:id',
+  '/mi-perfil',
 ]
