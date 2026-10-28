@@ -81,10 +81,13 @@ export async function actualizarJugador(
     });
   }
 
-  const cambios =
-    datos.pais === undefined
-      ? datos
-      : { ...datos, departamento: datos.departamento ?? null };
+  const cambios = {
+    ...datos,
+    ...(datos.pais !== undefined && { departamento: datos.departamento ?? null }),
+    // Una presentación en blanco se guarda como ausente, para que el perfil
+    // público muestre su estado vacío y no un párrafo sin texto.
+    ...(datos.bio !== undefined && { bio: datos.bio.trim() || null }),
+  };
   const perfil = await repositorio.actualizarJugador(usuarioId, cambios);
   return { tipo: "JUGADOR", perfil: aRespuestaJugador(perfil) };
 }
