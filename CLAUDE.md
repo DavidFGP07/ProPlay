@@ -277,6 +277,9 @@ docs(readme): añadir configuración de Vercel
 
 Un commit por bloque de trabajo coherente.
 
+Tras fusionar un PR, borra su rama en local y en el remoto. Antes, reapunta a `main` los PR
+que la usen como base.
+
 ---
 
 ## 8. Qué NO hacer
@@ -306,8 +309,8 @@ Un commit por bloque de trabajo coherente.
 
 ## 9. Estado actual
 
-**Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me` y
-`PATCH /perfiles/jugador`. Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
+**Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
+`PATCH /perfiles/jugador` y `GET /perfiles/:id` (perfil público, sin sesión). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
 `scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
