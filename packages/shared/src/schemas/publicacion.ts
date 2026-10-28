@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { urlHttpSchema } from "./common";
 
 export const crearPublicacionSchema = z.object({
   texto: z.string().min(1).max(2000),
-  mediaUrls: z.array(z.string().url()).max(4).default([]),
+  mediaUrls: z.array(urlHttpSchema).max(4).default([]),
 });
 
 export const publicacionSchema = crearPublicacionSchema.extend({

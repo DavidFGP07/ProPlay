@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CATEGORIAS_HABILIDAD, DEPARTAMENTOS, PLATAFORMAS } from "../enums";
+import { urlHttpSchema } from "./common";
 import {
   NIVEL_HABILIDAD_MAX,
   NIVEL_HABILIDAD_MIN,
@@ -50,20 +51,29 @@ export const ubicacionJugadorSchema = z
   .object(camposUbicacion)
   .superRefine(validarUbicacion);
 
+/**
+ * Edición del perfil del jugador (`PATCH /perfiles/jugador`): campo ausente,
+ * no cambia; `null`, se borra (en `avatarUrl` y la ubicación).
+ */
 export const perfilJugadorSchema = z
   .object({
     bio: z.string().max(1000).optional(),
     ...camposUbicacion,
     disponibilidadHoras: z.number().int().min(0).max(80).optional(),
-    avatarUrl: z.string().url().optional(),
+    avatarUrl: urlHttpSchema.nullable().optional(),
   })
   .superRefine(validarUbicacion);
 
+/**
+ * Edición del perfil del equipo (`PATCH /perfiles/equipo`): campo ausente, no
+ * cambia; `null`, se borra. El nombre de la organización es obligatorio en la
+ * base, así que se puede omitir pero no borrar.
+ */
 export const perfilEquipoSchema = z.object({
-  nombreOrg: z.string().min(2).max(120),
-  descripcion: z.string().max(1000).optional(),
-  sitioWeb: z.string().url().optional(),
-  logoUrl: z.string().url().optional(),
+  nombreOrg: z.string().trim().min(2).max(120).optional(),
+  descripcion: z.string().max(1000).nullable().optional(),
+  sitioWeb: urlHttpSchema.nullable().optional(),
+  logoUrl: urlHttpSchema.nullable().optional(),
 });
 
 export const habilidadSchema = z.object({
