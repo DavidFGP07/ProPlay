@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { auth } from "../../middleware/auth";
+import { auth, authOpcional } from "../../middleware/auth";
+import { limitePerfilPublico } from "../../middleware/rateLimit";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./perfiles.controller";
@@ -76,10 +77,12 @@ perfilesRouter.post(
   controlador.vincularCuenta,
 );
 
-// TODO: Devolver el perfil público de un usuario por su id.
+// RF-05 · Perfil público del jugador, compartible y sin sesión. Va al final:
+// "/:id" capturaría "/me" y "/habilidades".
 perfilesRouter.get(
   "/:id",
-  auth,
+  authOpcional,
+  limitePerfilPublico,
   validate(idParamSchema, "params"),
   controlador.obtenerPublico,
 );

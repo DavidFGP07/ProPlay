@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { QueryClient, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const MODO_PRUEBAS = import.meta.env.MODE === 'test'
@@ -9,10 +10,22 @@ export function crearQueryClient(): QueryClient {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
         // En pruebas un error debe aflorar al instante, sin reintentos.
-        retry: MODO_PRUEBAS ? false : 1,
+        retry: MODO_PRUEBAS ? false : reintentarConsulta,
       },
     },
   })
+}
+
+/**
+ * Una consulta fallida se reintenta una vez, salvo con un 4xx (404, 403,
+ * 429...): repetirlo no lo arregla. El 401 ya lo trata el interceptor de
+ * `client.ts` (refresca y reintenta la peticion); si aun asi llega aqui es que
+ * la sesion no se pudo renovar, y otro intento solo repetiria el refresco.
+ */
+export function reintentarConsulta(fallos: number, error: unknown): boolean {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined
+  const esErrorDelCliente = status !== undefined && status >= 400 && status < 500
+  return fallos < 1 && !esErrorDelCliente
 }
 
 /**

@@ -74,8 +74,9 @@ export const vincularCuenta = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/v1/perfiles/:id
- * TODO: Devolver el perfil público de un usuario por su id.
+ * Perfil público de un jugador por el id de su perfil. No exige sesión y no
+ * cambia según quién lo pida.
  */
-export const obtenerPublico = asyncHandler(async (req, res) => {
-  res.json(await servicio.obtenerPublico(req.body ?? req.validado));
+export const obtenerPublico = asyncHandler<Request<{ id: string }>>(async (req, res) => {
+  res.status(200).json(await servicio.obtenerPublico(req.params.id));
 });

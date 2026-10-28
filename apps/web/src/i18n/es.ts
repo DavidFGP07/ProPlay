@@ -1,4 +1,10 @@
-import type { Departamento, EstadoOferta, Macrorregion, Rol } from '@proplay/shared'
+import type {
+  Departamento,
+  EstadoOferta,
+  Macrorregion,
+  Plataforma,
+  Rol,
+} from '@proplay/shared'
 import type { EstadoPostulacionPrototipo, PlataformaJuego } from '@/mocks/modelos'
 
 /**
@@ -37,6 +43,73 @@ export const es = {
     volverLogin: 'Volver al inicio de sesión',
     volverApp: 'Volver a ProPlay',
     enlace: 'Aviso de privacidad y términos de uso',
+  },
+  marcoPublico: {
+    lema: 'Scouting de talento eSports',
+    ingresar: 'Iniciar sesión',
+  },
+  perfilPublico: {
+    cargando: 'Cargando el perfil',
+    noEncontrado: 'Perfil no encontrado',
+    noEncontradoDetalle: 'El jugador no existe o su cuenta ya no está activa.',
+    irInicio: 'Ir al inicio',
+    irIngreso: 'Ir a ProPlay',
+    error: 'No pudimos cargar el perfil.',
+    errorDetalle: 'Revisa tu conexión e inténtalo de nuevo.',
+    demasiadasConsultas: 'Has consultado demasiados perfiles. Espera unos minutos.',
+    riotVerificada: 'Cuenta de Riot verificada',
+    sinRiot: 'Sin cuenta de Riot vinculada',
+    sinUbicacion: 'Ubicación no indicada',
+    sinBio: 'Este jugador todavía no ha escrito su presentación.',
+    cuentasTitulo: 'Cuentas verificadas',
+    cuentasSubtitulo: 'Vinculadas por OAuth 2.0: la plataforma confirma que la cuenta es suya.',
+    verificadaEl: (fecha: string) => `Verificada el ${fecha}`,
+    sinCuentas: 'Todavía no hay cuentas verificadas',
+    sinCuentasDetalle:
+      'Cuando el jugador vincule su cuenta de Riot Games aparecerá aquí, con la fecha de verificación.',
+    estadisticasTitulo: 'Estadísticas de juego',
+    estadisticasSubtitulo: 'Traídas de la API oficial del juego, nunca declaradas por el jugador.',
+    sinEstadisticas: 'Sin estadísticas todavía',
+    sinEstadisticasDetalle:
+      'Se cargarán desde la API de Riot Games cuando el jugador vincule su cuenta. ProPlay no muestra cifras autodeclaradas.',
+    habilidadesTitulo: 'Habilidades y endorsements',
+    habilidadesSubtitulo: 'Validadas por otros usuarios de la plataforma.',
+    habilidadesProximamente: 'Próximamente',
+    habilidadesProximamenteDetalle:
+      'Las habilidades declaradas y sus endorsements llegarán en una próxima versión.',
+    comoTitulo: 'Cómo se construye este perfil',
+    comoSubtitulo: 'Cadena de captura, procesamiento y salida de datos',
+    pasos: [
+      {
+        n: '01',
+        titulo: 'Vinculación OAuth 2.0',
+        detalle: 'El jugador autoriza el acceso a su cuenta de Riot Games.',
+      },
+      {
+        n: '02',
+        titulo: 'Ingesta',
+        detalle:
+          'Un proceso consulta periódicamente la API oficial y guarda cada captura con su marca de tiempo.',
+      },
+      {
+        n: '03',
+        titulo: 'Normalización',
+        detalle:
+          'Las métricas se llevan a una escala comparable y se calculan las derivadas (KDA, win rate, tendencia).',
+      },
+      {
+        n: '04',
+        titulo: 'Vectorización',
+        detalle:
+          'El perfil se convierte en un vector de 64 dimensiones para buscar jugadores similares.',
+      },
+    ],
+    plataforma: {
+      RIOT: 'Riot Games',
+      STEAM: 'Steam',
+      TWITCH: 'Twitch',
+      YOUTUBE: 'YouTube',
+    } satisfies Record<Plataforma, string>,
   },
   noEncontrada: {
     titulo: 'Pagina no encontrada',

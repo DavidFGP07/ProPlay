@@ -4,7 +4,7 @@ import cors, { type CorsOptions } from "cors";
 import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { API_PREFIX } from "@proplay/shared";
-import { env } from "./config/env";
+import { env, type Env } from "./config/env";
 import { revisarSalud } from "./config/health";
 import { logger } from "./config/logger";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
@@ -29,8 +29,7 @@ import { adminRouter } from "./modules/admin/admin.routes";
 export function crearApp(): Express {
   const app = express();
 
-  // Detrás del proxy de Railway/Render para que rate-limit vea la IP real.
-  app.set("trust proxy", 1);
+  configurarProxy(app, env.trustProxy);
 
   app.use(helmet());
   app.use(cors(opcionesCors()));
@@ -59,6 +58,15 @@ export function crearApp(): Express {
   app.use(errorHandler);
 
   return app;
+}
+
+/**
+ * De qué proxies acepta Express X-Forwarded-For para calcular `req.ip`, que es
+ * la clave de los límites por IP. Viene de TRUST_PROXY: desactivado si no se
+ * fija, y fijado en el despliegue según los proxies que haya delante.
+ */
+export function configurarProxy(app: Express, trustProxy: Env["trustProxy"]): void {
+  app.set("trust proxy", trustProxy);
 }
 
 function crearRouterApi(): Router {

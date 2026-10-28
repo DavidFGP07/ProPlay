@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import path from "node:path";
 import { z } from "zod";
 
@@ -19,7 +20,42 @@ try {
 
 const stringNoVacio = (mensaje: string) => z.string().min(1, mensaje);
 
-const envSchema = z.object({
+/** Nombres que Express acepta en "trust proxy" para rangos de red conocidos. */
+const RANGOS_CON_NOMBRE = new Set(["loopback", "linklocal", "uniquelocal"]);
+
+function esDireccionOSubred(valor: string): boolean {
+  if (RANGOS_CON_NOMBRE.has(valor)) return true;
+  const [direccion = "", prefijo, ...resto] = valor.split("/");
+  const version = isIP(direccion);
+  if (version === 0 || resto.length > 0) return false;
+  if (prefijo === undefined) return true;
+  const bits = Number(prefijo);
+  return /^\d+$/.test(prefijo) && bits <= (version === 4 ? 32 : 128);
+}
+
+/**
+ * Valor de TRUST_PROXY para el setting "trust proxy" de Express, o `null` si
+ * no es válido. Sin variable (o con 0 / false) no se confía en ningún proxy:
+ * `req.ip` es la IP de la conexión y X-Forwarded-For se ignora. Es lo correcto
+ * sin proxy delante, porque cualquiera puede escribir esa cabecera y, si se le
+ * hiciera caso, saltarse los límites por IP con sólo cambiarla.
+ *
+ * Admite el número de proxies delante de la API (1 en Railway o Render) o una
+ * lista separada por comas de direcciones, subredes CIDR y los nombres
+ * loopback, linklocal y uniquelocal. `true` se rechaza: confiaría en
+ * cualquier cliente y equivale a no tener límite por IP.
+ */
+export function interpretarTrustProxy(
+  valor: string | undefined,
+): false | number | string[] | null {
+  const limpio = valor?.trim() ?? "";
+  if (limpio === "" || limpio === "0" || limpio === "false") return false;
+  if (/^\d+$/.test(limpio)) return Number(limpio);
+  const entradas = limpio.split(",").map((entrada) => entrada.trim());
+  return entradas.every(esDireccionOSubred) ? entradas : null;
+}
+
+export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -48,6 +84,14 @@ const envSchema = z.object({
 
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
 
+  TRUST_PROXY: z
+    .string()
+    .optional()
+    .refine(
+      (valor) => interpretarTrustProxy(valor) !== null,
+      "TRUST_PROXY debe ser el número de proxies delante de la API (p. ej. 1) o una lista de direcciones o subredes; `true` no se admite",
+    ),
+
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
@@ -62,6 +106,16 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+}).superRefine((valores, ctx) => {
+  // En el despliegue hay que decidirlo de forma explícita (0 si no hay proxy):
+  // olvidarla dejaría a todos los anónimos tras el proxy con la misma IP.
+  if (valores.NODE_ENV === "production" && !valores.TRUST_PROXY?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["TRUST_PROXY"],
+      message: "TRUST_PROXY es obligatoria en producción (1 detrás de Railway o Render, 0 sin proxy)",
+    });
+  }
 });
 
 const resultado = envSchema.safeParse(process.env);
@@ -85,6 +139,8 @@ export const env = {
   corsOrigins: parseado.CORS_ORIGIN.split(",")
     .map((origen) => origen.trim())
     .filter(Boolean),
+  /** Setting "trust proxy" de Express (ver interpretarTrustProxy). */
+  trustProxy: interpretarTrustProxy(parseado.TRUST_PROXY) ?? false,
   esProduccion: parseado.NODE_ENV === "production",
   esDesarrollo: parseado.NODE_ENV === "development",
   esTest: parseado.NODE_ENV === "test",

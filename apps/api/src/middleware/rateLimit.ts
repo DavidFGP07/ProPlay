@@ -107,3 +107,26 @@ export const limiteCambioContrasena = rateLimit({
   ...respuestaLimite,
   ...opcionesLimiteCambioContrasena,
 });
+
+/**
+ * Configuración del límite del perfil público: 120 consultas cada 15 minutos,
+ * por usuario si hay sesión y por IP si no. Es la única lectura sin sesión de
+ * la API y frena el recorrido masivo de perfiles; el límite global sigue
+ * aplicando por encima. Por IP sólo es fiable con TRUST_PROXY bien fijado.
+ */
+export const opcionesLimitePerfilPublico: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Has consultado demasiados perfiles, espera unos minutos",
+    },
+  },
+};
+
+export const limitePerfilPublico = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimitePerfilPublico,
+});
