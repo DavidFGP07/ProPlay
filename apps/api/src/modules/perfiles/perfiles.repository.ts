@@ -14,7 +14,6 @@ const seleccionJugador = {
   bio: true,
   pais: true,
   departamento: true,
-  fechaNacimiento: true,
   disponibilidadHoras: true,
   dispuestoRelocalizar: true,
   avatarUrl: true,
@@ -30,7 +29,6 @@ const seleccionEquipo = {
   descripcion: true,
   sitioWeb: true,
   logoUrl: true,
-  region: true,
   creadoEn: true,
   actualizadoEn: true,
 } satisfies Prisma.PerfilEquipoSelect;

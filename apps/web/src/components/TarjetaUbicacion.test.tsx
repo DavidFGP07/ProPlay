@@ -65,7 +65,6 @@ function perfil(cambios: Partial<PerfilJugadorRespuesta> = {}): PerfilJugadorRes
     bio: null,
     pais: null,
     departamento: null,
-    fechaNacimiento: null,
     disponibilidadHoras: null,
     dispuestoRelocalizar: false,
     avatarUrl: null,

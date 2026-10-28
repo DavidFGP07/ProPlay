@@ -78,15 +78,17 @@ describe(`GET ${RUTA_ME}`, () => {
       dispuestoRelocalizar: false,
     });
     expect(respuesta.body.perfil).not.toHaveProperty("region");
+    expect(respuesta.body.perfil).not.toHaveProperty("fechaNacimiento");
   });
 
-  it("devuelve el perfil del equipo", async () => {
+  it("devuelve el perfil del equipo, sin la región de texto libre", async () => {
     const token = await registrar("me-equipo", "EQUIPO");
     const respuesta = await obtener(token);
 
     expect(respuesta.status).toBe(200);
     expect(respuesta.body.tipo).toBe("EQUIPO");
     expect(respuesta.body.perfil.nombreOrg).toBe("Cuenta de Prueba");
+    expect(respuesta.body.perfil).not.toHaveProperty("region");
   });
 
   it("responde 200 con perfil nulo al scout, que no tiene perfil", async () => {
@@ -179,11 +181,15 @@ describe(`PATCH ${RUTA_JUGADOR}`, () => {
     expect(respuesta.body.perfil).toMatchObject({ pais: null, departamento: null });
   });
 
-  it("descarta `region`, que ya no es parte del perfil", async () => {
-    const respuesta = await actualizar(token, { region: "LAN" });
+  it("descarta `region` y `fechaNacimiento`, que ya no son parte del contrato", async () => {
+    const respuesta = await actualizar(token, {
+      region: "LAN",
+      fechaNacimiento: "2000-01-01",
+    });
 
     expect(respuesta.status).toBe(200);
     expect(respuesta.body.perfil).not.toHaveProperty("region");
+    expect(respuesta.body.perfil).not.toHaveProperty("fechaNacimiento");
   });
 
   it("con país guardado CO acepta sólo el departamento", async () => {
