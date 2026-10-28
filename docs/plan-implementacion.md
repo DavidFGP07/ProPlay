@@ -88,7 +88,7 @@ paralelo al desarrollo, el proyecto se queda sin piso aunque el software funcion
 | 0.7 | **Plan de reclutamiento del piloto**: lista objetivo de 50 jugadores y 3 equipos, y quién contacta a cada uno | Conseguir 50 jugadores reales es más difícil que construir el matching, y tiene el mismo plazo | | |
 | 0.8 | **Diseñar los instrumentos de medición**: encuesta de NPS y de percepción de objetividad | Se aplican al final pero se diseñan ahora. Improvisarlos la última semana invalida el resultado | | |
 | 0.9 | **Consultar si la facultad exige aval de comité de ética** para pruebas con personas | En varias universidades sí, y tramitarlo tarda | | |
-| 0.10 | **Recortar el alcance**: decidir cuáles de las 39 vistas del inventario entran en la tesis y declarar el resto como trabajo futuro | No vamos a construir 39. Decidirlo ahora se defiende; descubrirlo en la última semana, no | | |
+| 0.10 | **Recortar el alcance**: decidir cuáles de las 39 vistas del inventario entran en la tesis y declarar el resto como trabajo futuro<br>**Cerrada:** 19 vistas (13 de núcleo y 6 de soporte mínimo); el resto, trabajo futuro. Columna «Alcance» en el inventario de `CLAUDE.md` (§5) y decisión en `docs/decisiones.md`, «Recorte de alcance». Las tareas de los bloques 2 a 4 están reubicadas según ella y las que salen están en el Bloque 6 | No vamos a construir 39. Decidirlo ahora se defiende; descubrirlo en la última semana, no | | |
 
 **Sobre 0.1:** la clave de producción de Riot exige que el aviso de privacidad esté
 publicado en una URL pública. `/legal/privacidad` ya existe (#11), pero sólo en local: hay
@@ -110,6 +110,7 @@ repartir.
 | 1.4 | Documentar el alta del primer administrador<br>**En curso:** rama `feat/api-alta-administrador` | Para el piloto hace falta un admin real en producción. Hoy sólo hay un comentario que dice «se asigna a mano» | Media |
 | 1.5 | Decidir e implementar dónde se captura la región del jugador<br>**Hecha:** #13 (modelo por país y departamento), #14 y #15 (API) y #16 (tarjeta «Ubicación» en Mi perfil) | El registro dejó de pedirla y no hay onboarding. Es insumo de la dimensión geográfica del matching, que se necesita en S3 | Alta |
 | 1.6 | Deuda técnica diferida: partir `ui.tsx` en un archivo por componente, extraer los textos a `i18n/es.ts`, implementar los cuatro estados transversales, sembrar los comentarios `// RF-xx` en las vistas<br>**Pendiente.** Entre los textos por extraer están los escritos directamente en el JSX de `PanelEquipoPage.tsx` («Procesos de selección», «Gestión de vacantes…»), que no pasan por `es.ts` | No bloquea, pero cuanto más se posponga más cuesta | Baja |
+| 1.7 | **Retirar del menú de la versión del piloto las vistas simuladas fuera de alcance** (Feed, Mensajes, Dashboard simulado y Admin), conservando su código como prototipo. La página de inicio redirige a Explorar oportunidades (jugador) o a Analítica (equipo y scout). Decisión 0.10 | Un participante del piloto no debe encontrar vistas que la tesis no sostiene: verían datos simulados como si fueran reales | Media |
 
 ---
 
@@ -128,7 +129,7 @@ Twitch, YouTube y las demás plataformas pasan a trabajo futuro; sus esqueletos 
 | # | Tarea |
 |---|---|
 | 2.1 | Módulo `perfiles`: consulta y edición del perfil de jugador y del perfil de equipo<br>**Adelantada en el Sprint 1.** Jugador: #14 y #15 (`GET /perfiles/me`, `PATCH /perfiles/jugador`) y #19 (`/mi-perfil`). Perfil público: #17 y #18 (`GET /perfiles/:id`). Equipo: #20 y #21 (`PATCH /perfiles/equipo` y «Datos de la organización» en `/panel-equipo`) |
-| 2.2 | Habilidades y endorsements: asignación, niveles y validación por terceros |
+| 2.2 | Habilidades y endorsements en **versión mínima** (decisión 0.10): catálogo fijo cargado por el seed, asignación con nivel y endorsements sólo de equipos |
 | 2.3 | Módulo `integraciones`: implementar `GameStatsProvider` para Riot — flujo OAuth, obtención de la cuenta, obtención del historial de partidas |
 | 2.4 | Cifrado y descifrado de los tokens de `CuentaGaming`, y refresco automático cuando expiren |
 | 2.5 | Worker de ingesta: programación periódica, reintentos con retroceso, y control de cuota de la API de Riot usando Redis |
@@ -142,8 +143,10 @@ Twitch, YouTube y las demás plataformas pasan a trabajo futuro; sus esqueletos 
 | 2.8 | Vista de cuentas vinculadas: estado por plataforma, última sincronización, vincular, desvincular y **aviso claro de qué datos se leen y para qué** (exigencia de la Ley 1581) |
 | 2.9 | Vista de mis estadísticas: por juego, histórico y tendencias |
 | 2.10 | Conectar los hooks de perfil y estadísticas; **retirar el puente de demostración en esas vistas** y con él su distintivo |
-| 2.11 | Onboarding, si es ahí donde se decide capturar la región (ver 1.5) |
+| 2.11 | ~~Onboarding~~ **Descartada** (decisión 0.10): la ubicación se captura en Mi perfil (1.5) y la vinculación de la cuenta vive en Cuentas vinculadas (2.8) |
 | 2.12 | **Distintivo de verificación** visible junto a cada métrica que venga de la API oficial. Es el argumento central del proyecto hecho visible |
+| 2.15 | **Analítica, primer indicador: mapa del talento verificado** por macrorregión, rol y rango, con el Caribe frente al resto. Sólo cuenta jugadores con cuenta de Riot vinculada; la macrorregión sale de `MACROREGION_POR_DEPARTAMENTO`. Va en la vista fusionada de Analítica y panel del equipo |
+| 2.16 | **Analítica, tendencia del rendimiento del jugador**, dentro de Mis estadísticas (2.9) |
 
 ### Infraestructura
 
@@ -178,8 +181,11 @@ registrado en `docs/decisiones.md`, «Pendientes».
 | 3.5 | **Definir y documentar la fórmula de cada una de las cinco dimensiones** (técnica, experiencia, habilidades blandas, geográfica, disponibilidad). Hoy sólo están descritas en prosa. La de experiencia depende del modelo de trayectoria (ver el párrafo anterior) |
 | 3.6 | Ponderador: aplicar la ecuación del documento con pesos configurables por oferta |
 | 3.7 | Persistir el resultado en `Matching` con el desglose por dimensión |
-| 3.8 | Módulo `scouting`: búsqueda de jugadores con filtros por juego, rol, rango, región y disponibilidad |
+| 3.8 | Módulo `scouting` en **versión mínima** (decisión 0.10): búsqueda de jugadores con filtros por rol, rango y departamento |
 | 3.9 | **Medir RNF-01 en este sprint**: percentil 95 por debajo de 2 s con 1.000 perfiles indexados. Si se mide al final y falla, corregirlo exige rehacer el motor |
+| 3.16 | **Guardar la fecha de cada cambio de estado de la postulación** (historial de estados, no sólo el estado actual). Sin ella no se calcula el embudo de la vacante ni el tiempo hasta cubrirla (H1). Va con 3.2 y es un cambio de esquema en su propio PR |
+| 3.17 | Datos de la analítica: **embudo de la vacante con tiempo hasta cubrirla** (sobre 3.16) y **qué dimensión decide el ranking** (sobre el desglose de 3.7). La vista se completa en 4.10 |
+| 3.18 | Sustituto de la mensajería en el piloto (decisión 0.10): el equipo ve el correo del jugador cuando **preselecciona** su postulación. Antes de activarlo, reflejarlo en el aviso de privacidad y, si cambia el texto, subir `VERSION_AVISO_PRIVACIDAD` |
 
 ### Frontend
 
@@ -188,7 +194,7 @@ registrado en `docs/decisiones.md`, «Pendientes».
 | 3.10 | Crear oferta con **deslizadores de pesos que siempre suman 100 %**: al mover uno, los demás se reajustan. Es lo que materializa la ecuación y distingue a ProPlay de un tablón de empleo |
 | 3.11 | **Ranking de candidatos con desglose por dimensión** en gráfico de radar o barras. Es la pantalla estrella de la sustentación: si sólo muestra un número, el diferencial no se ve |
 | 3.12 | Detalle del candidato |
-| 3.13 | Mis postulaciones (jugador) y postulaciones recibidas (equipo) |
+| 3.13 | Mis postulaciones (jugador), como **pestaña de Mi perfil**, y postulaciones recibidas (equipo), **dentro del detalle de la oferta**. Ninguna tiene vista propia (decisión 0.10) |
 | 3.14 | Conectar los hooks correspondientes y retirar el puente de demostración en esas vistas |
 
 ### Documento
@@ -208,19 +214,15 @@ registrado en `docs/decisiones.md`, «Pendientes».
 | 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje |
 | 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo |
-| 4.4 | Módulo `mensajeria`: conversaciones y mensajes |
-| 4.5 | Módulo `notificaciones`: consumo de eventos publicados por los demás módulos |
-| 4.6 | Módulo `admin`: métricas, cambio de rol, suspensión de cuentas y consulta de auditoría |
+| 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y administración |
 
 ### Frontend
 
 | # | Tarea |
 |---|---|
 | 4.7 | Explicación del matching en el detalle del candidato |
-| 4.8 | Mensajería conectada |
-| 4.9 | Notificaciones conectadas |
-| 4.10 | Dashboard de analítica con datos reales |
-| 4.11 | Subvistas de administración |
+| 4.8, 4.9, 4.11 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y subvistas de administración |
+| 4.10 | **Analítica con datos reales**, fusionada con el panel del equipo: completa los cuatro indicadores (mapa del talento de 2.15, tendencia de 2.16, embudo y dimensión decisiva de 3.17). Es el componente de innovación que exige el director |
 | 4.12 | **Retirar por completo el puente de demostración y la bandera `VITE_DEMO_DATA`** |
 
 ### Validación
@@ -246,7 +248,26 @@ registrado en `docs/decisiones.md`, «Pendientes».
 
 ---
 
-## 8. Trabajo colaborativo: ramas
+## 8. Bloque 6 — Trabajo futuro. Fuera de la tesis
+
+Lo que la decisión 0.10 deja fuera. No se construye sin acordarlo; si sobra tiempo, se
+recupera en este orden:
+
+1. Recuperar y restablecer contraseña.
+2. Mensajería (RF-12): módulo `mensajeria` y vista Mensajes (antes 4.4 y 4.8).
+3. Perfil público de la organización.
+
+Sin orden de recuperación, en fase 2:
+
+| Antes | Tarea |
+|---|---|
+| 4.5 y 4.9 | Módulo `notificaciones` y su conexión en el cliente (RF-12) |
+| 4.6 y 4.11 | Módulo `admin` y subvistas de administración (interfaz de RF-14). Mientras tanto, las operaciones van por los scripts de `docs/operacion.md` y la auditoría se sigue escribiendo en `AuditLog` |
+| — | Descartadas: verificación de correo, feed, onboarding, comparador de candidatos y lista de seguimiento |
+
+---
+
+## 9. Trabajo colaborativo: ramas
 
 ### El principio
 
@@ -325,10 +346,10 @@ verificable, no sobre una rama local.
 
 ---
 
-## 9. Orden de ataque recomendado
+## 10. Orden de ataque recomendado
 
-1. **Hoy:** repartir el Bloque 0 y poner fecha a cada punto. Especialmente 0.1 (Riot),
-   0.2 (línea base) y 0.10 (recorte de alcance).
+1. **Hoy:** repartir el Bloque 0 y poner fecha a cada punto. Especialmente 0.1 (Riot) y
+   0.2 (línea base); 0.10 (recorte de alcance) ya está cerrada.
 2. **Esta semana:** cerrar el Bloque 1 en paralelo.
 3. **Semanas 3 y 4:** Sprint 2, con el ensayo de despliegue incluido.
 4. **Semanas 5 y 6:** Sprint 3. Medir RNF-01 dentro del sprint.
