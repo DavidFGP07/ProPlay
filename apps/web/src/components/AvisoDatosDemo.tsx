@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { matchPath, useLocation } from 'react-router-dom'
 import { FlaskConical } from 'lucide-react'
 import { datosDemoActivos, personaActual } from '@/api/demo'
 import { useAuth } from '@/context/AuthContext'
@@ -14,7 +14,8 @@ import { RUTAS_SIN_DATOS_DEMO } from '@/router/areas'
 export function AvisoDatosDemo() {
   const { usuario } = useAuth()
   const { pathname } = useLocation()
-  if (!datosDemoActivos || !usuario || RUTAS_SIN_DATOS_DEMO.includes(pathname)) return null
+  const soloDatosReales = RUTAS_SIN_DATOS_DEMO.some((ruta) => matchPath(ruta, pathname))
+  if (!datosDemoActivos || !usuario || soloDatosReales) return null
   const persona = personaActual()
 
   return (

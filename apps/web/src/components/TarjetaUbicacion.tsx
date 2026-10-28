@@ -9,7 +9,6 @@ import {
   PAIS_CON_DEPARTAMENTO,
   PAISES,
   ubicacionJugadorSchema,
-  type Departamento,
   type PerfilJugadorRespuesta,
 } from '@proplay/shared'
 import {
@@ -27,6 +26,7 @@ import { aplicarErrorApi } from '@/api/errores'
 import { useActualizarUbicacion, usePerfilPropio } from '@/api/perfiles'
 import { useToast } from '@/context/ToastContext'
 import { es } from '@/i18n/es'
+import { lugar, nombrePais } from '@/lib/ubicacion'
 
 /**
  * Los selects trabajan con cadenas ("" = sin elegir); al enviar se convierten
@@ -50,12 +50,6 @@ const esquemaFormulario = z
   .pipe(ubicacionJugadorSchema)
 
 type FormularioUbicacion = z.input<typeof esquemaFormulario>
-
-const nombresPais = new Intl.DisplayNames(['es'], { type: 'region' })
-
-function nombrePais(codigo: string): string {
-  return nombresPais.of(codigo) ?? codigo
-}
 
 /** Colombia primero (el piloto); el resto, por nombre en español. */
 function opcionesPais(): { codigo: string; nombre: string }[] {
@@ -251,10 +245,4 @@ function Formulario({ perfil }: { perfil: PerfilJugadorRespuesta }) {
       </div>
     </form>
   )
-}
-
-function lugar(pais: string, departamento: Departamento | null): string {
-  return departamento
-    ? `${es.departamento[departamento]}, ${nombrePais(pais)}`
-    : nombrePais(pais)
 }

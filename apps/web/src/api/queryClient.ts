@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { QueryClient, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const MODO_PRUEBAS = import.meta.env.MODE === 'test'
@@ -8,11 +9,17 @@ export function crearQueryClient(): QueryClient {
       queries: {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
-        // En pruebas un error debe aflorar al instante, sin reintentos.
-        retry: MODO_PRUEBAS ? false : 1,
+        // En pruebas un error debe aflorar al instante, sin reintentos. Un 4xx
+        // (404, 403, 429...) tampoco se reintenta: repetirlo no lo arregla.
+        retry: MODO_PRUEBAS ? false : (fallos, error) => fallos < 1 && !esErrorDelCliente(error),
       },
     },
   })
+}
+
+function esErrorDelCliente(error: unknown): boolean {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined
+  return status !== undefined && status >= 400 && status < 500
 }
 
 /**

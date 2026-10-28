@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import type { ComponentType, LazyExoticComponent } from 'react'
 import type { Rol } from '@proplay/shared'
 import { Layout } from '@/components/Layout'
+import { MarcoPublico } from '@/components/MarcoPublico'
 import { useAuth } from '@/context/AuthContext'
 import LoginPage from '@/pages/LoginPage'
 import NoEncontradaPage from '@/pages/NoEncontradaPage'
@@ -89,6 +90,11 @@ export default function App() {
       />
       {/* RNF-05 · Aviso de privacidad y terminos: se lee con o sin sesion */}
       <Route path="/legal/privacidad" element={<LegalPage />} />
+      {/* RF-05 · Perfil publico del jugador: con sesion dentro de la app, sin
+          ella con un marco minimo para poder compartirlo */}
+      <Route element={usuario ? <Layout /> : <MarcoPublico />}>
+        <Route path="jugador/:id" element={diferida(PerfilJugadorPage)} />
+      </Route>
 
       <Route element={<Privado />}>
         <Route element={<Layout />}>
@@ -96,7 +102,6 @@ export default function App() {
           <Route index element={diferida(FeedPage)} />
           <Route path="vacantes" element={diferida(OfertasPage)} />
           <Route path="vacantes/:id" element={diferida(OfertaDetallePage)} />
-          <Route path="jugador/:id" element={diferida(PerfilJugadorPage)} />
           <Route path="mensajes" element={diferida(MensajesPage)} />
           {/* RF-01 · RNF-05 · Ajustes de cuenta, comunes a los cuatro roles */}
           <Route path="cuenta" element={diferida(CuentaPage)} />

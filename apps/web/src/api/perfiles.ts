@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { PerfilPropioResponse, UbicacionJugadorInput } from '@proplay/shared'
+import axios from 'axios'
+import {
+  perfilJugadorPublicoSchema,
+  type PerfilPropioResponse,
+  type UbicacionJugadorInput,
+} from '@proplay/shared'
 import { api } from '@/api/client'
 import {
   actualizarPerfil,
@@ -49,12 +54,30 @@ export function useActualizarUbicacion() {
   })
 }
 
-// RF-05 · Perfil profesional del jugador con estadisticas, cuentas y habilidades
+// RF-05 · Perfil publico del jugador, con o sin sesion. API real, sin puente
+// de demostracion. Un 404 es que no existe o la cuenta esta inactiva.
+export function usePerfilPublico(id: string | undefined) {
+  return useQuery({
+    queryKey: ['perfiles', 'publico', id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const { data } = await api.get<unknown>(`/perfiles/${id}`)
+      return perfilJugadorPublicoSchema.parse(data)
+    },
+  })
+}
+
+export function esNoEncontrado(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404
+}
+
+// RF-05 · Perfil del jugador con estadisticas, cuentas y habilidades de la
+// persona de demostracion: solo lo usa /mi-perfil hasta conectarse a la API.
 export function usePerfil(id: string | undefined) {
   return useQuery({
-    queryKey: ['perfiles', id],
+    queryKey: ['perfiles', 'demo', id],
     enabled: Boolean(id),
-    // TODO: S2 — conectar con GET /api/v1/perfiles/:id
+    // TODO: S2 — conectar /mi-perfil con GET /api/v1/perfiles/me
     queryFn: () => simulado(() => obtenerPerfil(id!), null),
   })
 }
