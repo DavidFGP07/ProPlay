@@ -132,15 +132,13 @@ describe('Aplicacion', () => {
     ).toBeInTheDocument()
   })
 
-  it('el jugador accede a su perfil profesional', async () => {
+  it('el jugador accede a su perfil profesional, que sin API ofrece reintentar', async () => {
     sesionDe('JUGADOR')
     render(renderApp('/mi-perfil'))
     expect(
-      await screen.findByRole('heading', { name: 'Daniel Ocoro' }, { timeout: 8000 }),
+      await screen.findByText('No pudimos cargar tu perfil.', {}, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByText(/Vacantes que encajan contigo|Resumen de evidencia/i, {}, { timeout: 8000 }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
   it('el directorio de talento lista los perfiles con sus roles', async () => {

@@ -24,6 +24,8 @@ export const es = {
     titulo: 'Datos de demostracion',
     detalle: (persona: string) =>
       `Lo que ves en esta seccion son datos de ejemplo de ${persona}, no de tu cuenta. Solo tu sesion es real.`,
+    /** Marca de una sección simulada dentro de una vista que ya tiene datos reales. */
+    seccion: (persona: string) => `Ejemplo de ${persona}, no de tu cuenta.`,
   },
   registro: {
     mayorEdad: 'Declaro que soy mayor de 18 años.',
@@ -146,18 +148,37 @@ export const es = {
       actualInvalida: 'La contraseña actual no es correcta',
     },
   },
+  miPerfil: {
+    cargando: 'Cargando tu perfil',
+    errorCarga: 'No pudimos cargar tu perfil.',
+    errorCargaDetalle: 'Revisa tu conexión e inténtalo de nuevo.',
+    sinPerfil: 'Tu cuenta no tiene un perfil de jugador',
+    sinPerfilDetalle:
+      'El perfil profesional solo aplica a cuentas de tipo jugador. Como equipo o scout, usa el panel correspondiente.',
+    perfilProfesional: 'Perfil profesional',
+    sinUbicacion: 'Ubicación sin indicar',
+    horasSemana: (horas: number) => `${horas} h por semana`,
+    relocalizable: 'Dispuesto a relocalizarse',
+    verPublico: 'Ver como lo ven los equipos',
+    pestanaDatos: 'Datos profesionales',
+    datosSubtitulo: 'Se guardan en tu cuenta y los equipos los ven en tu perfil.',
+    bio: 'Presentación',
+    bioPista: (usados: number, maximo: number) => `${usados}/${maximo} caracteres.`,
+    bioPlaceholder: 'Describe tu trayectoria, el juego en el que compites y lo que buscas.',
+    horas: 'Horas disponibles por semana',
+    horasPista: 'Entre 0 y 80. Déjalo vacío si aún no lo sabes.',
+    guardar: 'Guardar cambios',
+    exito: 'Perfil guardado.',
+    notaEvidencia:
+      'Lo que declaras aquí es contexto para el matching, no evidencia: las estadísticas de juego llegan por la ingesta directa desde la API del juego.',
+  },
   ubicacion: {
     titulo: 'Ubicación',
     subtitulo:
       'Tu país y, en Colombia, tu departamento. Los equipos la usan para calcular la compatibilidad geográfica.',
-    datoReal: 'Dato real de tu cuenta',
-    /** Explica la marca: la tarjeta convive con los datos de demostración de otra persona. */
-    datoRealDetalle:
-      'Esta tarjeta guarda en tu cuenta. El resto de la vista sigue mostrando datos de ejemplo.',
     completaTitulo: 'Completa tu ubicación',
     completaDetalle:
       'Sin ella, el matching no puede calcular la dimensión geográfica de tu compatibilidad con las ofertas.',
-    actual: (lugar: string) => `Ubicación guardada: ${lugar}`,
     pais: 'País',
     departamento: 'Departamento',
     seleccionaPais: 'Selecciona tu país',
@@ -166,10 +187,13 @@ export const es = {
     relocalizar: 'Dispuesto a relocalizarme',
     relocalizarDetalle:
       'Mejora la dimensión geográfica cuando la oferta pide una ubicación distinta de la tuya.',
-    guardar: 'Guardar ubicación',
-    exito: 'Ubicación guardada.',
-    errorCarga: 'No pudimos cargar tu ubicación.',
-    cargando: 'Cargando tu ubicación',
+  },
+  /** Mensajes de validación de Zod que el contrato no personaliza. */
+  validacion: {
+    textoLargo: (maximo: number) => `Máximo ${maximo} caracteres`,
+    numeroEntero: 'Escribe un número entero',
+    numeroMinimo: (minimo: number) => `Debe ser ${minimo} o más`,
+    numeroMaximo: (maximo: number) => `Debe ser ${maximo} o menos`,
   },
   /** Etiquetas de los enums del contrato: la interfaz nunca muestra el valor crudo. */
   rol: {

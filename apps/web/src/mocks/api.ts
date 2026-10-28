@@ -435,37 +435,6 @@ export async function obtenerPerfil(id: string) {
   }
 }
 
-/* ------------------------ Edicion del perfil (RF-05) ---------------------- */
-
-export type CamposPerfil = Partial<
-  Pick<
-    PerfilJugador,
-    | 'biografia'
-    | 'region'
-    | 'horasDisponibles'
-    | 'dispuestoARelocalizarse'
-    | 'rolesPreferidos'
-    | 'aniosExperiencia'
-    | 'equiposAnteriores'
-  >
->
-
-export async function actualizarPerfil(
-  perfilId: string,
-  cambios: CamposPerfil,
-  autor: Usuario,
-): Promise<PerfilJugador> {
-  await jitter(420)
-  const idx = perfilesJugador.findIndex((p) => p.id === perfilId)
-  if (idx < 0) throw new Error('Perfil no encontrado')
-  if (cambios.region) {
-    perfilesJugador[idx].esCaribe = esCaribe(cambios.region)
-  }
-  perfilesJugador[idx] = { ...perfilesJugador[idx], ...cambios }
-  registrarAuditoria(autor, 'actualizar_perfil', `Perfil ${perfilId}`)
-  return perfilesJugador[idx]
-}
-
 /* --------------------------- Habilidades (RF-06) -------------------------- */
 
 export async function registrarHabilidad(

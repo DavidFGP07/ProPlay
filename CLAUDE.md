@@ -194,7 +194,7 @@ que falta una, dilo y la añadimos. Las rutas marcadas `—` todavía no existen
 | Vista | Ruta actual | RF |
 |---|---|---|
 | Feed | `/` | RF-08 |
-| Mi perfil | `/mi-perfil` | RF-05 |
+| Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 |
 | Cuentas vinculadas (estado, última sincronización) | — | RF-02, RF-03 |
 | Mis estadísticas | — | RF-04 |
 | Habilidades y endorsements | — | RF-06 |
@@ -325,13 +325,17 @@ sustituye el stub del repository por Prisma real: **no cambies la estructura de 
 hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con GET /api/v1/...`
 indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
-sesión) y la tarjeta de ubicación de `/mi-perfil`; `/legal/privacidad` es texto estático.
+sesión) y, en `/mi-perfil`, la cabecera y los datos profesionales; `/legal/privacidad` es texto
+estático. El resto de `/mi-perfil` (cuentas, habilidades, portafolio, postulaciones,
+privacidad y laterales) sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
 las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo
 rol (`src/mocks/persona.ts`) y el `Layout` lo avisa con «Datos de demostración». Con la
 bandera apagada sólo se ve lo real. Al conectar una vista de verdad, retira su hook del
 puente y añade su ruta (un patrón de React Router) a `RUTAS_SIN_DATOS_DEMO` en `src/router/areas.ts`.
+Si la vista queda mixta, entra igual en esa lista y cada sección simulada lleva
+`MarcaDatosDemo` (`src/components/AvisoDatosDemo.tsx`).
 
 **Integración continua.** El CI de GitHub corre en cada pull request y en `main` lo mismo
 que `npm run verify` más el build, contra un Postgres y un Redis limpios. Un PR no se

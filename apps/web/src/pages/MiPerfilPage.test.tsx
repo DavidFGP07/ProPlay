@@ -15,9 +15,10 @@ import { ToastProvider } from '@/context/ToastContext'
 import { crearQueryClient } from '@/api/queryClient'
 
 /**
- * RF-05 · RF-09 · Tarjeta «Ubicación» de /mi-perfil. Habla con la API real
- * (GET /perfiles/me y PATCH /perfiles/jugador); aquí el cliente HTTP es un
- * doble en memoria y el resto de la vista sigue con el puente de demostración.
+ * RF-05 · RF-09 · /mi-perfil: cabecera y datos profesionales reales
+ * (GET /perfiles/me y PATCH /perfiles/jugador). El cliente HTTP es un doble en
+ * memoria; las secciones que dependen de otros modulos siguen con el puente de
+ * demostracion y llevan su propia marca.
  */
 const doble = vi.hoisted(() => ({
   usuario: null as UsuarioPublico | null,
@@ -108,76 +109,121 @@ function renderMiPerfil() {
   )
 }
 
-/** La tarjeta, para no confundir sus textos con los de la persona de demostración. */
-async function tarjeta() {
-  const titulo = await screen.findByRole('heading', { name: 'Ubicación' }, { timeout: 8000 })
-  return within(titulo.closest('.card') as HTMLElement)
+/** La pestaña de datos profesionales, para no confundir sus textos con los del resto. */
+async function formulario() {
+  const boton = await screen.findByRole('button', { name: 'Guardar cambios' }, { timeout: 8000 })
+  return within(boton.closest('form') as HTMLElement)
 }
 
-function elegir(t: Awaited<ReturnType<typeof tarjeta>>, etiqueta: RegExp, valor: string) {
-  fireEvent.change(t.getByLabelText(etiqueta), { target: { value: valor } })
+function elegir(f: Awaited<ReturnType<typeof formulario>>, etiqueta: RegExp, valor: string) {
+  fireEvent.change(f.getByLabelText(etiqueta), { target: { value: valor } })
 }
 
-describe('Tarjeta de ubicación en Mi perfil', () => {
+describe('Mi perfil', () => {
   beforeEach(() => {
     doble.usuario = null
     doble.get.mockReset()
     doble.patch.mockReset()
   })
 
-  it('se distingue como dato real y pide completar la ubicación al jugador que no la tiene', async () => {
+  it('muestra la cabecera con los datos reales y enlaza al perfil público propio', async () => {
     sesionDe('JUGADOR')
     doble.get.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
     renderMiPerfil()
-    const t = await tarjeta()
 
-    expect(await t.findByText('Dato real de tu cuenta')).toBeInTheDocument()
-    expect(t.getByText(/El resto de la vista sigue mostrando datos de ejemplo/)).toBeInTheDocument()
-    expect(t.getByRole('note')).toHaveTextContent('Completa tu ubicación')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Usuario JUGADOR' }, { timeout: 8000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Ubicación sin indicar')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ver como lo ven los equipos/ })).toHaveAttribute(
+      'href',
+      '/jugador/perfil-1',
+    )
+    const f = await formulario()
+    expect(f.getByRole('note')).toHaveTextContent('Completa tu ubicación')
     expect(doble.get).toHaveBeenCalledWith('/perfiles/me')
-    // El aviso de demostración sigue para el resto de la vista.
-    expect(screen.getByText('Datos de demostracion')).toBeInTheDocument()
   })
 
-  it('guarda Colombia con departamento y muestra la ubicación con su macrorregión', async () => {
+  it('sin aviso de página: cada sección simulada lleva su propia marca', async () => {
+    sesionDe('JUGADOR')
+    doble.get.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
+    renderMiPerfil()
+    const f = await formulario()
+
+    // La pestaña real no lleva marca; los dos laterales simulados sí.
+    expect(f.queryByText('Datos de demostracion')).toBeNull()
+    expect(await screen.findByText('Resumen de evidencia', {}, { timeout: 8000 })).toBeInTheDocument()
+    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(2)
+    expect(screen.queryByText(/Lo que ves en esta seccion/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /Cuentas de juego/ }))
+    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(3)
+    expect(screen.getAllByRole('note')[0]).toHaveTextContent(/Datos de demostracion.*no de tu cuenta/)
+  })
+
+  it('guarda presentación, disponibilidad y ubicación y actualiza la cabecera', async () => {
     sesionDe('JUGADOR')
     doble.get.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
     doble.patch.mockResolvedValue(
       respuesta({
         tipo: 'JUGADOR',
-        perfil: perfil({ pais: 'CO', departamento: 'ATLANTICO', dispuestoRelocalizar: true }),
+        perfil: perfil({
+          bio: 'Jungla de LoL',
+          disponibilidadHoras: 20,
+          pais: 'CO',
+          departamento: 'ATLANTICO',
+          dispuestoRelocalizar: true,
+        }),
       }),
     )
     renderMiPerfil()
-    const t = await tarjeta()
-    await t.findByRole('note')
+    const f = await formulario()
 
-    elegir(t, /^País/, 'CO')
-    elegir(t, /^Departamento/, 'ATLANTICO')
-    fireEvent.click(t.getByLabelText(/Dispuesto a relocalizarme/))
-    fireEvent.click(t.getByRole('button', { name: 'Guardar ubicación' }))
+    fireEvent.change(f.getByLabelText(/^Presentación/), { target: { value: 'Jungla de LoL' } })
+    fireEvent.change(f.getByLabelText(/^Horas disponibles/), { target: { value: '20' } })
+    elegir(f, /^País/, 'CO')
+    elegir(f, /^Departamento/, 'ATLANTICO')
+    fireEvent.click(f.getByLabelText(/Dispuesto a relocalizarme/))
+    fireEvent.click(f.getByRole('button', { name: 'Guardar cambios' }))
 
-    expect(await t.findByText('Ubicación guardada: Atlántico, Colombia')).toBeInTheDocument()
-    expect(t.getByText('Caribe colombiano')).toBeInTheDocument()
-    expect(t.queryByRole('note')).toBeNull()
+    expect(await f.findByText('Perfil guardado.')).toBeInTheDocument()
     expect(doble.patch).toHaveBeenCalledWith('/perfiles/jugador', {
+      bio: 'Jungla de LoL',
+      disponibilidadHoras: 20,
       pais: 'CO',
       departamento: 'ATLANTICO',
       dispuestoRelocalizar: true,
     })
+    expect(screen.getByText('Atlántico, Colombia')).toBeInTheDocument()
+    expect(screen.getByText('Caribe colombiano')).toBeInTheDocument()
+    expect(screen.getByText('20 h por semana')).toBeInTheDocument()
+    expect(screen.getByText('Dispuesto a relocalizarse')).toBeInTheDocument()
+    expect(f.queryByRole('note')).toBeNull()
   })
 
   it('valida en el cliente que Colombia lleve departamento, sin llamar a la API', async () => {
     sesionDe('JUGADOR')
     doble.get.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
     renderMiPerfil()
-    const t = await tarjeta()
-    await t.findByRole('note')
+    const f = await formulario()
 
-    elegir(t, /^País/, 'CO')
-    fireEvent.click(t.getByRole('button', { name: 'Guardar ubicación' }))
+    elegir(f, /^País/, 'CO')
+    fireEvent.click(f.getByRole('button', { name: 'Guardar cambios' }))
 
-    expect(await t.findByText('Selecciona el departamento')).toBeInTheDocument()
+    expect(await f.findByText('Selecciona el departamento')).toBeInTheDocument()
+    expect(doble.patch).not.toHaveBeenCalled()
+  })
+
+  it('valida en español el rango de horas del contrato', async () => {
+    sesionDe('JUGADOR')
+    doble.get.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
+    renderMiPerfil()
+    const f = await formulario()
+
+    fireEvent.change(f.getByLabelText(/^Horas disponibles/), { target: { value: '81' } })
+    fireEvent.click(f.getByRole('button', { name: 'Guardar cambios' }))
+
+    expect(await f.findByText('Debe ser 80 o menos')).toBeInTheDocument()
     expect(doble.patch).not.toHaveBeenCalled()
   })
 
@@ -188,19 +234,18 @@ describe('Tarjeta de ubicación en Mi perfil', () => {
     )
     doble.patch.mockResolvedValue(respuesta({ tipo: 'JUGADOR', perfil: perfil({ pais: 'MX' }) }))
     renderMiPerfil()
-    const t = await tarjeta()
-    expect(await t.findByText('Ubicación guardada: Bolívar, Colombia')).toBeInTheDocument()
+    const f = await formulario()
+    expect(screen.getByText('Bolívar, Colombia')).toBeInTheDocument()
 
-    elegir(t, /^País/, 'MX')
-    expect(t.getByLabelText(/^Departamento/)).toBeDisabled()
-    fireEvent.click(t.getByRole('button', { name: 'Guardar ubicación' }))
+    elegir(f, /^País/, 'MX')
+    expect(f.getByLabelText(/^Departamento/)).toBeDisabled()
+    fireEvent.click(f.getByRole('button', { name: 'Guardar cambios' }))
 
-    expect(await t.findByText('Ubicación guardada: México')).toBeInTheDocument()
-    expect(doble.patch).toHaveBeenCalledWith('/perfiles/jugador', {
-      pais: 'MX',
-      departamento: null,
-      dispuestoRelocalizar: false,
-    })
+    expect(await screen.findByText('México')).toBeInTheDocument()
+    expect(doble.patch).toHaveBeenCalledWith(
+      '/perfiles/jugador',
+      expect.objectContaining({ pais: 'MX', departamento: null }),
+    )
   })
 
   it('lleva a su campo el error de validación de la API', async () => {
@@ -210,38 +255,29 @@ describe('Tarjeta de ubicación en Mi perfil', () => {
       errorApi(422, [{ campo: 'departamento', mensaje: 'El departamento sólo aplica a Colombia' }]),
     )
     renderMiPerfil()
-    const t = await tarjeta()
-    await t.findByRole('note')
+    const f = await formulario()
 
-    elegir(t, /^País/, 'CO')
-    elegir(t, /^Departamento/, 'SUCRE')
-    fireEvent.click(t.getByRole('button', { name: 'Guardar ubicación' }))
+    elegir(f, /^País/, 'CO')
+    elegir(f, /^Departamento/, 'SUCRE')
+    fireEvent.click(f.getByRole('button', { name: 'Guardar cambios' }))
 
-    expect(await t.findByText('El departamento sólo aplica a Colombia')).toBeInTheDocument()
+    expect(await f.findByText('El departamento sólo aplica a Colombia')).toBeInTheDocument()
   })
 
-  it('ofrece reintentar si no puede cargar la ubicación', async () => {
+  it('ofrece reintentar si no puede cargar el perfil', async () => {
     sesionDe('JUGADOR')
     doble.get
       .mockRejectedValueOnce(errorApi(500))
       .mockResolvedValueOnce(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
     renderMiPerfil()
-    const t = await tarjeta()
 
-    expect(await t.findByText('No pudimos cargar tu ubicación.')).toBeInTheDocument()
-    fireEvent.click(t.getByRole('button', { name: 'Reintentar' }))
+    expect(
+      await screen.findByText('No pudimos cargar tu perfil.', {}, { timeout: 8000 }),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
 
-    expect(await t.findByRole('note')).toHaveTextContent('Completa tu ubicación')
+    const f = await formulario()
+    expect(f.getByRole('note')).toHaveTextContent('Completa tu ubicación')
     await waitFor(() => expect(doble.get).toHaveBeenCalledTimes(2))
-  })
-
-  it.each(['EQUIPO', 'SCOUT'] as const)('no se muestra al rol %s', async (rol) => {
-    sesionDe(rol)
-    doble.get.mockResolvedValue(respuesta({ tipo: null, perfil: null }))
-    renderMiPerfil()
-
-    await screen.findByText(/no tiene un perfil de jugador|Datos de demostracion/i, {}, { timeout: 8000 })
-    expect(screen.queryByRole('heading', { name: 'Ubicación' })).toBeNull()
-    expect(doble.get).not.toHaveBeenCalledWith('/perfiles/me')
   })
 })
