@@ -33,14 +33,15 @@ export function CardHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/6 px-5 py-4">
-      <div className="flex items-start gap-3">
+    // En movil las acciones bajan bajo el titulo; desde sm vuelven a su derecha.
+    <div className="flex flex-col items-start gap-3 border-b border-white/6 px-5 py-4 sm:flex-row sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 items-start gap-3">
         {icon && (
-          <span className="mt-0.5 grid size-9 place-items-center rounded-lg bg-brand-500/12 text-brand-300">
+          <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-500/12 text-brand-300">
             {icon}
           </span>
         )}
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold tracking-tight text-slate-100">{title}</h3>
           {subtitle && (
             <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{subtitle}</p>
