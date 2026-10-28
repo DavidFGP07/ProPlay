@@ -151,20 +151,33 @@ Notas:
 ## Algoritmo de compatibilidad
 
 `calcularCompatibilidad(jugador, oferta)` (en `matching.service.ts`) devuelve
-la media ponderada de cinco dimensiones. Los pesos son constantes configurables
-en `@proplay/shared/constants` (`PESOS_MATCHING`), así que cliente y servidor
-muestran y calculan siempre lo mismo.
+la media ponderada de cinco dimensiones, según la ecuación (1) de la Sección
+VIII del documento: S(j, o) = Σ wₖ·dₖ(j, o), con Σ wₖ = 1.
 
-| Dimensión | Peso | Qué mide |
+Los pesos wₖ los **configura el equipo que publica la oferta**. `PESOS_MATCHING`
+(`@proplay/shared/constants`) son sólo los **pesos por defecto**: los valores con
+los que arranca el formulario de la oferta y los que se aplican si el equipo no
+los ajusta. Hoy `Oferta` todavía no guarda pesos propios, así que el cálculo usa
+siempre los de por defecto; los pesos por oferta llegan con las tareas 3.6 y 3.10
+del plan, y la justificación de estos valores, con la tarea que los lleva a la
+Sección VIII.
+
+| Dimensión | Peso por defecto | Qué mide (Sección VIII) |
 | --- | --- | --- |
-| `tecnica` | 0.35 | Estadísticas del jugador frente al rango y rol pedidos |
-| `experiencia` | 0.20 | Años de trayectoria frente a `experienciaMinAnios` |
-| `habilidadesBlandas` | 0.15 | Habilidades de categoría `BLANDA` endosadas y su nivel |
-| `geografica` | 0.15 | Coincidencia de región y disposición a relocalizarse |
-| `disponibilidad` | 0.15 | Horas semanales declaradas frente a las de la oferta |
+| `tecnica` | 0.35 | Estadísticas de rendimiento del jugador en los videojuegos y roles en los que participa |
+| `experiencia` | 0.20 | Historial en equipos, torneos, competencias y logros obtenidos |
+| `habilidadesBlandas` | 0.15 | Endorsements de comunicación, trabajo en equipo y liderazgo (habilidades de categoría `BLANDA`) |
+| `geografica` | 0.15 | Región del jugador y disponibilidad para relocalización o participación en línea |
+| `disponibilidad` | 0.15 | Horarios de práctica y preferencias de compromiso |
 
-Hoy devuelve un valor fijo: el contrato, el desglose y los pesos ya están
-cerrados, la implementación es lo siguiente que toca.
+La experiencia **no se mide en años**. El modelo de trayectoria que la sostiene
+(equipos anteriores, torneos y logros) aún no existe en `schema.prisma`; está en
+`docs/decisiones.md`, «Pendientes», para resolverse antes del S3 junto con la
+tarea 3.5. El campo `Oferta.experienciaMinAnios` es anterior a esta definición y
+se revisará entonces.
+
+Hoy devuelve un valor fijo: el contrato y el desglose ya están cerrados; la
+implementación de cada dimensión es lo siguiente que toca.
 
 ## Flujo de autenticación
 

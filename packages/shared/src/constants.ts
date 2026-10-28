@@ -41,9 +41,11 @@ export const PERFIL_VECTOR_DIMENSIONES = 64;
 export const PERFIL_VECTOR_VERSION = 1;
 
 /**
- * Pesos de las cinco dimensiones del algoritmo de compatibilidad.
- * Configurables aquí: son la única fuente de verdad para api y web.
- * La suma debe ser 1.
+ * Pesos POR DEFECTO de las cinco dimensiones del algoritmo de compatibilidad
+ * (ecuación (1), Sección VIII del documento). Cada equipo los ajusta al
+ * publicar su oferta; estos son los valores iniciales del formulario y los que
+ * se aplican si no se ajustan. api y web deben leerlos de aquí (CLAUDE.md
+ * §3.1). La suma debe ser 1.
  */
 export const PESOS_MATCHING = {
   tecnica: 0.35,

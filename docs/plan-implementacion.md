@@ -10,9 +10,16 @@
 
 ### Funciona de verdad
 
-**Backend.** Un único módulo implementado, `usuarios`, con autenticación completa:
-registro, inicio de sesión, refresco, cierre de sesión y consulta del usuario en sesión.
-Más listado de usuarios para administrador, edición de la cuenta propia y consulta por id.
+**Backend.** El módulo `usuarios` está implementado, con autenticación completa:
+registro (con la aceptación del aviso y la declaración de mayoría de edad), inicio de
+sesión, refresco, cierre de sesión y consulta del usuario en sesión. Más listado de
+usuarios para administrador, edición de la cuenta propia, cambio de contraseña y consulta
+por id.
+
+Del módulo `perfiles` están implementados `GET /perfiles/me`, `PATCH /perfiles/jugador`
+(incluida la ubicación), `PATCH /perfiles/equipo` y `GET /perfiles/:id` (perfil público,
+sin sesión). Sus demás rutas —catálogo de habilidades, habilidades del jugador,
+endorsements y vinculación de cuentas— siguen respondiendo `501`.
 
 Infraestructura común operativa: `GET /health` comprobando Postgres y Redis; middlewares de
 helmet, CORS, límite de peticiones, verificación JWT, control por rol, validación con los
@@ -24,12 +31,17 @@ automáticas de la API pasando (`npm run verify` en `main`, 2026-10-28).
 `pgvector`. El índice HNSW sobre `PerfilVector.embedding` **no existía hasta el #5**: el
 esquema declaraba la columna `vector(64)` pero ninguna migración creaba el índice. Hoy vive
 en la migración manual `20261027153113_indice_hnsw_perfil_vector` y lo vigila
-`check:indice-hnsw` dentro de `npm run verify` y del CI (#10). El seed carga 15 jugadores con estadísticas y vectores de 64 dimensiones,
-3 equipos, 5 ofertas y 16 habilidades. **Esos datos están en la base pero ningún endpoint
-los lee todavía.**
+`check:indice-hnsw` dentro de `npm run verify` y del CI (#10). El seed carga 15 jugadores
+con estadísticas y vectores de 64 dimensiones, 3 equipos, 5 ofertas y 16 habilidades. De
+esos datos, los endpoints sólo leen hoy las cuentas y los perfiles de jugador y de equipo;
+**estadísticas, vectores, ofertas y habilidades están en la base pero ningún endpoint los
+lee todavía.**
 
-**Frontend.** Once rutas más el 404, todas navegables. Registro e inicio de sesión reales
-contra la API, sesión en memoria con cookie `httpOnly`, guardas de rol en el enrutador.
+**Frontend.** Trece rutas más el 404, todas navegables. Sesión en memoria con cookie
+`httpOnly` y guardas de rol en el enrutador. Hablan con la API real: registro e inicio de
+sesión, `/cuenta` (nombre y contraseña), el perfil público `/jugador/:id`, en `/mi-perfil`
+la cabecera, los datos profesionales y la ubicación, y en `/panel-equipo` la tarjeta «Datos
+de la organización». `/legal/privacidad` es texto estático.
 161 pruebas del cliente pasando (`npm run verify` en `main`, 2026-10-28; `packages/shared`
 no tiene pruebas propias). Lint y typecheck limpios en los tres workspaces.
 
@@ -38,18 +50,24 @@ en un servidor real.
 
 ### No funciona todavía
 
-Ocho módulos del backend responden `501`: `perfiles`, `estadisticas`, `ofertas`,
-`matching`, `scouting`, `mensajeria`, `notificaciones` y `admin`. Las integraciones con
-Riot, Steam, Twitch, YouTube y Cloudinary son esqueleto con `TODO`.
+Siete módulos del backend responden `501` en todas sus rutas: `estadisticas`, `ofertas`,
+`matching`, `scouting`, `mensajeria`, `notificaciones` y `admin`; `perfiles`, en las rutas
+no implementadas que se listan arriba. Las integraciones con Riot, Steam, Twitch, YouTube
+y Cloudinary son esqueleto con `TODO`.
 
-En la aplicación, todo lo que no sea autenticación viene de la simulación en
-`apps/web/src/mocks/`, y por eso aparece el aviso «Datos de demostración». Cada hook de
-`apps/web/src/api/` lleva un `TODO` con el endpoint y el sprint que lo conecta.
+En la aplicación, lo que no está en la lista de arriba viene de la simulación en
+`apps/web/src/mocks/`: el feed, las vacantes y su detalle, mensajes, el buscador, la
+analítica, el panel de administración y las secciones simuladas de `/mi-perfil` y
+`/panel-equipo`. Las vistas enteramente simuladas muestran el aviso «Datos de
+demostración»; las mixtas marcan cada sección simulada con `MarcaDatosDemo`. Cada hook
+simulado de `apps/web/src/api/` lleva un `TODO` con el endpoint y el sprint que lo
+conecta.
 
 ### La frase honesta
 
-Tenemos un producto que **se ve terminado y está terminado sólo en autenticación**. El
-aporte diferencial del proyecto —los perfiles verificables y el motor de matching— aún no
+Tenemos un producto que **se ve terminado y está terminado sólo en la cuenta y el
+perfil**: autenticación, ajustes de cuenta, aviso de privacidad y edición y consulta de
+perfiles. El aporte diferencial del proyecto —los perfiles verificables y el motor de matching— aún no
 existe. Eso es normal al cierre del Sprint 1 y es exactamente lo que toca construir ahora.
 
 ---
@@ -172,6 +190,12 @@ registrado en `docs/decisiones.md`, «Pendientes».
 | 3.12 | Detalle del candidato |
 | 3.13 | Mis postulaciones (jugador) y postulaciones recibidas (equipo) |
 | 3.14 | Conectar los hooks correspondientes y retirar el puente de demostración en esas vistas |
+
+### Documento
+
+| # | Tarea |
+|---|---|
+| 3.15 | **Justificar los valores por defecto de los pesos** (`PESOS_MATCHING`: técnica 0,35, experiencia 0,20, habilidades blandas 0,15, geográfica 0,15, disponibilidad 0,15) y reflejarlos en la Sección VIII del documento. Hoy la ecuación (1) sólo dice que los pesos los configura el equipo que publica la oferta; los valores con que arranca el formulario no están justificados en ninguna parte |
 
 ---
 
