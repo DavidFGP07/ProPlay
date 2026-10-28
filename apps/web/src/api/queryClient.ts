@@ -9,17 +9,23 @@ export function crearQueryClient(): QueryClient {
       queries: {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
-        // En pruebas un error debe aflorar al instante, sin reintentos. Un 4xx
-        // (404, 403, 429...) tampoco se reintenta: repetirlo no lo arregla.
-        retry: MODO_PRUEBAS ? false : (fallos, error) => fallos < 1 && !esErrorDelCliente(error),
+        // En pruebas un error debe aflorar al instante, sin reintentos.
+        retry: MODO_PRUEBAS ? false : reintentarConsulta,
       },
     },
   })
 }
 
-function esErrorDelCliente(error: unknown): boolean {
+/**
+ * Una consulta fallida se reintenta una vez, salvo con un 4xx (404, 403,
+ * 429...): repetirlo no lo arregla. El 401 ya lo trata el interceptor de
+ * `client.ts` (refresca y reintenta la peticion); si aun asi llega aqui es que
+ * la sesion no se pudo renovar, y otro intento solo repetiria el refresco.
+ */
+export function reintentarConsulta(fallos: number, error: unknown): boolean {
   const status = axios.isAxiosError(error) ? error.response?.status : undefined
-  return status !== undefined && status >= 400 && status < 500
+  const esErrorDelCliente = status !== undefined && status >= 400 && status < 500
+  return fallos < 1 && !esErrorDelCliente
 }
 
 /**
