@@ -164,7 +164,9 @@ Tres puntos que es fácil romper:
    - Lo vigila `npm run check:indice-hnsw -w api`, dentro de `npm run verify` y del CI:
      falla si una migración contiene ese `DROP INDEX`, salvo que el mismo archivo vuelva a
      crear el índice con `USING hnsw` después del borrado. La prueba
-     `apps/api/tests/indice-hnsw.test.ts` confirma que el índice existe tras migrar.
+     `apps/api/tests/indice-hnsw.test.ts` confirma que el índice existe tras migrar, y
+     `apps/api/tests/guarda-indice-hnsw.test.ts` prueba la propia guarda (excepción
+     incluida) con migraciones escritas en un directorio temporal.
 3. **Los tokens de `CuentaGaming` se guardan cifrados** con AES-256-GCM usando
    `ENCRYPTION_KEY`. Nunca en claro. Es RNF-03.
 
