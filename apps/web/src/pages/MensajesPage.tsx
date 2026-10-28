@@ -69,7 +69,7 @@ export default function MensajesPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <Card className="h-fit">
+        <Card className="h-fit min-w-0">
           <CardHeader title="Conversaciones" icon={<MessageSquare size={16} />} />
           <div className="max-h-[26rem] overflow-y-auto p-2">
             {contactos.length === 0 ? (
@@ -112,7 +112,7 @@ export default function MensajesPage() {
           </div>
         </Card>
 
-        <Card className="flex h-[32rem] flex-col">
+        <Card className="flex h-[32rem] min-w-0 flex-col">
           <CardHeader
             title={conversacionActual?.nombre ?? 'Conversacion'}
             subtitle={conversacionActual?.sub}

@@ -107,7 +107,7 @@ export default function OfertasPage() {
               (p) => p.ofertaId === o.id,
             ).length
             return (
-              <Link key={o.id} to={`/vacantes/${o.id}`} className="card card-hover block p-5">
+              <Link key={o.id} to={`/vacantes/${o.id}`} className="card card-hover block min-w-0 p-5">
                 <div className="flex items-start gap-3">
                   {equipo && <Avatar nombre={equipo.nombre} size="md" />}
                   <div className="min-w-0 flex-1">
