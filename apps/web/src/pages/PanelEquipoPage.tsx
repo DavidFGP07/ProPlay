@@ -216,8 +216,8 @@ export default function PanelEquipoPage() {
           nombreOrg
             ? nombreOrg
             : esScout
-              ? 'Consulta de vacantes y procesos de seleccion del ecosistema.'
-              : 'Gestion de vacantes y procesos de seleccion.'
+              ? 'Consulta de vacantes y procesos de selección del ecosistema.'
+              : 'Gestión de vacantes y procesos de selección.'
         }
         action={
           puedeGestionar ? (
@@ -353,7 +353,7 @@ export default function PanelEquipoPage() {
         {/* ------------------------- Postulaciones ------------------------- */}
         <Card className="min-w-0">
           <CardHeader
-            title={esScout ? 'Procesos de las vacantes' : 'Procesos de seleccion'}
+            title={esScout ? 'Procesos de las vacantes' : 'Procesos de selección'}
             subtitle={
               esScout
                 ? 'Candidatos que se postularon. Solo la organizacion puede avanzar el estado.'
