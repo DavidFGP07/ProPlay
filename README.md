@@ -148,6 +148,7 @@ Todos se ejecutan desde la raíz del monorepo.
 | `npm run db:studio` | Abre Prisma Studio |
 | `npm run db:reset` | Borra la base, reaplica migraciones y siembra |
 | `npm run docker:up` / `docker:down` | Atajos de `docker compose` |
+| `npm run admin:promover -w api -- <correo>` | Promueve a `ADMIN` una cuenta de scout ya registrada ([docs/operacion.md](docs/operacion.md)) |
 
 Para un solo workspace: `npm run <script> -w api`, `-w web`,
 `-w @proplay/shared`.
@@ -208,6 +209,10 @@ si la API recibe las conexiones directamente. En producción es obligatoria y
 la API no arranca sin ella. Si se queda corta, todos los anónimos comparten la
 IP del proxy y el mismo cupo de los límites; si sobra, cualquiera puede
 falsear `X-Forwarded-For` y saltarse el límite por IP.
+
+El primer administrador se da de alta después del despliegue, desde una consola
+del contenedor: ver [docs/operacion.md](docs/operacion.md). El seed nunca se
+ejecuta en producción.
 
 ### Web en Vercel
 

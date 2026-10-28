@@ -9,6 +9,7 @@
     "dev": "tsx watch --clear-screen=false src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
+    "admin:promover": "tsx src/cli/promoverAdministrador.ts",
     "lint": "eslint .",
     "check:indice-hnsw": "node scripts/verificar-indice-hnsw.mjs",
     "typecheck": "tsc --noEmit",

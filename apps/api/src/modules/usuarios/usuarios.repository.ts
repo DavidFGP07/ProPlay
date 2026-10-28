@@ -124,6 +124,48 @@ export function actualizar(
   });
 }
 
+/** Cuenta con lo necesario para decidir si puede pasar a administrador. */
+export function buscarParaPromocion(email: string) {
+  return prisma.usuario.findUnique({
+    where: { email },
+    select: {
+      ...seleccionPublica,
+      perfilJugador: { select: { id: true } },
+      perfilEquipo: { select: { id: true } },
+    },
+  });
+}
+
+/**
+ * Cambia el rol y deja su traza en AuditLog en la misma transacción: no puede
+ * quedar un cambio de rol sin rastro, ni un rastro de un cambio que no ocurrió.
+ */
+export async function cambiarRolConAuditoria(
+  id: string,
+  rol: Rol,
+  auditoria: DatosAuditoria,
+): Promise<UsuarioPublicoDb> {
+  return prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.update({
+      where: { id },
+      data: { rol },
+      select: seleccionPublica,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        usuarioId: id,
+        accion: auditoria.accion,
+        entidad: auditoria.entidad,
+        entidadId: id,
+        metadata: auditoria.metadata,
+      },
+    });
+
+    return usuario;
+  });
+}
+
 export interface FiltroUsuarios extends OpcionesPaginacion {
   rol?: Rol;
   q?: string;

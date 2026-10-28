@@ -18,7 +18,7 @@ export const Rol = {
   ADMIN: "ADMIN",
 } as const satisfies Record<Rol, Rol>;
 
-/** Roles que un visitante puede elegir al registrarse (ADMIN se asigna a mano). */
+/** Roles que un visitante puede elegir al registrarse (ADMIN, con el script de docs/operacion.md). */
 export const ROLES_REGISTRABLES = ["JUGADOR", "EQUIPO", "SCOUT"] as const;
 export type RolRegistrable = (typeof ROLES_REGISTRABLES)[number];
 
