@@ -172,6 +172,23 @@ export const es = {
     notaEvidencia:
       'Lo que declaras aquí es contexto para el matching, no evidencia: las estadísticas de juego llegan por la ingesta directa desde la API del juego.',
   },
+  organizacion: {
+    titulo: 'Datos de la organización',
+    subtitulo: 'Se guardan en tu cuenta. Así se presenta tu organización ante los jugadores.',
+    cargando: 'Cargando los datos de la organización',
+    errorCarga: 'No pudimos cargar los datos de la organización.',
+    nombre: 'Nombre de la organización',
+    descripcion: 'Descripción',
+    descripcionPista: (usados: number, maximo: number) => `${usados}/${maximo} caracteres.`,
+    descripcionPlaceholder: 'Qué juegos compite tu organización, dónde entrena y qué perfiles busca.',
+    sitioWeb: 'Sitio web',
+    sitioWebPista: 'Con http:// o https://. Déjalo vacío para quitarlo.',
+    sitioWebActual: 'Sitio web publicado:',
+    guardar: 'Guardar cambios',
+    exito: 'Datos de la organización guardados.',
+  },
+  /** Aviso para lectores de pantalla en los enlaces que abren otra pestaña. */
+  enlaceExterno: '(se abre en una pestaña nueva)',
   ubicacion: {
     titulo: 'Ubicación',
     subtitulo:

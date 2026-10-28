@@ -1,6 +1,6 @@
 import { matchPath, useLocation } from 'react-router-dom'
 import { FlaskConical } from 'lucide-react'
-import { Badge } from '@/components/ui'
+import { Badge, cn } from '@/components/ui'
 import { datosDemoActivos, personaActual } from '@/api/demo'
 import { useAuth } from '@/context/AuthContext'
 import { es } from '@/i18n/es'
@@ -37,10 +37,16 @@ export function AvisoDatosDemo() {
 /**
  * Marca de una seccion simulada dentro de una vista que ya muestra datos
  * reales (RUTAS_SIN_DATOS_DEMO): el aviso pasa de la pagina a cada seccion.
+ * Con el puente apagado no se pinta.
  */
-export function MarcaDatosDemo() {
+export function MarcaDatosDemo({ className = 'mb-4' }: { className?: string }) {
+  // Sin el puente no hay persona de ejemplo ni datos que marcar.
+  if (!datosDemoActivos) return null
   return (
-    <p role="note" className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-amber-100/80">
+    <p
+      role="note"
+      className={cn('flex flex-wrap items-center gap-2 text-[11px] text-amber-100/80', className)}
+    >
       <Badge tono="ambar" className="shrink-0">
         <FlaskConical size={11} aria-hidden />
         {es.demo.titulo}

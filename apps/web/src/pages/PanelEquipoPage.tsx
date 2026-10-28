@@ -30,6 +30,8 @@ import {
   cn,
 } from '@/components/ui'
 import { es } from '@/i18n/es'
+import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
+import { DatosOrganizacion } from '@/components/DatosOrganizacion'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { useIdentidad } from '@/api/identidad'
@@ -41,7 +43,7 @@ import {
   usePostulaciones,
   useVacantes,
 } from '@/api/ofertas'
-import { useEquipos } from '@/api/perfiles'
+import { useEquipos, usePerfilPropio } from '@/api/perfiles'
 import { PESOS_POR_DEFECTO } from '@/lib/matching'
 import type { Oferta, Postulacion } from '@/mocks/modelos'
 
@@ -92,6 +94,9 @@ const ESTADOS: { v: Postulacion['estado']; l: string }[] = (
   ['ENVIADA', 'EN_REVISION', 'ENTREVISTA', 'ACEPTADA', 'RECHAZADA'] as const
 ).map((v) => ({ v, l: es.estadoPostulacion[v] }))
 
+// RF-13 · Panel del equipo. «Datos de la organización» es real (RF-07); las
+// vacantes, procesos, indicadores y recomendaciones siguen simulados, cada
+// seccion con su marca de demostracion.
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
   const { notificar } = useToast()
@@ -121,7 +126,11 @@ export default function PanelEquipoPage() {
   // El scout consulta los procesos pero no contrata: puede publicar y
   // avanzar estados unicamente la organizacion o el administrador.
   const esScout = usuario?.rol === 'SCOUT'
-  const puedeGestionar = usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN'
+  const esEquipo = usuario?.rol === 'EQUIPO'
+  const puedeGestionar = esEquipo || usuario?.rol === 'ADMIN'
+  // Nombre real de la organizacion para el subtitulo; solo el equipo tiene perfil.
+  const { data: propio } = usePerfilPropio(esEquipo)
+  const nombreOrg = propio?.tipo === 'EQUIPO' ? propio.perfil.nombreOrg : null
 
   const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
   const misOfertas = miEquipo
@@ -204,8 +213,8 @@ export default function PanelEquipoPage() {
       <SectionTitle
         title={esScout ? 'Panel de scouting' : 'Panel de equipo'}
         subtitle={
-          miEquipo
-            ? `${miEquipo.nombre} · ${miEquipo.region}`
+          nombreOrg
+            ? nombreOrg
             : esScout
               ? 'Consulta de vacantes y procesos de seleccion del ecosistema.'
               : 'Gestion de vacantes y procesos de seleccion.'
@@ -235,37 +244,42 @@ export default function PanelEquipoPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat
-          label="Vacantes abiertas"
-          value={misOfertas.filter((o) => o.estado === 'ABIERTA').length}
-          icono={<Briefcase size={16} />}
-          acento="violeta"
-        />
-        <Stat
-          label="Postulaciones"
-          value={postulacionesDeMisOfertas.length}
-          icono={<UserPlus size={16} />}
-          acento="cian"
-        />
-        <Stat
-          label="En proceso"
-          value={
-            postulacionesDeMisOfertas.filter(
-              (p) => p.estado === 'EN_REVISION' || p.estado === 'ENTREVISTA',
-            ).length
-          }
-          icono={<Clock size={16} />}
-          acento="ambar"
-        />
-        <Stat
-          label="Coincidencias exitosas"
-          value={
-            postulacionesDeMisOfertas.filter((p) => p.estado === 'ACEPTADA').length
-          }
-          icono={<Target size={16} />}
-          acento="verde"
-        />
+      {esEquipo && <DatosOrganizacion />}
+
+      <div>
+        <MarcaDatosDemo />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label="Vacantes abiertas"
+            value={misOfertas.filter((o) => o.estado === 'ABIERTA').length}
+            icono={<Briefcase size={16} />}
+            acento="violeta"
+          />
+          <Stat
+            label="Postulaciones"
+            value={postulacionesDeMisOfertas.length}
+            icono={<UserPlus size={16} />}
+            acento="cian"
+          />
+          <Stat
+            label="En proceso"
+            value={
+              postulacionesDeMisOfertas.filter(
+                (p) => p.estado === 'EN_REVISION' || p.estado === 'ENTREVISTA',
+              ).length
+            }
+            icono={<Clock size={16} />}
+            acento="ambar"
+          />
+          <Stat
+            label="Coincidencias exitosas"
+            value={
+              postulacionesDeMisOfertas.filter((p) => p.estado === 'ACEPTADA').length
+            }
+            icono={<Target size={16} />}
+            acento="verde"
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -276,6 +290,7 @@ export default function PanelEquipoPage() {
             subtitle="Ciclo de vida de la oportunidad publicada."
             icon={<Briefcase size={16} />}
           />
+          <MarcaDatosDemo className="mx-5 mt-4" />
           {misOfertas.length === 0 ? (
             <EmptyState
               icono={<Briefcase size={22} />}
@@ -341,6 +356,7 @@ export default function PanelEquipoPage() {
             }
             icon={<UserPlus size={16} />}
           />
+          <MarcaDatosDemo className="mx-5 mt-4" />
           {postulacionesDeMisOfertas.length === 0 ? (
             <EmptyState
               icono={<UserPlus size={22} />}
@@ -412,6 +428,7 @@ export default function PanelEquipoPage() {
             </Link>
           }
         />
+        <MarcaDatosDemo className="mx-5 mt-4" />
         {!abiertaPrincipal ? (
           <EmptyState
             icono={<Briefcase size={22} />}
