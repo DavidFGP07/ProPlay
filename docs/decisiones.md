@@ -80,6 +80,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | El contexto de build del Dockerfile es la raíz del monorepo | La imagen necesita `packages/shared`; construir desde `apps/api` no lo alcanzaría. |
 | La imagen de producción instala dependencias con `npm ci --omit=dev` de todos los workspaces | `npm ci` exige el árbol completo de workspaces del lockfile; filtrar por workspace daría un lockfile incoherente por unos pocos megas de diferencia. |
 | El `CMD` ejecuta `prisma migrate deploy` antes de arrancar | El despliegue queda en un paso y la base nunca se queda atrás del código. |
+| `trust proxy` sale de `TRUST_PROXY`, desactivado si no se fija y obligatorio en producción | Con un valor fijo y sin proxy delante, Express tomaría la IP de `X-Forwarded-For`, que el cliente puede escribir: bastaría cambiarla en cada petición para saltarse cualquier límite por IP. Sólo el despliegue sabe cuántos proxies hay; `true` se rechaza porque confía en cualquiera. |
 | `vercel.json` reescribe todas las rutas a `index.html` | Sin eso, recargar una URL profunda de React Router devuelve 404. |
 | El CI usa `prisma migrate deploy` sobre una base `proplay_test` | `migrate dev` es interactivo y pensado para desarrollo. |
 | Verificación local con Postgres 17 de Homebrew en lugar de Docker | En la máquina donde se construyó el esqueleto no había Docker; Homebrew compila pgvector contra 17, y `docker-compose.yml` sigue fijando 16 como dice la especificación. |

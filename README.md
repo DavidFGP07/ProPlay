@@ -199,8 +199,15 @@ docker build -f apps/api/Dockerfile -t proplay-api .
 
 Variables de entorno que hay que definir en el servicio: `DATABASE_URL`,
 `REDIS_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `ENCRYPTION_KEY`,
-`CORS_ORIGIN` (el dominio de Vercel), `NODE_ENV=production` y, cuando se
-conecten las integraciones, `CLOUDINARY_*` y `RIOT_API_KEY`.
+`CORS_ORIGIN` (el dominio de Vercel), `NODE_ENV=production`, `TRUST_PROXY`
+y, cuando se conecten las integraciones, `CLOUDINARY_*` y `RIOT_API_KEY`.
+
+`TRUST_PROXY` es el número de proxies que hay delante de la API: `1` en
+Railway o Render, uno más por cada capa añadida (una CDN, por ejemplo) y `0`
+si la API recibe las conexiones directamente. En producción es obligatoria y
+la API no arranca sin ella. Si se queda corta, todos los anónimos comparten la
+IP del proxy y el mismo cupo de los límites; si sobra, cualquiera puede
+falsear `X-Forwarded-For` y saltarse el límite por IP.
 
 ### Web en Vercel
 
