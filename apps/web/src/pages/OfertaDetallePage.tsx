@@ -283,7 +283,7 @@ export default function OfertaDetallePage() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         {/* --------------------------- Pesos --------------------------- */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader
               title="Pesos del matching"
@@ -397,7 +397,7 @@ export default function OfertaDetallePage() {
         </div>
 
         {/* --------------------------- Ranking --------------------------- */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader
               title="Ranking de compatibilidad"
