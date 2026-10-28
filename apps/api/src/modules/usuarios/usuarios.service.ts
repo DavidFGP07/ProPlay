@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import {
   VERSION_AVISO_PRIVACIDAD,
+  emailSchema,
   type AuthResponse,
   type LoginInput,
   type RegisterInput,
@@ -10,6 +11,7 @@ import {
 import { logger } from "../../config/logger";
 import {
   AppError,
+  BadRequestError,
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -226,4 +228,61 @@ export async function cambiarContrasena(
   logger.info({ usuarioId: id }, "Contraseña cambiada; sesiones anteriores revocadas");
 
   return crearSesion(aPublico(actualizado));
+}
+
+export interface ResultadoPromocion {
+  /** `YA_ERA_ADMIN` cuando no había nada que cambiar (y no se audita). */
+  estado: "PROMOVIDO" | "YA_ERA_ADMIN";
+  usuario: UsuarioPublico;
+  rolAnterior: Rol;
+}
+
+/**
+ * RF-01 · Alta de un administrador sobre una cuenta ya registrada (tarea 1.4).
+ * Sólo la invoca el script de operación `cli/promoverAdministrador.ts`: no hay
+ * endpoint (el de cambio de rol llega con el módulo `admin`). La contraseña la
+ * define la persona al registrarse, así que nunca pasa por la terminal.
+ *
+ * Se niega con cuentas de jugador o de equipo: su perfil público quedaría
+ * huérfano y la persona desaparecería de las búsquedas. El administrador debe
+ * ser una cuenta propia, registrada como scout (sin perfil).
+ */
+export async function promoverAAdministrador(email: string): Promise<ResultadoPromocion> {
+  // Se recorta antes de validar: un argumento de terminal puede traer espacios.
+  const correo = emailSchema.safeParse(email.trim());
+  if (!correo.success) {
+    throw new BadRequestError("El correo no es válido");
+  }
+
+  const usuario = await repositorio.buscarParaPromocion(correo.data);
+  if (!usuario) {
+    throw new NotFoundError("No existe ninguna cuenta con ese correo");
+  }
+  if (!usuario.activo) {
+    throw new ForbiddenError("La cuenta está desactivada");
+  }
+
+  const rolAnterior = usuario.rol as Rol;
+  if (rolAnterior === "ADMIN") {
+    return { estado: "YA_ERA_ADMIN", usuario: aPublico(usuario), rolAnterior };
+  }
+  if (
+    rolAnterior === "JUGADOR" ||
+    rolAnterior === "EQUIPO" ||
+    usuario.perfilJugador ||
+    usuario.perfilEquipo
+  ) {
+    throw new ConflictError(
+      "La cuenta tiene perfil de jugador o de equipo; el administrador debe ser una cuenta propia registrada como scout",
+    );
+  }
+
+  const promovido = await repositorio.cambiarRolConAuditoria(usuario.id, "ADMIN", {
+    accion: "ROL_CAMBIADO",
+    entidad: "Usuario",
+    metadata: { rolAnterior, rolNuevo: "ADMIN", origen: "cli" },
+  });
+  logger.info({ usuarioId: usuario.id, rolAnterior }, "Cuenta promovida a administrador");
+
+  return { estado: "PROMOVIDO", usuario: aPublico(promovido), rolAnterior };
 }
