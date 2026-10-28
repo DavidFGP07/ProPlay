@@ -52,6 +52,20 @@ vi.mock('@/api/auth', () => ({
   },
 }))
 
+/**
+ * Las vistas ya conectadas piden datos a la API real. Aquí ninguna petición
+ * sale de la prueba: fallan como si no hubiera servidor, para que el resultado
+ * no dependa de que haya una API escuchando en el puerto de VITE_API_URL.
+ */
+vi.mock('@/api/client', async (original) => {
+  const real = await original<typeof import('@/api/client')>()
+  const sinServidor = () => Promise.reject(new Error('Sin API en las pruebas de humo'))
+  return {
+    ...real,
+    api: { get: sinServidor, post: sinServidor, patch: sinServidor, put: sinServidor, delete: sinServidor },
+  }
+})
+
 const NOMBRES: Record<Rol, string> = {
   JUGADOR: 'Daniel Ocoro',
   EQUIPO: 'Carlos Mendoza',
@@ -231,14 +245,11 @@ describe('Aplicacion', () => {
     ).not.toHaveLength(0)
   })
 
-  it('el perfil publico de un jugador muestra sus estadisticas verificadas', async () => {
-    sesionDe('SCOUT')
+  it('el perfil publico de un jugador se abre sin sesion, sin pasar por el login', async () => {
     render(renderApp('/jugador/p-01'))
     expect(
-      await screen.findByRole('heading', { name: 'Daniel Ocoro' }, { timeout: 8000 }),
+      await screen.findByRole('link', { name: /Iniciar sesión/ }, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByText(/Estadisticas de juego \(ingesta directa\)/i, {}, { timeout: 8000 }),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Iniciar sesion/i })).toBeNull()
   })
 })
