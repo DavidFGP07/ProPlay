@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom/vitest'
+import { instalarMensajesZod } from '@/lib/mensajesZod'
+
+// Igual que main.tsx: las pruebas ven los mensajes de validación en español.
+instalarMensajesZod()
 
 /**
  * jsdom no implementa estas APIs de navegador que usa el prototipo

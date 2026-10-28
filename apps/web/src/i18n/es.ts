@@ -166,7 +166,7 @@ export const es = {
     bioPista: (usados: number, maximo: number) => `${usados}/${maximo} caracteres.`,
     bioPlaceholder: 'Describe tu trayectoria, el juego en el que compites y lo que buscas.',
     horas: 'Horas disponibles por semana',
-    horasPista: 'Entre 0 y 80. Déjalo vacío si aún no lo sabes.',
+    horasPista: 'Entre 0 y 80.',
     guardar: 'Guardar cambios',
     exito: 'Perfil guardado.',
     notaEvidencia:
@@ -188,12 +188,20 @@ export const es = {
     relocalizarDetalle:
       'Mejora la dimensión geográfica cuando la oferta pide una ubicación distinta de la tuya.',
   },
-  /** Mensajes de validación de Zod que el contrato no personaliza. */
+  /**
+   * Mensajes por defecto de Zod, por código de error (lib/mensajesZod.ts). Los
+   * esquemas que traen su propio mensaje no pasan por aquí.
+   */
   validacion: {
+    obligatorio: 'Campo obligatorio',
+    textoCorto: (minimo: number) => `Mínimo ${minimo} caracteres`,
     textoLargo: (maximo: number) => `Máximo ${maximo} caracteres`,
     numeroEntero: 'Escribe un número entero',
     numeroMinimo: (minimo: number) => `Debe ser ${minimo} o más`,
     numeroMaximo: (maximo: number) => `Debe ser ${maximo} o menos`,
+    url: 'Escribe una dirección web válida, con https://',
+    correo: 'Escribe un correo válido',
+    opcionInvalida: 'Selecciona una opción de la lista',
   },
   /** Etiquetas de los enums del contrato: la interfaz nunca muestra el valor crudo. */
   rol: {

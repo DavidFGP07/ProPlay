@@ -6,7 +6,10 @@ import App from './App'
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { crearQueryClient } from '@/api/queryClient'
+import { instalarMensajesZod } from '@/lib/mensajesZod'
 import './index.css'
+
+instalarMensajesZod()
 
 const queryClient = crearQueryClient()
 

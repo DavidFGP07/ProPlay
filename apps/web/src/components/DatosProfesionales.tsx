@@ -23,7 +23,6 @@ import { aplicarErrorApi } from '@/api/errores'
 import { useActualizarPerfilJugador } from '@/api/perfiles'
 import { useToast } from '@/context/ToastContext'
 import { es } from '@/i18n/es'
-import { mapaErroresZod } from '@/lib/mensajesZod'
 import { nombrePais } from '@/lib/ubicacion'
 
 const t = es.miPerfil
@@ -102,7 +101,7 @@ export function DatosProfesionales({ perfil }: { perfil: PerfilJugadorRespuesta 
   } = useForm<FormularioPerfil>({
     // raw: el resolver solo valida y entrega los valores del formulario; la
     // conversion al contrato se hace al enviar, con su tipo.
-    resolver: zodResolver(esquemaFormulario, { errorMap: mapaErroresZod }, { raw: true }),
+    resolver: zodResolver(esquemaFormulario, undefined, { raw: true }),
     defaultValues: valoresDe(perfil),
   })
   const enColombia = watch('pais') === PAIS_CON_DEPARTAMENTO
