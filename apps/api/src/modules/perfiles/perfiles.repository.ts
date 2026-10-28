@@ -102,11 +102,15 @@ export async function actualizarJugador(
   });
 }
 
-/** TODO: Actualizar el PerfilEquipo del usuario autenticado. */
-export async function actualizarEquipo(_datos?: unknown): Promise<never> {
-  throw new NotImplementedError(
-    "perfiles.repository.actualizarEquipo todavía no consulta la base de datos",
-  );
+export async function actualizarEquipo(
+  usuarioId: string,
+  datos: Prisma.PerfilEquipoUpdateInput,
+): Promise<PerfilEquipoDb> {
+  return prisma.perfilEquipo.update({
+    where: { usuarioId },
+    data: datos,
+    select: seleccionEquipo,
+  });
 }
 
 /** TODO: Devolver el catálogo de habilidades (técnicas y blandas). */

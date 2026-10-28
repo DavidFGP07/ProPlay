@@ -123,19 +123,12 @@ describe(`PATCH ${RUTA_JUGADOR}`, () => {
     expect(respuesta.status).toBe(403);
   });
 
-  it("las actualizaciones parciales van por PATCH: PUT ya no existe y el equipo sigue en 501", async () => {
+  it("las actualizaciones parciales van por PATCH: PUT ya no existe", async () => {
     const put = await request(app)
       .put(RUTA_JUGADOR)
       .set("Authorization", `Bearer ${token}`)
       .send({ pais: "MX" });
     expect(put.status).toBe(404);
-
-    const equipo = await registrar("patch-equipo", "EQUIPO");
-    const respuesta = await request(app)
-      .patch(`${API_PREFIX}/perfiles/equipo`)
-      .set("Authorization", `Bearer ${equipo}`)
-      .send({ nombreOrg: "Equipo de Prueba" });
-    expect(respuesta.status).toBe(501);
   });
 
   it("guarda país, departamento y disposición a relocalizarse", async () => {
