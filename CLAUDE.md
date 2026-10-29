@@ -177,36 +177,47 @@ Tres puntos que es fácil romper:
 Lo que el producto debe llegar a tener. **No inventes vistas que no estén aquí**; si crees
 que falta una, dilo y la añadimos. Las rutas marcadas `—` todavía no existen.
 
+> **No construyas vistas marcadas como Futuro sin acordarlo.**
+
 > Mantener actualizada la columna "ruta actual" es parte del trabajo: cuando implementes o
 > renombres una vista, actualiza esta tabla en el mismo commit.
 
+La columna **Alcance** recoge el recorte de la tesis a 19 vistas (tarea 0.10; la decisión
+está en `docs/decisiones.md`, «Recorte de alcance»):
+
+- **Núcleo** (13): lo necesario para demostrar la verificabilidad y el matching explicable, y
+  para ejecutar y medir el piloto (H1 y H2).
+- **Soporte** (6): versión mínima, con el límite que indica la fila.
+- **Futuro**: fuera de la tesis. Las recuperables llevan su orden de recuperación (1.º a
+  3.º) si sobra tiempo; las demás están descartadas.
+
 ### Públicas
 
-| Vista | Ruta actual | RF |
-|---|---|---|
-| Ingreso y registro (misma pantalla, dos modos) | `/login` | RF-01 |
-| Recuperar y restablecer contraseña | — | RF-01 |
-| Verificación de correo | — | RF-01 |
-| Perfil público del jugador (compartible, sin sesión) | `/jugador/:id` | RF-05 |
-| Perfil público de la organización | — | RF-07 |
-| Aviso de privacidad y términos (Ley 1581) | `/legal/privacidad` (`#privacidad`, `#terminos`) | RNF-05 |
-| 404 | `*` (cualquier ruta desconocida) | — |
+| Vista | Ruta actual | RF | Alcance |
+|---|---|---|---|
+| Ingreso y registro (misma pantalla, dos modos) | `/login` | RF-01 | Núcleo |
+| Recuperar y restablecer contraseña | — | RF-01 | Futuro (1.º en recuperarse) |
+| Verificación de correo | — | RF-01 | Futuro (descartada) |
+| Perfil público del jugador (compartible, sin sesión) | `/jugador/:id` | RF-05 | Núcleo |
+| Perfil público de la organización | — | RF-07 | Futuro (3.º en recuperarse) |
+| Aviso de privacidad y términos (Ley 1581) | `/legal/privacidad` (`#privacidad`, `#terminos`) | RNF-05 | Núcleo |
+| 404 | `*` (cualquier ruta desconocida) | — | Núcleo |
 
 ### Jugador
 
-| Vista | Ruta actual | RF |
-|---|---|---|
-| Feed | `/` | RF-08 |
-| Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 |
-| Cuentas vinculadas (estado, última sincronización) | — | RF-02, RF-03 |
-| Mis estadísticas | — | RF-04 |
-| Habilidades y endorsements | — | RF-06 |
-| Explorar oportunidades | `/vacantes` | RF-07, RF-09 |
-| Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 |
-| Mis postulaciones | — | RF-10 |
-| Mensajes | `/mensajes` | RF-12 |
-| Ajustes de cuenta y privacidad (común a los cuatro roles; hoy nombre y contraseña) | `/cuenta` | RF-01, RNF-05 |
-| Onboarding | — | RF-02, RF-05 |
+| Vista | Ruta actual | RF | Alcance |
+|---|---|---|---|
+| Feed | `/` | RF-08 | Futuro (descartada) |
+| Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 | Núcleo |
+| Cuentas vinculadas (estado, última sincronización) | — | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
+| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | — | RF-04, RF-13 | Núcleo |
+| Habilidades y endorsements | — | RF-06 | Soporte: catálogo fijo; endorsements sólo de equipos |
+| Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
+| Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
+| Mis postulaciones | — | RF-10 | Soporte: pestaña de Mi perfil, sin vista propia |
+| Mensajes | `/mensajes` | RF-12 | Futuro (2.º en recuperarse) |
+| Ajustes de cuenta y privacidad (común a los cuatro roles; hoy nombre y contraseña) | `/cuenta` | RF-01, RNF-05 | Soporte, y cuenta como dos de las 19: Mi cuenta, y Ajustes de privacidad sólo de visibilidad (perfil público sí/no y mostrar ubicación) |
+| Onboarding | — | RF-02, RF-05 | Futuro (descartada): su contenido vive en Cuentas vinculadas y en el aviso de ubicación de Mi perfil |
 
 ### Equipo y scout
 
@@ -214,24 +225,24 @@ El scout ve lo mismo que el equipo **salvo** crear, editar y cerrar ofertas y ca
 estado de una postulación. El menú se arma desde el rol, no con condicionales sueltos
 dentro de cada vista.
 
-| Vista | Ruta actual | RF |
-|---|---|---|
-| Panel del equipo (datos de la organización reales; el resto, simulado) | `/panel-equipo` | RF-13, RF-07 |
-| Buscador de talento | `/explorar` | RF-08 |
-| Crear oferta, **con ajuste de los pesos de las cinco dimensiones** | — | RF-07, RF-09 |
-| **Ranking de candidatos con desglose por dimensión** | — | RF-09 |
-| Detalle del candidato con la explicación del matching | — | RF-09, RF-11 |
-| Comparador de candidatos | — | RF-09 |
-| Postulaciones recibidas | — | RF-10 |
-| Lista de seguimiento | — | RF-08 |
-| Analítica | `/dashboard` | RF-13 |
+| Vista | Ruta actual | RF | Alcance |
+|---|---|---|---|
+| Panel del equipo (datos de la organización reales; el resto, simulado) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
+| Buscador de talento | `/explorar` | RF-08 | Soporte: filtros por rol, rango y departamento |
+| Crear oferta, **con ajuste de los pesos de las cinco dimensiones** | — | RF-07, RF-09 | Núcleo |
+| **Ranking de candidatos con desglose por dimensión** | — | RF-09 | Núcleo |
+| Detalle del candidato con la explicación del matching | — | RF-09, RF-11 | Núcleo |
+| Comparador de candidatos | — | RF-09 | Futuro (descartada) |
+| Postulaciones recibidas | — | RF-10 | Soporte: dentro del detalle de la oferta, sin vista propia |
+| Lista de seguimiento | — | RF-08 | Futuro (descartada) |
+| Analítica (`/dashboard` es hoy la versión simulada) | `/dashboard` | RF-13 | Núcleo, fusionada con el panel del equipo. Indicadores: embudo de la vacante con tiempo hasta cubrirla (mide H1), dimensión que decide el ranking y mapa del talento verificado por macrorregión, rol y rango (el Caribe frente al resto); el cuarto, la tendencia del jugador, vive en Mis estadísticas |
 
 ### Administrador
 
-| Vista | Ruta actual | RF |
-|---|---|---|
-| Panel de administración | `/admin` | RF-13 |
-| Usuarios, contenido, catálogo de habilidades, auditoría, integraciones | — | RF-01, RF-06, RF-14, RF-03 |
+| Vista | Ruta actual | RF | Alcance |
+|---|---|---|---|
+| Panel de administración | `/admin` | RF-13 | Futuro (descartada): las operaciones van por scripts documentados en `docs/operacion.md` |
+| Usuarios, contenido, catálogo de habilidades, auditoría, integraciones | — | RF-01, RF-06, RF-14, RF-03 | Futuro (descartada), igual que el panel |
 
 ### Estados transversales
 
