@@ -97,6 +97,9 @@ export const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
 
   RIOT_API_KEY: z.string().optional(),
+  /** Credenciales OAuth (Riot Sign On / RSO) de la app en el Riot Dev Portal. */
+  RIOT_CLIENT_ID: z.string().optional(),
+  RIOT_CLIENT_SECRET: z.string().optional(),
   STEAM_API_KEY: z.string().optional(),
   TWITCH_CLIENT_ID: z.string().optional(),
   TWITCH_CLIENT_SECRET: z.string().optional(),

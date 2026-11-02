@@ -78,7 +78,7 @@ export default function FeedPage() {
   const sincronizando = ingesta.isPending
 
   const sincronizar = async () => {
-    const r = await ingesta.mutateAsync()
+    const r = await ingesta.mutateAsync({ plataforma: 'RIOT', juego: 'League of Legends' })
     notificar(
       `Ingesta completada: ${r.registrosActualizados} registros actualizados desde las APIs de Riot Games y Steam en ${r.duracionMs} ms.`,
     )

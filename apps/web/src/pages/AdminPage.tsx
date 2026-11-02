@@ -21,7 +21,7 @@ export default function AdminPage() {
   const sincronizando = ingesta.isPending
 
   const sincronizar = async () => {
-    const r = await ingesta.mutateAsync()
+    const r = await ingesta.mutateAsync({ plataforma: 'RIOT', juego: 'League of Legends' })
     notificar(
       `Ingesta completada: ${r.registrosActualizados} registros en ${r.duracionMs} ms.`,
     )

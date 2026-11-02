@@ -168,7 +168,9 @@ describe('Perfil público del jugador', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
 
     expect(await titulo('Valentina Rojas')).toBeInTheDocument()
-    await waitFor(() => expect(doble.get).toHaveBeenCalledTimes(2))
+    // Llamadas del flujo: 1) perfil (falla), 2) estadísticas (resuelven vacías) y
+    // 3) reintento del perfil tras "Reintentar".
+    await waitFor(() => expect(doble.get).toHaveBeenCalledTimes(3))
   })
 
   it('avisa del límite de consultas', async () => {

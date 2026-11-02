@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import {
   MACROREGION_POR_DEPARTAMENTO,
+  type Estadistica,
   type PerfilJugadorPublico,
 } from '@proplay/shared'
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { esNoEncontrado, usePerfilPublico } from '@/api/perfiles'
+import { useEstadisticas } from '@/api/estadisticas'
 import { es } from '@/i18n/es'
 import { lugar } from '@/lib/ubicacion'
 
@@ -80,6 +82,15 @@ export default function PerfilJugadorPage() {
 function Perfil({ perfil }: { perfil: PerfilJugadorPublico }) {
   const riot = perfil.cuentasVerificadas.some((cuenta) => cuenta.plataforma === 'RIOT')
 
+  // Estadisticas reales del jugador obtenidas por la API oficial (Riot, steam):
+  // GET /api/v1/estadisticas/jugador/:id. Mientras no haya datos registrados
+  // se mantiene el estado honesto de "sin estadisticas".
+  const { id } = useParams<{ id: string }>()
+  const consultaEstadisticas = useEstadisticas(id ?? '')
+  const estadisticas: Estadistica[] = Array.isArray(consultaEstadisticas.data)
+    ? consultaEstadisticas.data
+    : []
+
   return (
     <div className="space-y-6">
       {/* ----------------------------- Cabecera ----------------------------- */}
@@ -133,11 +144,81 @@ function Perfil({ perfil }: { perfil: PerfilJugadorPublico }) {
               subtitle={t.estadisticasSubtitulo}
               icon={<BarChart3 size={16} />}
             />
-            <EmptyState
-              icono={<Gamepad2 size={22} />}
-              titulo={t.sinEstadisticas}
-              descripcion={t.sinEstadisticasDetalle}
-            />
+            {estadisticas.length > 0 ? (
+              <div className="space-y-4 p-5">
+                {estadisticas.map((estadistica) => (
+                  <div
+                    key={estadistica.id}
+                    className="rounded-xl border border-white/8 bg-white/3 p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-100">
+                        {estadistica.juego}
+                      </p>
+                      {estadistica.rol ? <Badge tono="cian">{estadistica.rol}</Badge> : null}
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          Partidas
+                        </p>
+                        <p className="mt-1 text-xl font-bold text-slate-50">
+                          {estadistica.partidas}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          Victorias
+                        </p>
+                        <p className="mt-1 text-xl font-bold text-slate-50">
+                          {estadistica.victorias}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          Win rate
+                        </p>
+                        <p className="mt-1 text-xl font-bold text-slate-50">
+                          {Math.round(estadistica.winRate * 100)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          KDA
+                        </p>
+                        <p className="mt-1 text-xl font-bold text-slate-50">
+                          {estadistica.kda.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    {estadistica.metricas ? (
+                      <div className="mt-4 rounded-xl border border-white/8 bg-white/3 p-3">
+                        <p className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">
+                          Métricas
+                        </p>
+                        <ul className="space-y-1">
+                          {Object.entries(estadistica.metricas).map(([clave, valor]) => (
+                            <li
+                              key={clave}
+                              className="flex items-center justify-between gap-2 text-xs"
+                            >
+                              <span className="capitalize text-slate-400">{clave}</span>
+                              <span className="font-mono text-slate-200">{String(valor)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icono={<Gamepad2 size={22} />}
+                titulo={t.sinEstadisticas}
+                descripcion={t.sinEstadisticasDetalle}
+              />
+            )}
           </Card>
           <Card>
             <CardHeader
