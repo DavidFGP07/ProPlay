@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
-import { CheckCircle2, Loader2, RotateCcw } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Lock, RotateCcw } from 'lucide-react'
 import { es } from '@/i18n/es'
 
 export function cn(...parts: (string | false | null | undefined)[]) {
@@ -387,6 +388,88 @@ export function EmptyState({
   )
 }
 
+/**
+ * Estado de error de una carga (CLAUDE.md §5): mensaje y reintento. Es el
+ * mismo en todas las vistas; cada una sólo cambia el texto.
+ */
+export function EstadoError({
+  titulo = es.comun.errorCarga,
+  descripcion = es.comun.errorCargaDetalle,
+  onReintentar,
+}: {
+  titulo?: string
+  descripcion?: string
+  onReintentar: () => void
+}) {
+  return (
+    <div role="alert">
+      <EmptyState
+        icono={<RotateCcw size={22} />}
+        titulo={titulo}
+        descripcion={descripcion}
+        action={
+          <Button variante="secundario" onClick={onReintentar}>
+            <RotateCcw size={13} aria-hidden />
+            {es.comun.reintentar}
+          </Button>
+        }
+      />
+    </div>
+  )
+}
+
+/** Estado «sin permiso» (403) de una vista o sección (CLAUDE.md §5). */
+export function EstadoSinPermiso({
+  titulo = es.comun.sinPermiso,
+  descripcion = es.comun.sinPermisoDetalle,
+}: {
+  titulo?: string
+  descripcion?: string
+}) {
+  return <EmptyState icono={<Lock size={22} />} titulo={titulo} descripcion={descripcion} />
+}
+
+/* ------------------------------- Paginacion ------------------------------- */
+
+/** Anterior / siguiente de un listado paginado (`meta` de `paginadoSchema`). */
+export function Paginacion({
+  pagina,
+  totalPaginas,
+  onCambiar,
+}: {
+  pagina: number
+  totalPaginas: number
+  onCambiar: (pagina: number) => void
+}) {
+  if (totalPaginas <= 1) return null
+  const t = es.comun.paginacion
+  return (
+    <nav aria-label={t.etiqueta} className="flex items-center justify-between gap-3">
+      <Button
+        variante="secundario"
+        tamano="sm"
+        disabled={pagina <= 1}
+        onClick={() => onCambiar(pagina - 1)}
+      >
+        <ChevronLeft size={14} aria-hidden />
+        {t.anterior}
+      </Button>
+      <p className="text-xs text-slate-400" aria-live="polite">
+        {t.pagina(pagina, totalPaginas)}
+      </p>
+      <Button
+        variante="secundario"
+        tamano="sm"
+        disabled={pagina >= totalPaginas}
+        onClick={() => onCambiar(pagina + 1)}
+      >
+        {t.siguiente}
+        <ChevronRight size={14} aria-hidden />
+      </Button>
+    </nav>
+  )
+}
+
 /* --------------------------------- Tabs ----------------------------------- */
 
 export function Tabs({
@@ -463,7 +546,9 @@ export function Modal({
   }, [abierto, onCerrar])
 
   if (!abierto) return null
-  return (
+  // Portal al body: un ancestro con backdrop-filter (como `.card`) convierte
+  // el `fixed` en relativo a él y recortaría el diálogo.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -491,7 +576,8 @@ export function Modal({
         </div>
         <div className="max-h-[75vh] overflow-y-auto p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
