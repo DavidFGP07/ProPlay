@@ -214,7 +214,7 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 | Habilidades y endorsements | — | RF-06 | Soporte: catálogo fijo; endorsements sólo de equipos |
 | Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
-| Mis postulaciones | — | RF-10 | Soporte: pestaña de Mi perfil, sin vista propia |
+| Mis postulaciones | `/mi-perfil?pestana=postulaciones` | RF-10 | Soporte: pestaña de Mi perfil, sin vista propia |
 | Mensajes | `/mensajes` | RF-12 | Futuro (2.º en recuperarse) |
 | Ajustes de cuenta y privacidad (común a los cuatro roles; hoy nombre y contraseña) | `/cuenta` | RF-01, RNF-05 | Soporte, y cuenta como dos de las 19: Mi cuenta, y Ajustes de privacidad sólo de visibilidad (perfil público sí/no y mostrar ubicación) |
 | Onboarding | — | RF-02, RF-05 | Futuro (descartada): su contenido vive en Cuentas vinculadas y en el aviso de ubicación de Mi perfil |
@@ -339,10 +339,11 @@ sustituye el stub del repository por Prisma real: **no cambies la estructura de 
 hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con GET /api/v1/...`
 indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
-sesión), en `/mi-perfil` la cabecera y los datos profesionales, y en `/panel-equipo` la
-tarjeta «Datos de la organización» (sólo el rol `EQUIPO`); `/legal/privacidad` es texto
-estático. El resto de `/mi-perfil` (cuentas, habilidades, portafolio, postulaciones,
-privacidad y laterales) y de `/panel-equipo` (indicadores, vacantes, procesos y
+sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
+(`/vacantes/:id`), en `/mi-perfil` la cabecera, los datos profesionales y la pestaña de
+postulaciones, y en `/panel-equipo` la tarjeta «Datos de la organización» (sólo el rol
+`EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
+habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (indicadores, vacantes, procesos y
 recomendaciones) sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta

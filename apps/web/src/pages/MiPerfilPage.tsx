@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   BadgeCheck,
-  Briefcase,
   Clock,
   Eye,
   EyeOff,
@@ -15,7 +14,6 @@ import {
   RotateCcw,
   Save,
   ShieldCheck,
-  Sparkles,
   Trash2,
   TrendingUp,
 } from 'lucide-react'
@@ -36,11 +34,11 @@ import {
 } from '@/components/ui'
 import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
 import { DatosProfesionales } from '@/components/DatosProfesionales'
+import { MisPostulaciones } from '@/components/MisPostulaciones'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { useIdentidad } from '@/api/identidad'
 import { useMarcarTodasLeidas, useNotificaciones } from '@/api/notificaciones'
-import { useMisPostulaciones, type PostulacionConOferta } from '@/api/ofertas'
 import {
   useActualizarPrivacidad,
   useDesvincularCuenta,
@@ -63,16 +61,25 @@ import type {
   HabilidadJugador,
   PerfilJugador,
   PlataformaJuego,
-  Postulacion,
 } from '@/mocks/modelos'
 
 const t = es.miPerfil
 
-type Pestana = 'datos' | 'cuentas' | 'habilidades' | 'portafolio' | 'postulaciones' | 'privacidad'
+const PESTANAS = ['datos', 'cuentas', 'habilidades', 'portafolio', 'postulaciones', 'privacidad'] as const
+type Pestana = (typeof PESTANAS)[number]
 
-// RF-05 · Mi perfil. La cabecera y los datos profesionales son reales
-// (GET /perfiles/me y PATCH /perfiles/jugador). Cuentas, habilidades,
-// portafolio, postulaciones, privacidad y los laterales dependen de otros
+/** Pestañas que ya hablan con la API real: no llevan marca de demostración. */
+const PESTANAS_REALES: readonly Pestana[] = ['datos', 'postulaciones']
+
+/** `?pestana=postulaciones` abre esa pestaña (enlace desde el detalle de la oferta). */
+function pestanaDeLaUrl(valor: string | null): Pestana {
+  return PESTANAS.find((pestana) => pestana === valor) ?? 'datos'
+}
+
+// RF-05 · RF-10 · Mi perfil. La cabecera, los datos profesionales
+// (GET /perfiles/me y PATCH /perfiles/jugador) y las postulaciones
+// (GET /ofertas/postulaciones/me) son reales. Cuentas, habilidades,
+// portafolio, privacidad y los laterales dependen de otros
 // modulos: siguen simulados, cada seccion con su marca de demostracion, y
 // desaparecen con el puente apagado.
 export default function MiPerfilPage() {
@@ -127,7 +134,8 @@ export default function MiPerfilPage() {
 
 function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespuesta }) {
   const { notificar } = useToast()
-  const [pestana, setPestana] = useState<Pestana>('datos')
+  const [busqueda] = useSearchParams()
+  const [pestana, setPestana] = useState<Pestana>(() => pestanaDeLaUrl(busqueda.get('pestana')))
 
   // Secciones simuladas: con el puente apagado, la consulta no corre o
   // devuelve null y la vista se queda solo con lo real.
@@ -135,20 +143,20 @@ function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespu
   const demoId = identidad.data?.perfilJugadorId
   const { data: demo = null } = usePerfil(demoId)
   const { data: catalogo = [] } = useHabilidades()
-  const { data: postulaciones = [] } = useMisPostulaciones(demoId)
   const { data: config = null } = usePrivacidad()
   const { data: notificaciones = [] } = useNotificaciones()
   const privacidad = useActualizarPrivacidad()
   const marcarTodas = useMarcarTodasLeidas()
 
+  // Datos profesionales y postulaciones son reales; el resto, simulado.
   const tabs: { id: Pestana; label: string; badge?: number }[] = [
     { id: 'datos', label: t.pestanaDatos },
+    { id: 'postulaciones', label: es.misPostulaciones.pestana },
     ...(demo
       ? [
           { id: 'cuentas' as const, label: 'Cuentas de juego', badge: demo.cuentas.length },
           { id: 'habilidades' as const, label: 'Habilidades', badge: demo.skills.length },
           { id: 'portafolio' as const, label: 'Portafolio', badge: demo.perfil.portafolio.length },
-          { id: 'postulaciones' as const, label: 'Postulaciones', badge: postulaciones.length },
           { id: 'privacidad' as const, label: 'Privacidad' },
         ]
       : []),
@@ -233,7 +241,9 @@ function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespu
             <div className="p-5">
               {activa === 'datos' && <DatosProfesionales perfil={perfil} />}
 
-              {demo && activa !== 'datos' && <MarcaDatosDemo />}
+              {activa === 'postulaciones' && <MisPostulaciones />}
+
+              {demo && !PESTANAS_REALES.includes(activa) && <MarcaDatosDemo />}
 
               {demo && activa === 'cuentas' && (
                 <CuentasPanel
@@ -257,9 +267,6 @@ function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespu
                 <PortafolioPanel perfil={demo.perfil} stats={demo.stats} />
               )}
 
-              {demo && activa === 'postulaciones' && (
-                <PostulacionesPanel postulaciones={postulaciones} />
-              )}
 
               {demo && activa === 'privacidad' && config && (
                 <PrivacidadPanel
@@ -770,73 +777,6 @@ function PortafolioPanel({
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  )
-}
-
-/* ========================= Pestaña: postulaciones ========================= */
-
-function PostulacionesPanel({
-  postulaciones,
-}: {
-  postulaciones: PostulacionConOferta[]
-}) {
-  const ETIQUETA: Record<Postulacion['estado'], { t: string; tono: 'neutro' | 'violeta' | 'cian' | 'verde' | 'ambar' | 'rojo' }> = {
-    ENVIADA: { t: 'Recibida', tono: 'neutro' },
-    EN_REVISION: { t: 'En revision', tono: 'cian' },
-    ENTREVISTA: { t: 'Entrevista', tono: 'violeta' },
-    ACEPTADA: { t: 'Aceptada', tono: 'verde' },
-    RECHAZADA: { t: 'Rechazada', tono: 'rojo' },
-  }
-
-  return (
-    <div className="space-y-4">
-      {postulaciones.length === 0 ? (
-        <EmptyState
-          icono={<Briefcase size={22} />}
-          titulo="Sin postulaciones"
-          descripcion="Cuando te postules a una vacante, podras seguir aqui el estado del proceso."
-          action={
-            <Link to="/vacantes">
-              <Button variante="secundario" tamano="sm">
-                Ver vacantes abiertas
-              </Button>
-            </Link>
-          }
-        />
-      ) : (
-        postulaciones.map(({ postulacion, oferta }) => {
-          const estado = ETIQUETA[postulacion.estado]
-          return (
-            <div
-              key={postulacion.id}
-              className="rounded-xl border border-white/8 bg-white/3 p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-100">
-                    {oferta.rol} · {oferta.juego}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    Postulado el {postulacion.fecha}
-                  </p>
-                </div>
-                <Badge tono={estado.tono}>{estado.t}</Badge>
-              </div>
-              <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-slate-400">
-                "{postulacion.mensaje}"
-              </p>
-              <Link
-                to={`/vacantes/${oferta.id}`}
-                className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-brand-300 transition hover:text-brand-200"
-              >
-                <Sparkles size={12} />
-                Ver elMatching de esta vacante
-              </Link>
-            </div>
-          )
-        })
       )}
     </div>
   )

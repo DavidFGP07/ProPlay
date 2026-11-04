@@ -1,25 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import axios from 'axios'
+import { ArrowLeft, Briefcase, CheckCircle2, Send, Sigma, Weight } from 'lucide-react'
 import {
-  ArrowLeft,
-  ArrowUpDown,
-  BadgeCheck,
-  Banknote,
-  BookOpen,
-  Bot,
-  Brain,
-  CheckCircle2,
-  Clock,
-  Cpu,
-  Database,
-  MapPin,
-  Search,
-  Sparkles,
-  TrendingUp,
-  TriangleAlert,
-  Users,
-  Weight,
-} from 'lucide-react'
+  DIMENSIONES_MATCHING,
+  crearPostulacionSchema,
+  type CrearPostulacionInput,
+  type ErrorResponse,
+  type Oferta,
+} from '@proplay/shared'
 import {
   Avatar,
   Badge,
@@ -27,716 +18,280 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorCampo,
+  EstadoEnvio,
+  EstadoError,
+  Field,
   Modal,
   Progress,
-  ScoreRing,
-  SectionTitle,
   Textarea,
-  cn,
 } from '@/components/ui'
-import { useToast } from '@/context/ToastContext'
-import { es } from '@/i18n/es'
 import { useAuth } from '@/context/AuthContext'
-import { useIdentidad } from '@/api/identidad'
-import { useCandidatos, useExplicarMatching, useJugadores } from '@/api/matching'
-import { usePostulaciones, usePostular, useVacante } from '@/api/ofertas'
-import { DIMENSIONES, PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { ExplicacionMatching, Pesos } from '@/mocks/modelos'
+import { useToast } from '@/context/ToastContext'
+import { esNoEncontrado } from '@/api/perfiles'
+import { aplicarErrorApi } from '@/api/errores'
+import { useMisPostulaciones, useOferta, usePostular } from '@/api/ofertas'
+import { es } from '@/i18n/es'
+import { lugarOferta } from '@/lib/ubicacion'
 
-type Orden = 'puntaje' | 'vectorial' | 'tecnica' | 'experiencia'
+const t = es.ofertaDetalle
 
+const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' })
+
+const TONO_ESTADO_OFERTA = {
+  BORRADOR: 'ambar',
+  ABIERTA: 'verde',
+  CUBIERTA: 'azul',
+  CERRADA: 'neutro',
+} as const satisfies Record<Oferta['estado'], string>
+
+const claseEnlace =
+  'inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
+
+// RF-07 · RF-10 · Detalle de la oferta y postulación: datos reales de
+// GET /api/v1/ofertas/:id y POST /api/v1/ofertas/:id/postulaciones. El ranking
+// de candidatos y su explicación son otra vista (motor de matching).
 export default function OfertaDetallePage() {
   const { id } = useParams<{ id: string }>()
-  const { usuario } = useAuth()
-  const { notificar } = useToast()
+  const consulta = useOferta(id)
 
-  const [pesos, setPesos] = useState<Pesos>({ ...PESOS_POR_DEFECTO })
-  const [pesosConsulta, setPesosConsulta] = useState<Pesos>(pesos)
-  const [orden, setOrden] = useState<Orden>('puntaje')
-  const [seleccionado, setSeleccionado] = useState<string | null>(null)
-  const [explicacion, setExplicacion] = useState<ExplicacionMatching | null>(null)
-  const [modalPostular, setModalPostular] = useState(false)
-  const [mensajePostulacion, setMensajePostulacion] = useState('')
-
-  // El ranking se recalcula cuando el usuario deja de mover los pesos.
-  useEffect(() => {
-    const t = window.setTimeout(() => setPesosConsulta(pesos), 150)
-    return () => window.clearTimeout(t)
-  }, [pesos])
-
-  const vacante = useVacante(id)
-  const candidatos = useCandidatos(id, pesosConsulta)
-  const { data: postulaciones = [] } = usePostulaciones()
-  // Catalogo de perfiles para resolver nombres en el ranking.
-  const { data: perfiles = [] } = useJugadores()
-  const { data: identidad } = useIdentidad()
-  const explicar = useExplicarMatching()
-  const postulacion = usePostular()
-
-  const oferta = vacante.data?.oferta ?? null
-  const equipo = vacante.data?.equipo ?? null
-  const resultados = useMemo(() => candidatos.data?.resultados ?? [], [candidatos.data])
-  const traza = candidatos.data?.traza ?? null
-  const cargando = vacante.isLoading || candidatos.isLoading
-  const generando = explicar.isPending
-
-  const perfilDe = (perfilId: string) => perfiles.find((p) => p.id === perfilId)
-
-  /** Postulacion del usuario en sesion sobre esta vacante, si existe. */
-  const miPerfilId = identidad?.perfilJugadorId
-  const miPostulacion = miPerfilId
-    ? postulaciones.find(
-        (p) => p.ofertaId === id && p.perfilId === miPerfilId,
-      )
-    : undefined
-
-  const ordenados = useMemo(() => {
-    const copia = [...resultados]
-    if (orden === 'puntaje') copia.sort((a, b) => b.puntaje - a.puntaje)
-    if (orden === 'vectorial') copia.sort((a, b) => b.similitudVectorial - a.similitudVectorial)
-    if (orden === 'tecnica')
-      copia.sort(
-        (a, b) =>
-          (b.desglose.find((d) => d.key === 'tecnica')?.valor ?? 0) -
-          (a.desglose.find((d) => d.key === 'tecnica')?.valor ?? 0),
-      )
-    if (orden === 'experiencia')
-      copia.sort(
-        (a, b) =>
-          (b.desglose.find((d) => d.key === 'experiencia')?.valor ?? 0) -
-          (a.desglose.find((d) => d.key === 'experiencia')?.valor ?? 0),
-      )
-    return copia
-  }, [resultados, orden])
-
-  const detalle = useMemo(
-    () => resultados.find((r) => r.perfilId === seleccionado) ?? null,
-    [resultados, seleccionado],
-  )
-
-  const generarExplicacion = async (perfilId: string) => {
-    setExplicacion(null)
-    try {
-      const exp = await explicar.mutateAsync({ ofertaId: id!, perfilId, resultados })
-      setExplicacion(exp)
-    } catch (e) {
-      notificar(
-        e instanceof Error ? e.message : 'No se pudo generar la explicacion.',
-        'error',
-      )
-    }
-  }
-
-  const enviarPostulacion = async () => {
-    if (!usuario || !id) return
-    try {
-      await postulacion.mutateAsync({ ofertaId: id, mensaje: mensajePostulacion })
-      setModalPostular(false)
-      setMensajePostulacion('')
-      notificar('Postulacion enviada. El equipo ya puede revisarla.')
-    } catch (e) {
-      notificar(
-        e instanceof Error ? e.message : 'No se pudo enviar la postulacion.',
-        'error',
-      )
-    }
-  }
-
-  if (cargando) {
+  if (consulta.isPending) {
     return (
-      <div className="space-y-4">
-        <div className="skeleton h-40 rounded-2xl" />
-        <div className="skeleton h-96 rounded-2xl" />
+      <div aria-busy="true" aria-label={t.cargando} className="space-y-4">
+        <div className="skeleton h-56 rounded-2xl" />
+        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="skeleton h-48 rounded-2xl" />
+          <div className="skeleton h-48 rounded-2xl" />
+        </div>
       </div>
     )
   }
 
-  if (!oferta) {
+  if (consulta.isError) {
     return (
-      <EmptyState
-        icono={<Users size={22} />}
-        titulo="Vacante no encontrada"
-        descripcion="La vacante solicitada no existe o fue eliminada."
-      />
+      <div className="space-y-4">
+        <Volver />
+        <Card>
+          {esNoEncontrado(consulta.error) ? (
+            <EmptyState
+              icono={<Briefcase size={22} />}
+              titulo={t.noEncontrada}
+              descripcion={t.noEncontradaDetalle}
+            />
+          ) : (
+            <EstadoError titulo={t.error} onReintentar={() => void consulta.refetch()} />
+          )}
+        </Card>
+      </div>
+    )
+  }
+
+  return <Detalle oferta={consulta.data} />
+}
+
+function Volver() {
+  return (
+    <Link to="/vacantes" className={claseEnlace}>
+      <ArrowLeft size={14} aria-hidden />
+      {t.volver}
+    </Link>
+  )
+}
+
+function Detalle({ oferta }: { oferta: Oferta }) {
+  const ficha: [string, string][] = [
+    [t.posicion, es.posicionLol[oferta.rol]],
+    [t.rangoMinimo, oferta.rangoMinimo ?? t.sinRango],
+    [t.modalidad, es.modalidad[oferta.modalidad]],
+    [t.ubicacion, lugarOferta(oferta)],
+    [t.horas, oferta.horasSemana === null ? t.sinHoras : es.ofertas.horas(oferta.horasSemana)],
+    ...(oferta.publicadaEn
+      ? [[t.publicada, formatoFecha.format(oferta.publicadaEn)] as [string, string]]
+      : []),
+  ]
+
+  return (
+    <div className="space-y-6">
+      <Volver />
+
+      {/* ---------------------------- Cabecera ---------------------------- */}
+      <Card className="relative overflow-hidden">
+        <div className="grid-bg absolute inset-0 opacity-30" aria-hidden />
+        <div className="relative flex flex-col gap-6 p-5 sm:p-6 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tono="cian">{es.posicionLol[oferta.rol]}</Badge>
+              <Badge tono="violeta">{es.modalidad[oferta.modalidad]}</Badge>
+              <Badge tono={TONO_ESTADO_OFERTA[oferta.estado]}>
+                {es.estadoOferta[oferta.estado]}
+              </Badge>
+            </div>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight break-words text-slate-50">
+              {oferta.titulo}
+            </h1>
+            <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
+              <Avatar nombre={oferta.equipo.nombreOrg} size="sm" />
+              <span className="min-w-0 truncate">
+                {oferta.equipo.nombreOrg} · {oferta.juego}
+              </span>
+            </div>
+            <h2 className="sr-only">{t.descripcion}</h2>
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed whitespace-pre-line text-slate-300">
+              {oferta.descripcion}
+            </p>
+          </div>
+          <div className="w-full shrink-0 lg:w-72">
+            <AccionPostulacion oferta={oferta} />
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <Card className="min-w-0">
+          <CardHeader title={t.requisitos} icon={<Briefcase size={16} />} />
+          <dl className="grid gap-4 p-5 sm:grid-cols-2">
+            {ficha.map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="min-w-0">
+                <dt className="text-[11px] tracking-wide text-slate-400 uppercase">{etiqueta}</dt>
+                <dd className="mt-1 text-sm break-words text-slate-100">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+
+        <Card className="min-w-0">
+          <CardHeader title={t.pesosTitulo} subtitle={t.pesosSubtitulo} icon={<Weight size={16} />} />
+          <dl className="space-y-3.5 p-5">
+            {DIMENSIONES_MATCHING.map((dimension) => (
+              <div key={dimension}>
+                <div className="flex items-center justify-between text-xs">
+                  <dt className="text-slate-300">{es.dimension[dimension]}</dt>
+                  <dd className="font-mono text-brand-300">
+                    {Math.round(oferta.pesos[dimension] * 100)} %
+                  </dd>
+                </div>
+                <Progress valor={oferta.pesos[dimension]} className="mt-1.5" />
+              </div>
+            ))}
+          </dl>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader title={t.metodologiaTitulo} icon={<Sigma size={16} />} />
+        <p className="p-5 text-sm leading-relaxed text-slate-400">{t.metodologia}</p>
+      </Card>
+    </div>
+  )
+}
+
+/** Qué puede hacer con la oferta quien la mira: el jugador, postularse. */
+function AccionPostulacion({ oferta }: { oferta: Oferta }) {
+  const { usuario } = useAuth()
+  const esJugador = usuario?.rol === 'JUGADOR'
+  const mias = useMisPostulaciones(esJugador)
+  const [abierto, setAbierto] = useState(false)
+
+  if (!esJugador) {
+    return (
+      <p className="rounded-xl border border-white/8 bg-surface-900/60 px-4 py-3 text-xs leading-relaxed text-slate-400">
+        {usuario?.rol === 'EQUIPO' ? t.vistaEquipo : t.vistaScout}
+      </p>
+    )
+  }
+
+  if (mias.isPending) return <div className="skeleton h-20 rounded-xl" aria-hidden />
+
+  const mia = mias.data?.find((p) => p.oferta.id === oferta.id)
+  if (mia) {
+    return (
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3">
+        <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-300">
+          <CheckCircle2 size={14} aria-hidden />
+          {t.postulacionEnviada}
+        </p>
+        <p className="mt-1 text-xs text-slate-300">
+          {t.estadoActual(es.estadoPostulacion[mia.estado])}
+        </p>
+        <Link
+          to="/mi-perfil?pestana=postulaciones"
+          className="mt-2 inline-flex text-xs font-medium text-brand-300 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+        >
+          {t.verMisPostulaciones}
+        </Link>
+      </div>
+    )
+  }
+
+  if (oferta.estado !== 'ABIERTA') {
+    return (
+      <p className="rounded-xl border border-white/8 bg-surface-900/60 px-4 py-3 text-xs text-slate-400">
+        {t.noAbierta}
+      </p>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <Link
-        to="/vacantes"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-500 transition hover:text-slate-300"
-      >
-        <ArrowLeft size={14} />
-        Volver a las vacantes
-      </Link>
-
-      {/* ---------------------------- Cabecera ---------------------------- */}
-      <Card className="relative overflow-hidden">
-        <div className="grid-bg absolute inset-0 opacity-30" />
-        <div className="absolute -right-16 -top-24 size-72 rounded-full bg-brand-600/20 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-6 p-6">
-          <div className="min-w-[18rem] flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tono="violeta">
-                <Sparkles size={11} />
-                {oferta.juego}
-              </Badge>
-              <Badge tono="cian">{oferta.rol}</Badge>
-              <Badge tono={oferta.estado === 'ABIERTA' ? 'verde' : 'neutro'}>
-                {es.estadoOferta[oferta.estado]}
-              </Badge>
-            </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-50">
-              {oferta.rol} · {oferta.juego}
-            </h1>
-            <p className="mt-1.5 text-sm text-slate-400">
-              {equipo?.nombre ?? 'Equipo'} — {equipo?.region}
-            </p>
-            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-300">
-              {oferta.descripcion}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <TrendingUp size={13} />
-                Rank minimo {oferta.rangoMinimo}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Clock size={13} />
-                {oferta.horasSemanales} h/semana
-              </span>
-              <span className="flex items-center gap-1.5">
-                <MapPin size={13} />
-                {oferta.regionPreferida}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users size={13} />
-                {postulaciones.filter((p) => p.ofertaId === oferta.id).length}{' '}
-                postulaciones
-              </span>
-              {oferta.salario && (
-                <span className="flex items-center gap-1.5 text-emerald-300">
-                  <Banknote size={13} />
-                  {oferta.salario}
-                </span>
-              )}
-            </div>
-
-            {oferta.requisitos && oferta.requisitos.length > 0 && (
-              <div className="mt-4 rounded-xl border border-white/8 bg-white/3 p-4">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Requisitos de la plaza
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {oferta.requisitos.map((r) => (
-                    <li
-                      key={r}
-                      className="flex gap-2 text-[11px] leading-relaxed text-slate-300"
-                    >
-                      <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-brand-400" />
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col items-end gap-3">
-            <div className="rounded-xl border border-white/8 bg-surface-900/60 px-4 py-3 text-right">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                Candidatos evaluados
-              </p>
-              <p className="text-2xl font-bold text-slate-50">{resultados.length}</p>
-            </div>
-            {usuario?.rol === 'JUGADOR' ? (
-              miPostulacion ? (
-                <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 text-center">
-                  <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-300">
-                    <CheckCircle2 size={13} />
-                    Postulacion enviada
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Estado actual: {es.estadoPostulacion[miPostulacion.estado]}
-                  </p>
-                </div>
-              ) : (
-                <Button
-                  variante="primario"
-                  onClick={() => setModalPostular(true)}
-                  disabled={oferta.estado !== 'ABIERTA'}
-                >
-                  Postularme
-                </Button>
-              )
-            ) : (
-              <p className="max-w-[14rem] text-right text-[11px] leading-relaxed text-slate-500">
-                {usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN'
-                  ? 'Estas viendo la vacante como organización. Puedes gestionar candidatos desde el panel de equipo.'
-                  : 'Estas viendo la vacante como scout. Puedes consultar el ranking, pero la postulación la realiza el jugador.'}
-              </p>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        {/* --------------------------- Pesos --------------------------- */}
-        <div className="min-w-0 space-y-5">
-          <Card>
-            <CardHeader
-              title="Pesos del matching"
-              subtitle="Configurables por el equipo que publica la oferta."
-              icon={<Weight size={16} />}
-            />
-            <div className="space-y-4 p-5">
-              {DIMENSIONES.map((d) => (
-                <div key={d.key}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300">{d.label}</span>
-                    <span className="font-mono text-brand-300">
-                      {Math.round(pesos[d.key] * 100)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={Math.round(pesos[d.key] * 100)}
-                    onChange={(e) =>
-                      setPesos((p) => ({
-                        ...p,
-                        [d.key]: Number(e.target.value) / 100,
-                      }))
-                    }
-                    className="mt-2 w-full accent-[#7c4df5]"
-                  />
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-slate-600">
-                    {d.descripcion}
-                  </p>
-                </div>
-              ))}
-              <Button
-                variante="fantasma"
-                tamano="sm"
-                className="w-full"
-                onClick={() => setPesos({ ...PESOS_POR_DEFECTO })}
-              >
-                Restaurar pesos por defecto
-              </Button>
-            </div>
-          </Card>
-
-          {/* --------------------------- Traza --------------------------- */}
-          {traza && (
-            <Card>
-              <CardHeader
-                title="Traza de la consulta"
-                subtitle="Evidencia tecnica del recorrido del motor."
-                icon={<Cpu size={16} />}
-              />
-              <div className="space-y-3 p-5">
-                {[
-                  {
-                    l: 'Indice consultado',
-                    v: traza.indice,
-                    i: <Database size={12} />,
-                  },
-                  {
-                    l: 'Perfiles en la plataforma',
-                    v: `${traza.totalPerfiles}`,
-                    i: <Users size={12} />,
-                  },
-                  {
-                    l: 'Recuperados por contenido',
-                    v: `${traza.recuperadosPorContenido} (top-K)`,
-                    i: <Search size={12} />,
-                  },
-                  {
-                    l: 'Coincidencias vectoriales',
-                    v: `${traza.coincidenciasVectoriales}`,
-                    i: <BadgeCheck size={12} />,
-                  },
-                  {
-                    l: 'Peso colaborativo',
-                    v:
-                      traza.pesoColaborativo > 0
-                        ? `${Math.round(traza.pesoColaborativo * 100)} % (hibrido)`
-                        : '0 % (contenido puro)',
-                    i: <Brain size={12} />,
-                  },
-                  {
-                    l: 'Latencia',
-                    v: `${traza.latenciaMs} ms`,
-                    i: <Clock size={12} />,
-                  },
-                ].map((f) => (
-                  <div
-                    key={f.l}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-white/3 px-3 py-2"
-                  >
-                    <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                      {f.i}
-                      {f.l}
-                    </span>
-                    <span className="font-mono text-[11px] text-slate-200">{f.v}</span>
-                  </div>
-                ))}
-                <p className="text-[10px] leading-relaxed text-slate-600">
-                  El recuperador por contenido resuelve una consulta de similitud
-                  sobre el indice vectorial, de modo que evita cargar la totalidad
-                  de los perfiles en memoria. El componente colaborativo mantiene
-                  peso cero mientras el historial de interacciones del equipo sea
-                  insuficiente: es la respuesta prevista al arranque en frio.
-                </p>
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* --------------------------- Ranking --------------------------- */}
-        <div className="min-w-0 space-y-5">
-          <Card>
-            <CardHeader
-              title="Ranking de compatibilidad"
-              subtitle="Puntaje S(j, o) = promedio ponderado de las cinco dimensiones."
-              icon={<ArrowUpDown size={16} />}
-              action={
-                <select
-                  value={orden}
-                  onChange={(e) => setOrden(e.target.value as Orden)}
-                  className="rounded-lg border border-white/10 bg-surface-900/70 px-2.5 py-1.5 text-[11px] text-slate-300 focus:border-brand-500/60 focus:outline-none"
-                >
-                  <option value="puntaje">Ordenar por puntaje</option>
-                  <option value="vectorial">Ordenar por similitud vectorial</option>
-                  <option value="tecnica">Ordenar por dimension tecnica</option>
-                  <option value="experiencia">Ordenar por experiencia</option>
-                </select>
-              }
-            />
-
-            {ordenados.length === 0 ? (
-              <EmptyState
-                icono={<Users size={22} />}
-                titulo="Sin candidatos en el pool"
-                descripcion="No hay perfiles que coincidan con los criterios de recuperacion por contenido."
-              />
-            ) : (
-              <ul className="divide-y divide-white/5">
-                {ordenados.map((r, i) => {
-                  const perfil = perfilDe(r.perfilId)
-                  const tecnica = r.desglose.find((d) => d.key === 'tecnica')
-                  return (
-                    <li key={r.perfilId}>
-                      <button
-                        onClick={() => {
-                          setSeleccionado(r.perfilId)
-                          setExplicacion(null)
-                        }}
-                        className={cn(
-                          'flex w-full items-center gap-4 px-5 py-3.5 text-left transition',
-                          seleccionado === r.perfilId
-                            ? 'bg-brand-500/10'
-                            : 'hover:bg-white/3',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'w-6 shrink-0 text-center font-mono text-xs',
-                            i === 0
-                              ? 'text-brand-300'
-                              : i < 3
-                                ? 'text-accent-400'
-                                : 'text-slate-600',
-                          )}
-                        >
-                          {i + 1}
-                        </span>
-
-                        {perfil && <Avatar nombre={perfil.nombre} size="sm" />}
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-100">
-                            {perfil?.nombre ?? r.perfilId}
-                            {perfil && (
-                              <BadgeCheck
-                                size={13}
-                                className="ml-1.5 inline text-emerald-400"
-                              />
-                            )}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                            {perfil && <span>{perfil.region}</span>}
-                            {perfil && (
-                              <span>{perfil.rolesPreferidos[0]}</span>
-                            )}
-                            <span>Sim. vectorial {Math.round(r.similitudVectorial * 100)}%</span>
-                            {tecnica && (
-                              <span>Tecnica {Math.round(tecnica.valor * 100)}%</span>
-                            )}
-                            {r.modo === 'hibrido' && (
-                              <Badge tono="cian" className="!py-0 !text-[10px]">
-                                Hibrido
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        <Progress
-                          valor={r.puntaje}
-                          className="hidden w-28 sm:block"
-                        />
-
-                        <ScoreRing
-                          valor={r.puntaje}
-                          tamano={52}
-                          grosor={5}
-                        />
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </Card>
-
-          {/* ------------------------ Desglose ------------------------ */}
-          {detalle && perfilDe(detalle.perfilId) && (
-            <Card>
-              <CardHeader
-                title={`Desglose de compatibilidad · ${perfilDe(detalle.perfilId)!.nombre}`}
-                subtitle="Contribucion de cada dimension al puntaje final."
-                icon={<ArrowUpDown size={16} />}
-                action={
-                  <Button
-                    variante="primario"
-                    tamano="sm"
-                    onClick={() => generarExplicacion(detalle.perfilId)}
-                    cargando={generando}
-                  >
-                    <Bot size={14} />
-                    Explicar con IA
-                  </Button>
-                }
-              />
-              <div className="space-y-4 p-5">
-                {detalle.desglose.map((d) => {
-                  const def = DIMENSIONES.find((x) => x.key === d.key)!
-                  return (
-                    <div key={d.key}>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="font-medium text-slate-200">
-                          {def.label}
-                          <span className="ml-2 font-mono text-[10px] text-slate-500">
-                            peso {Math.round(d.peso * 100)}%
-                          </span>
-                        </span>
-                        <span className="font-mono text-slate-300">
-                          {Math.round(d.valor * 100)}% →{' '}
-                          <span className="text-brand-300">
-                            +{Math.round(d.contribucion * 1000) / 1000}
-                          </span>
-                        </span>
-                      </div>
-                      <Progress valor={d.valor} className="mt-1.5" />
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                        {d.detalle}
-                      </p>
-                    </div>
-                  )
-                })}
-
-                <div className="flex items-center justify-between rounded-xl border border-brand-500/25 bg-brand-500/8 px-4 py-3">
-                  <span className="text-sm font-semibold text-slate-100">
-                    Puntaje de compatibilidad
-                  </span>
-                  <span className="text-xl font-bold gradient-text">
-                    {Math.round(detalle.puntaje * 100)}%
-                  </span>
-                </div>
-
-                <Link to={`/jugador/${detalle.perfilId}`}>
-                  <Button variante="secundario" tamano="sm" className="w-full">
-                    Ver perfil completo del jugador
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          )}
-
-          {/* ------------------------ Explicacion ------------------------ */}
-          {(generando || explicacion) && (
-            <Card className="border-brand-500/25">
-              <CardHeader
-                title="Explicacion en lenguaje natural"
-                subtitle="Generada por un modelo Transformer anclado en fuentes recuperadas en tiempo real."
-                icon={<Bot size={16} />}
-                action={
-                  explicacion && (
-                    <Badge tono="violeta">
-                      <BookOpen size={10} />
-                      Grounding verificado
-                    </Badge>
-                  )
-                }
-              />
-              <div className="p-5">
-                {generando ? (
-                  <div className="space-y-3">
-                    <div className="skeleton h-4 w-full rounded" />
-                    <div className="skeleton h-4 w-11/12 rounded" />
-                    <div className="skeleton h-4 w-9/12 rounded" />
-                    <div className="skeleton h-24 w-full rounded-xl" />
-                    <p className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
-                      <Cpu size={12} className="animate-pulse" />
-                      Recuperando fuentes externas y redactando la justificacion...
-                    </p>
-                  </div>
-                ) : (
-                  explicacion && (
-                    <div className="space-y-5">
-                      <p className="text-sm leading-relaxed text-slate-300">
-                        {explicacion.resumen}
-                      </p>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-                            <CheckCircle2 size={13} />
-                            Fortalezas
-                          </p>
-                          <ul className="space-y-1.5">
-                            {explicacion.fortalezas.map((f, i) => (
-                              <li
-                                key={i}
-                                className="flex gap-2 text-[11px] leading-relaxed text-slate-400"
-                              >
-                                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-emerald-400" />
-                                {f}
-                              </li>
-                            ))}
-                            {explicacion.fortalezas.length === 0 && (
-                              <li className="text-[11px] text-slate-500">
-                                Sin fortalezas destacables.
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-                            <TriangleAlert size={13} />
-                            Riesgos y limitantes
-                          </p>
-                          <ul className="space-y-1.5">
-                            {explicacion.riesgos.map((f, i) => (
-                              <li
-                                key={i}
-                                className="flex gap-2 text-[11px] leading-relaxed text-slate-400"
-                              >
-                                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-400" />
-                                {f}
-                              </li>
-                            ))}
-                            {explicacion.riesgos.length === 0 && (
-                              <li className="text-[11px] text-slate-500">
-                                Sin riesgos relevantes detectados.
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                          <BookOpen size={13} />
-                          Fuentes consultadas (grounding)
-                        </p>
-                        <div className="space-y-2">
-                          {explicacion.grounding.map((g) => (
-                            <div
-                              key={g.url}
-                              className="rounded-lg border border-white/8 bg-white/3 p-3"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-[11px] font-medium text-accent-400">
-                                  {g.etiqueta}
-                                </p>
-                                <a
-                                  href={g.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="truncate font-mono text-[10px] text-slate-600 underline-offset-2 hover:text-brand-300 hover:underline"
-                                >
-                                  {g.url}
-                                </a>
-                              </div>
-                              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                                {g.detalle}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <p className="border-t border-white/6 pt-3 font-mono text-[10px] text-slate-600">
-                        {explicacion.modelo} · generado{' '}
-                        {new Date(explicacion.generadoEn).toLocaleTimeString('es-CO')} ·
-                        latencia {explicacion.latenciaMs} ms · calculo numerico
-                        delegado al sandbox de Python
-                      </p>
-                    </div>
-                  )
-                )}
-              </div>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      <SectionTitle
-        title="Metodologia del puntaje"
-        subtitle="Como se interpreta el ranking"
-      />
-      <Card className="p-5">
-        <p className="text-sm leading-relaxed text-slate-400">
-          El puntaje de compatibilidad entre un jugador j y una oferta o se calcula
-          como el promedio ponderado de cinco dimensiones normalizadas en el
-          intervalo [0, 1]:{' '}
-          <span className="font-mono text-brand-300">
-            S(j, o) = Σ wk · dk(j, o), con Σ wk = 1
-          </span>
-          . Los pesos los configura el equipo que publica la vacante, de modo que
-          cada organizacion puede priorizar las dimensiones segun su estrategia de
-          reclutamiento.
-        </p>
-      </Card>
-
-      <Modal
-        abierto={modalPostular}
-        onCerrar={() => setModalPostular(false)}
-        titulo="Postular a la vacante"
-      >
-        <div className="space-y-4">
-          <div className="rounded-lg border border-white/8 bg-white/3 p-3 text-xs text-slate-400">
-            <p className="font-medium text-slate-200">{oferta.rol} · {oferta.juego}</p>
-            <p className="mt-1">{equipo?.nombre}</p>
-          </div>
-          <Textarea
-            rows={5}
-            value={mensajePostulacion}
-            onChange={(e) => setMensajePostulacion(e.target.value)}
-            placeholder="Cuentanos por que encajas en este rol. El equipo vera las estadisticas verificadas de tu perfil junto a este mensaje."
-          />
-          <div className="flex justify-end gap-2">
-            <Button variante="fantasma" onClick={() => setModalPostular(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={enviarPostulacion}>Enviar postulacion</Button>
-          </div>
-        </div>
+    <>
+      <Button className="w-full" onClick={() => setAbierto(true)}>
+        <Send size={14} aria-hidden />
+        {t.postularme}
+      </Button>
+      <Modal abierto={abierto} onCerrar={() => setAbierto(false)} titulo={t.modalTitulo}>
+        <FormularioPostulacion oferta={oferta} onEnviada={() => setAbierto(false)} />
       </Modal>
-    </div>
+    </>
+  )
+}
+
+function FormularioPostulacion({ oferta, onEnviada }: { oferta: Oferta; onEnviada: () => void }) {
+  const { notificar } = useToast()
+  const postulacion = usePostular()
+  const [errorGeneral, setErrorGeneral] = useState('')
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<CrearPostulacionInput>({
+    resolver: zodResolver(crearPostulacionSchema),
+    defaultValues: { mensaje: '' },
+  })
+
+  const enviar = handleSubmit(async (datos) => {
+    setErrorGeneral('')
+    try {
+      await postulacion.mutateAsync({ ofertaId: oferta.id, ...datos })
+      notificar(t.exito)
+      onEnviada()
+    } catch (e) {
+      // Los 409 del contrato tienen su mensaje; el resto, el traductor común.
+      const codigo = axios.isAxiosError<ErrorResponse>(e) ? e.response?.data?.error?.code : undefined
+      if (codigo === 'POSTULACION_DUPLICADA') setErrorGeneral(t.duplicada)
+      else if (codigo === 'OFERTA_NO_ABIERTA') setErrorGeneral(t.cerrada)
+      else setErrorGeneral(aplicarErrorApi(e, setError))
+    }
+  })
+
+  return (
+    <form onSubmit={enviar} noValidate className="space-y-4">
+      <div className="rounded-lg border border-white/8 bg-white/3 p-3 text-xs text-slate-400">
+        <p className="font-medium text-slate-200">{oferta.titulo}</p>
+        <p className="mt-1">{oferta.equipo.nombreOrg}</p>
+      </div>
+      <Field label={t.mensaje} hint={t.mensajeAyuda}>
+        <Textarea rows={5} aria-invalid={Boolean(errors.mensaje)} {...register('mensaje')} />
+        <ErrorCampo mensaje={errors.mensaje?.message} />
+      </Field>
+      <EstadoEnvio exito="" error={errorGeneral} onReintentar={() => void enviar()} />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variante="fantasma" onClick={onEnviada}>
+          {t.cancelar}
+        </Button>
+        <Button type="submit" cargando={postulacion.isPending}>
+          {t.enviar}
+        </Button>
+      </div>
+    </form>
   )
 }
