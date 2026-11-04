@@ -68,6 +68,43 @@ enum PosicionLol {
   SOPORTE
 }
 
+/// Rango de clasificatoria solo/dúo de LoL, de menor a mayor (RANGOS_LOL en
+/// @proplay/shared). Postgres compara los enums en el orden de declaración:
+/// no lo reordenes.
+enum RangoLol {
+  HIERRO_IV
+  HIERRO_III
+  HIERRO_II
+  HIERRO_I
+  BRONCE_IV
+  BRONCE_III
+  BRONCE_II
+  BRONCE_I
+  PLATA_IV
+  PLATA_III
+  PLATA_II
+  PLATA_I
+  ORO_IV
+  ORO_III
+  ORO_II
+  ORO_I
+  PLATINO_IV
+  PLATINO_III
+  PLATINO_II
+  PLATINO_I
+  ESMERALDA_IV
+  ESMERALDA_III
+  ESMERALDA_II
+  ESMERALDA_I
+  DIAMANTE_IV
+  DIAMANTE_III
+  DIAMANTE_II
+  DIAMANTE_I
+  MAESTRO
+  GRAN_MAESTRO
+  RETADOR
+}
+
 enum Departamento {
   AMAZONAS
   ANTIOQUIA
@@ -258,7 +295,10 @@ model Estadistica {
   id          String     @id @default(cuid())
   jugadorId   String
   juego       String
+  /// Posición más jugada (PosicionLol en LoL), de POSICION_POR_TEAM_POSITION.
   rol         String?
+  /// Rango solo/dúo en el momento de la captura (rangoDesdeRiot, league-v4).
+  rango       RangoLol?
   partidas    Int        @default(0)
   victorias   Int        @default(0)
   kda         Float      @default(0)
@@ -271,7 +311,7 @@ model Estadistica {
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
 
   @@index([jugadorId])
-  @@index([jugadorId, juego])
+  @@index([jugadorId, juego, capturadaEn])
   @@index([juego])
 }
 
@@ -317,7 +357,7 @@ model Oferta {
   /// Siempre League of Legends en el piloto (JUEGO_PILOTO en @proplay/shared).
   juego        String
   rol          PosicionLol
-  rangoMinimo  String?
+  rangoMinimo  RangoLol?
   /// REMOTA no lleva ubicación; PRESENCIAL e HIBRIDA, país y (en "CO") departamento.
   modalidad    Modalidad
   pais         String?       @db.Char(2)

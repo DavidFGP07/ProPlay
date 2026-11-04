@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
+  COLA_SOLO_DUO,
   FECHA_POR_ESTADO_POSTULACION,
   JUEGO_PILOTO,
   PERFIL_VECTOR_DIMENSIONES,
@@ -12,13 +13,15 @@ import {
   type Modalidad,
   type Pais,
   type PosicionLol,
+  type RangoLol,
 } from "@proplay/shared";
 
 /**
  * Datos de prueba de ProPlay.
  *
- * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores con estadísticas
- * y vectores sintéticos, 5 ofertas de League of Legends en todos los estados
+ * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores (10 con cuenta
+ * de Riot verificada y estadísticas de LoL con posición y rango) y vectores
+ * sintéticos, 5 ofertas de League of Legends en todos los estados
  * con postulaciones fechadas (para el embudo), un scout y un administrador.
  *
  * Es idempotente (usa upsert), así que se puede ejecutar varias veces:
@@ -60,12 +63,32 @@ const HABILIDADES_BLANDAS = [
   "Gestión del tiempo",
 ];
 
-const JUEGOS = [
-  { nombre: "League of Legends", roles: ["TOP", "JUNGLA", "MID", "ADC", "SUPPORT"], fuente: "RIOT" as const },
-  { nombre: "VALORANT", roles: ["DUELISTA", "CENTINELA", "CONTROLADOR", "INICIADOR"], fuente: "RIOT" as const },
-  { nombre: "Counter-Strike 2", roles: ["AWPER", "ENTRY", "IGL", "SUPPORT"], fuente: "STEAM" as const },
-  { nombre: "Dota 2", roles: ["CARRY", "MID", "OFFLANE", "SOPORTE"], fuente: "STEAM" as const },
+/**
+ * Cuenta de Riot y datos de juego de los 15 jugadores, en orden. Los diez
+ * primeros tienen la cuenta verificada y dos capturas de estadísticas (la
+ * anterior, un mes antes y con un rango más bajo, para que haya historia); los
+ * cinco últimos no tienen cuenta, como un jugador recién registrado. Sólo
+ * League of Legends, el juego del piloto. Los puuid llevan el prefijo `seed-`
+ * para que nunca se confundan con uno real.
+ */
+const DATOS_RIOT: ({ posicion: PosicionLol; rango: RangoLol; rangoAnterior: RangoLol } | null)[] = [
+  { posicion: "MID", rango: "DIAMANTE_II", rangoAnterior: "DIAMANTE_IV" },
+  { posicion: "SOPORTE", rango: "MAESTRO", rangoAnterior: "DIAMANTE_I" },
+  { posicion: "TOP", rango: "PLATINO_I", rangoAnterior: "PLATINO_III" },
+  { posicion: "JUNGLA", rango: "ESMERALDA_III", rangoAnterior: "ESMERALDA_IV" },
+  { posicion: "ADC", rango: "ORO_II", rangoAnterior: "ORO_IV" },
+  { posicion: "MID", rango: "DIAMANTE_IV", rangoAnterior: "ESMERALDA_I" },
+  { posicion: "SOPORTE", rango: "PLATA_I", rangoAnterior: "PLATA_III" },
+  { posicion: "JUNGLA", rango: "ESMERALDA_I", rangoAnterior: "ESMERALDA_II" },
+  { posicion: "ADC", rango: "PLATINO_IV", rangoAnterior: "ORO_I" },
+  { posicion: "TOP", rango: "GRAN_MAESTRO", rangoAnterior: "MAESTRO" },
+  null,
+  null,
+  null,
+  null,
+  null,
 ];
+
 
 /**
  * Ubicación de los 15 jugadores, en orden: mayoría del Caribe colombiano (el
@@ -148,7 +171,7 @@ interface OfertaSemilla {
   equipo: number;
   titulo: string;
   rol: PosicionLol;
-  rangoMinimo: string;
+  rangoMinimo: RangoLol;
   modalidad: Modalidad;
   pais: Pais | null;
   departamento: Departamento | null;
@@ -173,7 +196,7 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 0,
     titulo: "Buscamos MID para academia de League of Legends",
     rol: "MID",
-    rangoMinimo: "Diamante II",
+    rangoMinimo: "DIAMANTE_II",
     modalidad: "PRESENCIAL",
     pais: "CO",
     departamento: "ATLANTICO",
@@ -195,7 +218,7 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 1,
     titulo: "Jungla para el roster principal",
     rol: "JUNGLA",
-    rangoMinimo: "Maestro",
+    rangoMinimo: "MAESTRO",
     modalidad: "HIBRIDA",
     pais: "CO",
     departamento: "BOGOTA_DC",
@@ -225,7 +248,7 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 2,
     titulo: "Soporte para la división universitaria",
     rol: "SOPORTE",
-    rangoMinimo: "Platino I",
+    rangoMinimo: "PLATINO_I",
     modalidad: "PRESENCIAL",
     pais: "CO",
     departamento: "ATLANTICO",
@@ -259,7 +282,7 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 0,
     titulo: "ADC para la liga en línea",
     rol: "ADC",
-    rangoMinimo: "Esmeralda I",
+    rangoMinimo: "ESMERALDA_I",
     modalidad: "REMOTA",
     pais: null,
     departamento: null,
@@ -285,7 +308,7 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 1,
     titulo: "Top para la temporada de clausura",
     rol: "TOP",
-    rangoMinimo: "Diamante IV",
+    rangoMinimo: "DIAMANTE_IV",
     modalidad: "HIBRIDA",
     pais: "CO",
     departamento: "BOGOTA_DC",
@@ -409,8 +432,7 @@ async function main() {
   const perfilesJugador: { id: string }[] = [];
   for (const [indice, nombre] of NOMBRES_JUGADORES.entries()) {
     const email = `jugador${indice + 1}@proplay.gg`;
-    const juego = JUEGOS[indice % JUEGOS.length]!;
-    const rol = juego.roles[indice % juego.roles.length]!;
+    const riot = DATOS_RIOT[indice]!;
 
     const usuario = await prisma.usuario.upsert({
       where: { email },
@@ -432,7 +454,9 @@ async function main() {
       update: { ...ubicacion },
       create: {
         usuarioId: usuario.id,
-        bio: `${rol} de ${juego.nombre} buscando equipo competitivo.`,
+        bio: riot
+          ? `${riot.posicion} de ${JUEGO_PILOTO} buscando equipo competitivo.`
+          : `Jugador de ${JUEGO_PILOTO} buscando equipo competitivo.`,
         ...ubicacion,
         fechaNacimiento: new Date(1998 + (indice % 8), indice % 12, 1 + (indice % 27)),
         disponibilidadHoras: 15 + (indice % 4) * 5,
@@ -465,34 +489,55 @@ async function main() {
       });
     }
 
-    // Estadísticas sintéticas del juego principal.
-    const partidas = 80 + Math.round(aleatorio() * 220);
-    const winRate = Number((0.42 + aleatorio() * 0.24).toFixed(3));
-    const victorias = Math.round(partidas * winRate);
-    const kda = Number((1.6 + aleatorio() * 2.4).toFixed(2));
-
-    const existente = await prisma.estadistica.findFirst({
-      where: { jugadorId: jugador.id, juego: juego.nombre },
-    });
-    if (!existente) {
-      await prisma.estadistica.create({
-        data: {
+    // Cuenta de Riot verificada y estadísticas de LoL. Se rehacen en cada
+    // ejecución: las bases anteriores guardaban estadísticas de otros juegos
+    // y sin rango, y la cuenta de un jugador sin datos de Riot se retira.
+    await prisma.estadistica.deleteMany({ where: { jugadorId: jugador.id } });
+    if (!riot) {
+      await prisma.cuentaGaming.deleteMany({
+        where: { jugadorId: jugador.id, plataforma: "RIOT" },
+      });
+    } else {
+      const handle = `${nombre.split(" ")[0]}#SEED`;
+      const verificadaEn = haceDias(60 - indice);
+      await prisma.cuentaGaming.upsert({
+        where: { jugadorId_plataforma: { jugadorId: jugador.id, plataforma: "RIOT" } },
+        update: { externalId: `seed-puuid-${indice + 1}`, handle, verificadaEn },
+        create: {
           jugadorId: jugador.id,
-          juego: juego.nombre,
-          rol,
-          partidas,
-          victorias,
-          kda,
-          winRate,
-          fuente: juego.fuente,
-          metricas: {
-            csPorMinuto: Number((5.5 + aleatorio() * 3).toFixed(2)),
-            danoPorMinuto: Math.round(400 + aleatorio() * 500),
-            visionScore: Math.round(20 + aleatorio() * 40),
-          } satisfies Prisma.InputJsonObject,
+          plataforma: "RIOT",
+          externalId: `seed-puuid-${indice + 1}`,
+          handle,
+          verificadaEn,
         },
       });
-      estadisticasCreadas += 1;
+
+      for (const [captura, rango] of [riot.rangoAnterior, riot.rango].entries()) {
+        const partidas = 80 + Math.round(aleatorio() * 220);
+        const winRate = Number((0.42 + aleatorio() * 0.24).toFixed(3));
+        await prisma.estadistica.create({
+          data: {
+            jugadorId: jugador.id,
+            juego: JUEGO_PILOTO,
+            rol: riot.posicion,
+            rango,
+            partidas,
+            victorias: Math.round(partidas * winRate),
+            kda: Number((1.6 + aleatorio() * 2.4).toFixed(2)),
+            winRate,
+            fuente: "RIOT",
+            metricas: {
+              cola: COLA_SOLO_DUO,
+              csPorMinuto: Number((5.5 + aleatorio() * 3).toFixed(2)),
+              danoPorMinuto: Math.round(400 + aleatorio() * 500),
+              visionScore: Math.round(20 + aleatorio() * 40),
+            } satisfies Prisma.InputJsonObject,
+            // La anterior, un mes antes; la actual, hace (indice) días.
+            capturadaEn: haceDias(captura === 0 ? 30 + indice : indice),
+          },
+        });
+        estadisticasCreadas += 1;
+      }
     }
 
     // Vector de características sintético (64 dimensiones).
@@ -519,7 +564,7 @@ async function main() {
     `;
   }
   console.log(
-    `  · ${NOMBRES_JUGADORES.length} jugadores con habilidades, ${estadisticasCreadas} series de estadísticas y vectores de ${PERFIL_VECTOR_DIMENSIONES} dimensiones`,
+    `  · ${NOMBRES_JUGADORES.length} jugadores (${DATOS_RIOT.filter(Boolean).length} con cuenta de Riot verificada), ${estadisticasCreadas} capturas de estadísticas de LoL y vectores de ${PERFIL_VECTOR_DIMENSIONES} dimensiones`,
   );
 
   // ------------------------------------------------------------------ ofertas

@@ -8,6 +8,7 @@ import {
   MODALIDADES,
   PAIS_CON_DEPARTAMENTO,
   POSICIONES_LOL,
+  RANGOS_LOL,
   actualizarOfertaSchema,
   crearOfertaSchema,
   type Oferta,
@@ -66,7 +67,7 @@ const esquemaFormulario = z
     return {
       titulo: v.titulo,
       rol: v.rol,
-      rangoMinimo: v.rangoMinimo.trim() === '' ? null : v.rangoMinimo,
+      rangoMinimo: v.rangoMinimo === '' ? null : v.rangoMinimo,
       modalidad: v.modalidad,
       pais: remota || v.pais === '' ? null : v.pais,
       departamento:
@@ -243,7 +244,14 @@ function Formulario({ oferta }: { oferta?: Oferta }) {
                   <ErrorCampo mensaje={errors.rol?.message} />
                 </Field>
                 <Field label={t.rangoMinimo} hint={t.rangoAyuda}>
-                  <Input aria-invalid={Boolean(errors.rangoMinimo)} {...register('rangoMinimo')} />
+                  <Select aria-invalid={Boolean(errors.rangoMinimo)} {...register('rangoMinimo')}>
+                    <option value="">{t.sinRangoMinimo}</option>
+                    {RANGOS_LOL.map((rango) => (
+                      <option key={rango} value={rango}>
+                        {es.rangoLol[rango]}
+                      </option>
+                    ))}
+                  </Select>
                   <ErrorCampo mensaje={errors.rangoMinimo?.message} />
                 </Field>
               </div>
