@@ -41,9 +41,15 @@ vi.mock('@/api/auth', () => ({
   },
 }))
 
+// «Tus ofertas» también es real: aquí responde sin ofertas, para que el doble
+// de GET sólo hable del perfil.
 vi.mock('@/api/client', async (original) => {
   const real = await original<typeof import('@/api/client')>()
-  return { ...real, api: { get: doble.get, patch: doble.patch } }
+  const get = (ruta: string, ...resto: unknown[]) =>
+    ruta === '/ofertas/me'
+      ? Promise.resolve({ data: { data: [], meta: { page: 1, pageSize: 100, total: 0, totalPages: 1 } } })
+      : doble.get(ruta, ...resto)
+  return { ...real, api: { get, patch: doble.patch } }
 })
 
 function sesionDe(rol: Rol) {
@@ -136,7 +142,7 @@ describe('Datos de la organización en el panel de equipo', () => {
     expect(doble.get).toHaveBeenCalledWith('/perfiles/me')
     // Sin aviso de página: las secciones simuladas llevan su marca y la tarjeta no.
     expect(t.queryByText('Datos de demostracion')).toBeNull()
-    expect(screen.getAllByText('Datos de demostracion').length).toBeGreaterThanOrEqual(4)
+    expect(screen.getAllByText('Datos de demostracion').length).toBeGreaterThanOrEqual(2)
     expect(screen.queryByText(/Lo que ves en esta seccion/)).toBeNull()
   })
 
@@ -181,8 +187,42 @@ describe('Datos de la organización en el panel de equipo', () => {
       nombreOrg: 'Lobos eSports',
       descripcion: null,
       sitioWeb: null,
+      pais: null,
+      departamento: null,
     })
     expect(t.queryByRole('link')).toBeNull()
+  })
+
+  it('guarda la sede con país y departamento; fuera de Colombia, sin departamento', async () => {
+    sesionDe('EQUIPO')
+    doble.get.mockResolvedValue(respuesta({ tipo: 'EQUIPO', perfil: perfil() }))
+    doble.patch.mockResolvedValue(
+      respuesta({ tipo: 'EQUIPO', perfil: perfil({ pais: 'CO', departamento: 'BOLIVAR' }) }),
+    )
+    renderPanel()
+    const t = await tarjeta()
+
+    fireEvent.change(await t.findByLabelText('País'), { target: { value: 'CO' } })
+    fireEvent.change(t.getByLabelText('Departamento'), { target: { value: 'BOLIVAR' } })
+    fireEvent.click(t.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() =>
+      expect(doble.patch).toHaveBeenCalledWith(
+        '/perfiles/equipo',
+        expect.objectContaining({ pais: 'CO', departamento: 'BOLIVAR' }),
+      ),
+    )
+  })
+
+  it('valida en el cliente que una sede en Colombia lleve departamento', async () => {
+    sesionDe('EQUIPO')
+    doble.get.mockResolvedValue(respuesta({ tipo: 'EQUIPO', perfil: perfil() }))
+    renderPanel()
+    const t = await tarjeta()
+
+    fireEvent.change(await t.findByLabelText('País'), { target: { value: 'CO' } })
+    fireEvent.click(t.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await t.findByText('Selecciona el departamento')).toBeInTheDocument()
+    expect(doble.patch).not.toHaveBeenCalled()
   })
 
   it.each([

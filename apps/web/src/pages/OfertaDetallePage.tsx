@@ -2,13 +2,11 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import axios from 'axios'
 import { ArrowLeft, Briefcase, CheckCircle2, Send, Sigma, Weight } from 'lucide-react'
 import {
   DIMENSIONES_MATCHING,
   crearPostulacionSchema,
   type CrearPostulacionInput,
-  type ErrorResponse,
   type Oferta,
 } from '@proplay/shared'
 import {
@@ -28,8 +26,10 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { esNoEncontrado } from '@/api/perfiles'
-import { aplicarErrorApi } from '@/api/errores'
+import { esNoEncontrado, usePerfilPropio } from '@/api/perfiles'
+import { GestionOferta } from '@/components/GestionOferta'
+import { PostulacionesRecibidas } from '@/components/PostulacionesRecibidas'
+import { aplicarErrorApi, codigoError } from '@/api/errores'
 import { useMisPostulaciones, useOferta, usePostular } from '@/api/ofertas'
 import { es } from '@/i18n/es'
 import { lugarOferta } from '@/lib/ubicacion'
@@ -49,8 +49,10 @@ const claseEnlace =
   'inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
 
 // RF-07 · RF-10 · Detalle de la oferta y postulación: datos reales de
-// GET /api/v1/ofertas/:id y POST /api/v1/ofertas/:id/postulaciones. El ranking
-// de candidatos y su explicación son otra vista (motor de matching).
+// GET /api/v1/ofertas/:id y POST /api/v1/ofertas/:id/postulaciones. El equipo
+// dueño la gestiona desde aquí y ve las postulaciones recibidas; el scout las
+// consulta. El ranking de candidatos y su explicación son otra vista (motor de
+// matching).
 export default function OfertaDetallePage() {
   const { id } = useParams<{ id: string }>()
   const consulta = useOferta(id)
@@ -99,6 +101,13 @@ function Volver() {
 }
 
 function Detalle({ oferta }: { oferta: Oferta }) {
+  const { usuario } = useAuth()
+  const rol = usuario?.rol
+  const propio = usePerfilPropio(rol === 'EQUIPO')
+  const esPropia =
+    propio.data?.tipo === 'EQUIPO' && propio.data.perfil.id === oferta.equipo.id
+  // El equipo ve las de sus ofertas; el scout y el administrador, las de cualquiera publicada.
+  const veRecibidas = oferta.estado !== 'BORRADOR' && (esPropia || rol === 'SCOUT' || rol === 'ADMIN')
   const ficha: [string, string][] = [
     [t.posicion, es.posicionLol[oferta.rol]],
     [t.rangoMinimo, oferta.rangoMinimo ?? t.sinRango],
@@ -141,7 +150,7 @@ function Detalle({ oferta }: { oferta: Oferta }) {
             </p>
           </div>
           <div className="w-full shrink-0 lg:w-72">
-            <AccionPostulacion oferta={oferta} />
+            {esPropia ? <GestionOferta oferta={oferta} /> : <AccionPostulacion oferta={oferta} />}
           </div>
         </div>
       </Card>
@@ -176,6 +185,8 @@ function Detalle({ oferta }: { oferta: Oferta }) {
           </dl>
         </Card>
       </div>
+
+      {veRecibidas && <PostulacionesRecibidas oferta={oferta} gestiona={esPropia} />}
 
       <Card>
         <CardHeader title={t.metodologiaTitulo} icon={<Sigma size={16} />} />
@@ -266,7 +277,7 @@ function FormularioPostulacion({ oferta, onEnviada }: { oferta: Oferta; onEnviad
       onEnviada()
     } catch (e) {
       // Los 409 del contrato tienen su mensaje; el resto, el traductor común.
-      const codigo = axios.isAxiosError<ErrorResponse>(e) ? e.response?.data?.error?.code : undefined
+      const codigo = codigoError(e)
       if (codigo === 'POSTULACION_DUPLICADA') setErrorGeneral(t.duplicada)
       else if (codigo === 'OFERTA_NO_ABIERTA') setErrorGeneral(t.cerrada)
       else setErrorGeneral(aplicarErrorApi(e, setError))

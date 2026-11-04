@@ -19,6 +19,7 @@ const FeedPage = lazy(() => import('@/pages/FeedPage'))
 const ScoutingPage = lazy(() => import('@/pages/ScoutingPage'))
 const OfertasPage = lazy(() => import('@/pages/OfertasPage'))
 const OfertaDetallePage = lazy(() => import('@/pages/OfertaDetallePage'))
+const OfertaFormularioPage = lazy(() => import('@/pages/OfertaFormularioPage'))
 const PanelEquipoPage = lazy(() => import('@/pages/PanelEquipoPage'))
 const PerfilJugadorPage = lazy(() => import('@/pages/PerfilJugadorPage'))
 const MiPerfilPage = lazy(() => import('@/pages/MiPerfilPage'))
@@ -116,6 +117,15 @@ export default function App() {
             <Route path="explorar" element={diferida(ScoutingPage)} />
             <Route path="panel-equipo" element={diferida(PanelEquipoPage)} />
             <Route path="dashboard" element={diferida(DashboardPage)} />
+          </Route>
+
+          {/* RF-07 · RF-09 · Crear y editar ofertas: sólo el equipo */}
+          <Route element={<Privado roles={AREAS.gestionOfertas} />}>
+            <Route path="panel-equipo/ofertas/nueva" element={diferida(OfertaFormularioPage)} />
+            <Route
+              path="panel-equipo/ofertas/:id/editar"
+              element={diferida(OfertaFormularioPage)}
+            />
           </Route>
 
           {/* Area de administracion */}

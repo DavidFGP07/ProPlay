@@ -159,20 +159,20 @@ describe('Aplicacion', () => {
       await screen.findByRole('heading', { name: /Panel de scouting/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(/mismas capacidades de/i, {}, { timeout: 8000 }),
+      await screen.findByText(/no publicar ofertas ni cambiar el estado/i, {}, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Publicar vacante/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Publicar oferta/i })).toBeNull()
   })
 
-  it('el panel de equipo si permite publicar vacantes', async () => {
+  it('el panel de equipo enlaza a publicar una oferta', async () => {
     sesionDe('EQUIPO')
     render(renderApp('/panel-equipo'))
     expect(
       await screen.findByRole('heading', { name: /Panel de equipo/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole('button', { name: /Publicar vacante/i }, { timeout: 8000 }),
-    ).toBeInTheDocument()
+      await screen.findByRole('link', { name: /Publicar oferta/i }, { timeout: 8000 }),
+    ).toHaveAttribute('href', '/panel-equipo/ofertas/nueva')
   })
 
   it('el panel de equipo muestra los candidatos recomendados por el motor', async () => {

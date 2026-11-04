@@ -1,28 +1,27 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import {
+  MAX_PAGE_SIZE,
   miPostulacionSchema,
+  ofertaPropiaSchema,
   ofertaSchema,
   paginadoSchema,
+  postulacionRecibidaSchema,
   postulacionSchema,
+  type ActualizarOfertaInput,
+  type CrearOfertaInput,
   type CrearPostulacionInput,
+  type EstadoOferta,
+  type EstadoPostulacion,
   type ListarOfertasQuery,
 } from '@proplay/shared'
 import { api } from '@/api/client'
-import {
-  actualizarEstadoPostulacion,
-  cerrarOferta,
-  crearOferta,
-  listarOfertas,
-  listarPostulaciones,
-} from '@/mocks/api'
-import { actorDemo } from '@/mocks/sesion'
-import { simulado, useMutacionSimulada } from '@/api/demo'
-import type { Oferta, Postulacion } from '@/mocks/modelos'
+import { listarOfertas, listarPostulaciones } from '@/mocks/api'
+import { simulado } from '@/api/demo'
+import type { Oferta } from '@/mocks/modelos'
 
 /*
- * Ofertas y postulaciones del lado del jugador: API real, sin puente de
- * demostracion. Las respuestas se leen con los esquemas de @proplay/shared,
+ * Ofertas y postulaciones: API real, sin puente de demostracion. Las respuestas se leen con los esquemas de @proplay/shared,
  * que convierten las fechas.
  */
 
@@ -83,49 +82,112 @@ export function usePostular() {
   })
 }
 
+// --------------------------------------------------------------- equipo
+
+const ofertasPropiasSchema = paginadoSchema(ofertaPropiaSchema)
+const postulacionesRecibidasSchema = z.array(postulacionRecibidaSchema)
+
+/** Tras un cambio de ofertas o postulaciones, se refresca todo lo de ese recurso. */
+function useInvalidarOfertas() {
+  const cliente = useQueryClient()
+  return () =>
+    Promise.all([
+      cliente.invalidateQueries({ queryKey: ['ofertas'] }),
+      cliente.invalidateQueries({ queryKey: ['postulaciones'] }),
+    ])
+}
+
+// RF-07 · Ofertas del equipo en sesion, en cualquier estado
+export function useMisOfertas(habilitado = true) {
+  return useQuery({
+    queryKey: ['ofertas', 'mias'],
+    enabled: habilitado,
+    queryFn: async () => {
+      const { data } = await api.get('/ofertas/me', { params: { pageSize: MAX_PAGE_SIZE } })
+      return ofertasPropiasSchema.parse(data)
+    },
+  })
+}
+
+// RF-07 · Crear una oferta con los pesos de las cinco dimensiones
+export function useCrearOferta() {
+  const invalidar = useInvalidarOfertas()
+  return useMutation({
+    mutationFn: async (datos: CrearOfertaInput) => {
+      const { data } = await api.post('/ofertas', datos)
+      return ofertaSchema.parse(data)
+    },
+    onSuccess: invalidar,
+  })
+}
+
+// RF-07 · Editar una oferta propia
+export function useActualizarOferta() {
+  const invalidar = useInvalidarOfertas()
+  return useMutation({
+    mutationFn: async ({ id, ...datos }: ActualizarOfertaInput & { id: string }) => {
+      const { data } = await api.patch(`/ofertas/${id}`, datos)
+      return ofertaSchema.parse(data)
+    },
+    onSuccess: invalidar,
+  })
+}
+
+// RF-07 · Publicar, cubrir o cerrar una oferta propia
+export function useCambiarEstadoOferta() {
+  const invalidar = useInvalidarOfertas()
+  return useMutation({
+    mutationFn: async ({ id, estado }: { id: string; estado: EstadoOferta }) => {
+      const { data } = await api.patch(`/ofertas/${id}/estado`, { estado })
+      return ofertaSchema.parse(data)
+    },
+    onSuccess: invalidar,
+  })
+}
+
+// RF-10 · Postulaciones recibidas por una oferta (equipo dueño, scout o admin)
+export function usePostulacionesRecibidas(ofertaId: string, habilitado = true) {
+  return useQuery({
+    queryKey: ['postulaciones', 'oferta', ofertaId],
+    enabled: habilitado,
+    queryFn: async () => {
+      const { data } = await api.get(`/ofertas/${ofertaId}/postulaciones`)
+      return postulacionesRecibidasSchema.parse(data)
+    },
+  })
+}
+
+// RF-10 · Avanzar o rechazar una postulacion recibida
+export function useCambiarEstadoPostulacion() {
+  const invalidar = useInvalidarOfertas()
+  return useMutation({
+    mutationFn: async ({ id, estado }: { id: string; estado: EstadoPostulacion }) => {
+      const { data } = await api.patch(`/ofertas/postulaciones/${id}`, { estado })
+      return postulacionSchema.parse(data)
+    },
+    onSuccess: invalidar,
+  })
+}
+
 /*
- * Lado del equipo: sigue simulado hasta conectar el panel del equipo y las
- * postulaciones recibidas (PR de las vistas del equipo).
+ * Indicadores y recomendaciones del panel del equipo: siguen simulados hasta
+ * la analitica y el motor de matching.
  */
 
-// RF-07 · Oportunidades publicadas por las organizaciones
+// RF-13 · Vacantes de la simulacion, para los indicadores del panel
 export function useVacantes(estado?: Oferta['estado']) {
   return useQuery({
     queryKey: ['ofertas', 'demo', { estado }],
-    // TODO: S3 — conectar con GET /api/v1/ofertas
+    // TODO: S4 — sustituir por los datos de la analitica (tarea 4.10)
     queryFn: () => simulado(() => listarOfertas(estado), []),
   })
 }
 
-// RF-07 · Publicar una oferta
-export function useCrearOferta() {
-  return useMutacionSimulada((datos: Omit<Oferta, 'id' | 'publicadaEn' | 'estado'>) =>
-    // TODO: S3 — conectar con POST /api/v1/ofertas
-    crearOferta(datos, actorDemo()),
-  )
-}
-
-// RF-07 · Cerrar una oferta propia
-export function useCerrarOferta() {
-  return useMutacionSimulada((id: string) =>
-    // TODO: S3 — conectar con PATCH /api/v1/ofertas/:id
-    cerrarOferta(id, actorDemo()),
-  )
-}
-
-// RF-10 · Postulaciones registradas
+// RF-13 · Postulaciones de la simulacion, para los indicadores del panel
 export function usePostulaciones() {
   return useQuery({
     queryKey: ['postulaciones', 'demo'],
-    // TODO: S3 — conectar con GET /api/v1/ofertas/:id/postulaciones
+    // TODO: S4 — sustituir por los datos de la analitica (tarea 4.10)
     queryFn: () => simulado(() => listarPostulaciones(), []),
   })
-}
-
-// RF-10 · Avanzar el estado de una postulacion recibida
-export function useActualizarEstadoPostulacion() {
-  return useMutacionSimulada(({ id, estado }: { id: string; estado: Postulacion['estado'] }) =>
-    // TODO: S3 — conectar con PATCH /api/v1/ofertas/postulaciones/:id
-    actualizarEstadoPostulacion(id, estado, actorDemo()),
-  )
 }

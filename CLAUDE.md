@@ -227,13 +227,13 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Panel del equipo (datos de la organización reales; el resto, simulado) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
+| Panel del equipo (datos de la organización y «Tus ofertas» reales; indicadores y recomendaciones, simulados) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
 | Buscador de talento | `/explorar` | RF-08 | Soporte: filtros por rol, rango y departamento |
-| Crear oferta, **con ajuste de los pesos de las cinco dimensiones** | — | RF-07, RF-09 | Núcleo |
+| Crear oferta, **con ajuste de los pesos de las cinco dimensiones** (también su edición) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
 | **Ranking de candidatos con desglose por dimensión** | — | RF-09 | Núcleo |
 | Detalle del candidato con la explicación del matching | — | RF-09, RF-11 | Núcleo |
 | Comparador de candidatos | — | RF-09 | Futuro (descartada) |
-| Postulaciones recibidas | — | RF-10 | Soporte: dentro del detalle de la oferta, sin vista propia |
+| Postulaciones recibidas | dentro de `/vacantes/:id` | RF-10 | Soporte: dentro del detalle de la oferta, sin vista propia |
 | Lista de seguimiento | — | RF-08 | Futuro (descartada) |
 | Analítica (`/dashboard` es hoy la versión simulada) | `/dashboard` | RF-13 | Núcleo, fusionada con el panel del equipo. Indicadores: embudo de la vacante con tiempo hasta cubrirla (mide H1), dimensión que decide el ranking y mapa del talento verificado por macrorregión, rol y rango (el Caribe frente al resto); el cuarto, la tendencia del jugador, vive en Mis estadísticas |
 
@@ -340,10 +340,12 @@ hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con 
 indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
 sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
-(`/vacantes/:id`), en `/mi-perfil` la cabecera, los datos profesionales y la pestaña de
-postulaciones, y en `/panel-equipo` la tarjeta «Datos de la organización» (sólo el rol
-`EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
-habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (indicadores, vacantes, procesos y
+(`/vacantes/:id`, que para el equipo dueño incluye la gestión de la oferta y las postulaciones
+recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), en
+`/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
+`/panel-equipo` las tarjetas «Datos de la organización», con la sede, y «Tus ofertas» (sólo
+el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
+habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (indicadores y
 recomendaciones) sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
