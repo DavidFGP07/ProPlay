@@ -141,14 +141,14 @@ describe('Aplicacion', () => {
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
-  it('el directorio de talento lista los perfiles con sus roles', async () => {
+  it('el buscador de talento habla con la API real: sin servidor ofrece reintentar', async () => {
     sesionDe('SCOUT')
     render(renderApp('/explorar'))
     expect(
-      await screen.findByRole('heading', { name: /Directorio de talento/i }, { timeout: 8000 }),
+      await screen.findByRole('heading', { name: /Buscador de talento/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(/Filtros de busqueda/i, {}, { timeout: 8000 }),
+      await screen.findByRole('button', { name: /Reintentar/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
   })
 
