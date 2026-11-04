@@ -147,7 +147,7 @@ async function rellenarOferta() {
     target: { value: 'ADC para la liga en línea' },
   })
   fireEvent.change(screen.getByLabelText('Posición'), { target: { value: 'ADC' } })
-  fireEvent.change(screen.getByLabelText('Departamento'), { target: { value: 'ATLANTICO' } })
+  fireEvent.change(screen.getByLabelText(/^Departamento/), { target: { value: 'ATLANTICO' } })
   fireEvent.change(screen.getByLabelText(/^Descripción/), {
     target: { value: 'Equipo de la liga en línea busca ADC para la temporada.' },
   })
@@ -205,7 +205,10 @@ describe('Crear oferta con pesos (/panel-equipo/ofertas/nueva)', () => {
 
     await rellenarOferta()
     fireEvent.change(screen.getByLabelText('Modalidad'), { target: { value: 'REMOTA' } })
-    expect(screen.getByLabelText('País')).toBeDisabled()
+    // Remota: en lugar de campos desactivados, una nota que explica por qué no hay ubicación.
+    expect(screen.getByRole('note')).toHaveTextContent('Oferta remota: sin ubicación')
+    expect(screen.queryByLabelText('País')).toBeNull()
+    expect(screen.queryByLabelText(/^Departamento/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
 
     await waitFor(() =>
@@ -214,6 +217,15 @@ describe('Crear oferta con pesos (/panel-equipo/ofertas/nueva)', () => {
         expect.objectContaining({ estado: 'BORRADOR', modalidad: 'REMOTA', pais: null, departamento: null }),
       ),
     )
+  })
+
+  it('fuera de Colombia el departamento se desactiva y dice por qué', async () => {
+    sesionDe('EQUIPO')
+    renderRuta('/panel-equipo/ofertas/nueva')
+    fireEvent.change(await screen.findByLabelText('País', {}, ESPERA), { target: { value: 'MX' } })
+    const departamento = screen.getByLabelText(/^Departamento/)
+    expect(departamento).toBeDisabled()
+    expect(departamento.closest('label')).toHaveTextContent('Sólo se pide en Colombia.')
   })
 
   it('valida en el cliente sin llamar a la API', async () => {

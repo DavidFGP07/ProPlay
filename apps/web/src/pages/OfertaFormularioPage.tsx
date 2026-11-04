@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Briefcase, MapPin, Weight } from 'lucide-react'
+import { ArrowLeft, Briefcase, Globe, MapPin, Weight } from 'lucide-react'
 import {
   MODALIDADES,
   PAIS_CON_DEPARTAMENTO,
@@ -221,7 +221,7 @@ function Formulario({ oferta }: { oferta?: Oferta }) {
       </Link>
       <SectionTitle title={oferta ? t.tituloEditar : t.tituloNueva} subtitle={t.subtitulo} />
 
-      <form noValidate onSubmit={enviar('ABIERTA')} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <form noValidate onSubmit={enviar('ABIERTA')} className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader title={t.datos} icon={<Briefcase size={16} />} />
@@ -276,8 +276,8 @@ function Formulario({ oferta }: { oferta?: Oferta }) {
 
           <Card>
             <CardHeader title={t.ubicacion} subtitle={t.ubicacionAyuda} icon={<MapPin size={16} />} />
-            <div className="grid gap-4 p-5 sm:grid-cols-3">
-              <Field label={t.modalidad}>
+            <div className="grid gap-4 p-5 sm:grid-cols-2">
+              <Field label={t.modalidad} className="sm:col-span-2 sm:max-w-xs">
                 <Select aria-invalid={Boolean(errors.modalidad)} {...register('modalidad')}>
                   {MODALIDADES.map((modalidad) => (
                     <option key={modalidad} value={modalidad}>
@@ -287,32 +287,51 @@ function Formulario({ oferta }: { oferta?: Oferta }) {
                 </Select>
                 <ErrorCampo mensaje={errors.modalidad?.message} />
               </Field>
-              <Field label={es.ubicacion.pais}>
-                <Select disabled={remota} aria-invalid={Boolean(errors.pais)} {...register('pais')}>
-                  <option value="">{es.ubicacion.seleccionaPais}</option>
-                  {paises.map(({ codigo, nombre }) => (
-                    <option key={codigo} value={codigo}>
-                      {nombre}
-                    </option>
-                  ))}
-                </Select>
-                <ErrorCampo mensaje={errors.pais?.message} />
-              </Field>
-              <Field label={es.ubicacion.departamento}>
-                <Select
-                  disabled={remota || !enColombia}
-                  aria-invalid={Boolean(errors.departamento)}
-                  {...register('departamento')}
+              {remota ? (
+                <div
+                  role="note"
+                  className="flex items-start gap-2.5 rounded-xl border border-brand-500/30 bg-brand-500/8 px-3.5 py-3 sm:col-span-2"
                 >
-                  <option value="">{es.ubicacion.seleccionaDepartamento}</option>
-                  {OPCIONES_DEPARTAMENTO.map((departamento) => (
-                    <option key={departamento} value={departamento}>
-                      {es.departamento[departamento]}
-                    </option>
-                  ))}
-                </Select>
-                <ErrorCampo mensaje={errors.departamento?.message} />
-              </Field>
+                  <Globe size={15} className="mt-0.5 shrink-0 text-brand-300" aria-hidden />
+                  <p className="text-xs leading-relaxed text-slate-300">
+                    <strong className="font-semibold text-brand-200">{t.remotaTitulo}</strong>
+                    {' · '}
+                    {t.remotaDetalle}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Field label={t.pais}>
+                    <Select aria-invalid={Boolean(errors.pais)} {...register('pais')}>
+                      <option value="">{t.seleccionaPais}</option>
+                      {paises.map(({ codigo, nombre }) => (
+                        <option key={codigo} value={codigo}>
+                          {nombre}
+                        </option>
+                      ))}
+                    </Select>
+                    <ErrorCampo mensaje={errors.pais?.message} />
+                  </Field>
+                  <Field
+                    label={t.departamento}
+                    hint={enColombia ? undefined : t.pistaDepartamento}
+                  >
+                    <Select
+                      disabled={!enColombia}
+                      aria-invalid={Boolean(errors.departamento)}
+                      {...register('departamento')}
+                    >
+                      <option value="">{t.seleccionaDepartamento}</option>
+                      {OPCIONES_DEPARTAMENTO.map((departamento) => (
+                        <option key={departamento} value={departamento}>
+                          {es.departamento[departamento]}
+                        </option>
+                      ))}
+                    </Select>
+                    <ErrorCampo mensaje={errors.departamento?.message} />
+                  </Field>
+                </>
+              )}
             </div>
           </Card>
         </div>
@@ -327,7 +346,7 @@ function Formulario({ oferta }: { oferta?: Oferta }) {
 
           <EstadoEnvio exito="" error={errorGeneral} onReintentar={() => void enviar(ultimaAccion)()} />
 
-          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+          <div className="flex flex-col gap-2 sm:flex-row xl:flex-col">
             {oferta ? (
               <Button type="submit" cargando={enviando} className="w-full">
                 {t.guardar}

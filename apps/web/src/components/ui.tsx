@@ -280,8 +280,10 @@ export function Field({
   )
 }
 
+// Un campo desactivado tiene que verse desactivado: sin esto, parecía que
+// no respondía al clic.
 const baseInput =
-  'w-full rounded-lg border border-white/10 bg-surface-900/70 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 transition focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
+  'w-full rounded-lg border border-white/10 bg-surface-900/70 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 transition focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/3 disabled:text-slate-500'
 
 // Reenvian el ref para que react-hook-form pueda registrar el campo.
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(

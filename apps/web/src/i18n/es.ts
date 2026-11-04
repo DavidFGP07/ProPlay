@@ -347,6 +347,14 @@ export const es = {
     ubicacionAyuda:
       'La dimensión geográfica compara la ubicación del jugador con la de la oferta. Una oferta remota no restringe la ubicación.',
     modalidad: 'Modalidad',
+    pais: 'País',
+    seleccionaPais: 'Selecciona el país',
+    departamento: 'Departamento',
+    seleccionaDepartamento: 'Selecciona el departamento',
+    pistaDepartamento: 'Sólo se pide en Colombia.',
+    remotaTitulo: 'Oferta remota: sin ubicación',
+    remotaDetalle:
+      'Una oferta remota no pide país ni departamento, así que no restringe la ubicación de los jugadores. Si el puesto exige entrenar en un lugar, elige «Presencial» o «Híbrida».',
     pesos: 'Pesos de la compatibilidad',
     pesosAyuda:
       'Siempre suman 100 %: al mover una dimensión, las demás se reajustan en proporción. Arrancan con los valores por defecto de ProPlay.',
