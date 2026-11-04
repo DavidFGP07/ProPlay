@@ -417,6 +417,37 @@ export const es = {
     cambiada: (nombre: string, estado: string) => `${nombre}: ${estado}.`,
     congelada: 'La oferta ya no está abierta: sus postulaciones no cambian de estado.',
   },
+  // RF-08 · Buscador de talento (/explorar)
+  buscador: {
+    titulo: 'Buscador de talento',
+    subtitulo:
+      'Jugadores de ProPlay con sus datos de juego verificados en Riot. Primero los verificados y por rango; sin puntaje de compatibilidad, que llegará con el motor de matching.',
+    filtros: 'Filtros',
+    posicion: 'Posición',
+    rangoMinimo: 'Rango mínimo',
+    departamento: 'Departamento',
+    todas: 'Todas',
+    todos: 'Todos',
+    sinMinimo: 'Sin mínimo',
+    pistaVerificados: 'La posición y el rango sólo filtran a jugadores con cuenta de Riot verificada.',
+    limpiar: 'Quitar filtros',
+    cargando: 'Buscando jugadores',
+    error: 'No pudimos hacer la búsqueda.',
+    sinPermiso: 'El buscador es para equipos y scouts.',
+    vacio: 'Todavía no hay jugadores',
+    vacioDetalle: 'Cuando los jugadores se registren aparecerán aquí.',
+    vacioFiltros: 'Ningún jugador cumple los filtros',
+    vacioFiltrosDetalle:
+      'Prueba con otra posición o un rango más bajo. Recuerda que la posición y el rango sólo existen para jugadores con cuenta de Riot verificada.',
+    resultados: (total: number) => (total === 1 ? '1 jugador' : `${total} jugadores`),
+    verificada: (fecha: string) => `Cuenta de Riot verificada el ${fecha}`,
+    sinVerificar: 'Sin cuenta verificada',
+    sinRango: 'Sin rango',
+    sinUbicacion: 'Ubicación no indicada',
+    horas: (horas: number) => `${horas} h por semana`,
+    relocaliza: 'Dispuesto a relocalizarse',
+    datosDel: (fecha: string) => `Datos de Riot del ${fecha}`,
+  },
   // RF-13 · RF-07 · Panel del equipo
   panelEquipo: {
     titulo: 'Panel de equipo',

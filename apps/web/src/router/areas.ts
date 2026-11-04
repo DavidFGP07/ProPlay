@@ -29,4 +29,5 @@ export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/vacantes/:id',
   '/panel-equipo/ofertas/nueva',
   '/panel-equipo/ofertas/:id/editar',
+  '/explorar',
 ]

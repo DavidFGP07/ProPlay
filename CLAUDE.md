@@ -228,7 +228,7 @@ dentro de cada vista.
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
 | Panel del equipo (datos de la organización y «Tus ofertas» reales; indicadores y recomendaciones, simulados) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
-| Buscador de talento | `/explorar` | RF-08 | Soporte: filtros por rol, rango y departamento |
+| Buscador de talento (datos reales; posición y rango sólo de cuentas de Riot verificadas) | `/explorar` | RF-08 | Soporte: filtros por posición, rango mínimo y departamento |
 | Crear oferta, **con ajuste de los pesos de las cinco dimensiones** (también su edición) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
 | **Ranking de candidatos con desglose por dimensión** | — | RF-09 | Núcleo |
 | Detalle del candidato con la explicación del matching | — | RF-09, RF-11 | Núcleo |
@@ -341,7 +341,8 @@ indicando el sprint que lo conecta. Hablan ya con la API real la autenticación,
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
 sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
 (`/vacantes/:id`, que para el equipo dueño incluye la gestión de la oferta y las postulaciones
-recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), en
+recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), el buscador de talento
+(`/explorar`), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
 `/panel-equipo` las tarjetas «Datos de la organización», con la sede, y «Tus ofertas» (sólo
 el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,

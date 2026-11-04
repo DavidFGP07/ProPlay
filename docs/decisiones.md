@@ -336,8 +336,8 @@ Fuentes, consultadas el 28 de octubre de 2026:
 
 ## Buscador de talento
 
-Tarea 3.8 del plan. Esta parte cubre el contrato y el modelo; el endpoint y la
-vista llegan en sus propios PR.
+Tarea 3.8 del plan: contrato y modelo, el endpoint `GET /scouting/jugadores` y
+la vista `/explorar`.
 
 | Decisión | Justificación |
 | --- | --- |
@@ -355,4 +355,7 @@ vista llegan en sus propios PR.
 | La consulta usa sólo `$queryRaw` como plantilla y fragmentos `Prisma.sql` para los filtros opcionales, con cada valor como parámetro; nunca `$queryRawUnsafe` ni texto concatenado | Los filtros llegan validados por `busquedaJugadoresSchema`, pero la seguridad no depende de esa validación: una prueba llama al repository con valores maliciosos que la esquivan y comprueba que se tratan como texto literal (o que Postgres los rechaza como valor de enum inválido) sin tocar ninguna tabla. |
 | Orden: verificados primero, rango de mayor a menor (sin rango al final), el dato más reciente (la última captura o, si no la hay, la última edición del perfil) y el `id` | Sin puntaje de compatibilidad, el orden se apoya en criterios objetivos. El `id` desempata y hace estable la paginación. Un jugador verificado que acaba de editar su perfil puede quedar por delante de otro sin rango con una captura anterior: es lo esperado con «el dato más reciente». |
 | Límite propio del buscador, `limiteBusqueda`: **120 búsquedas cada 15 minutos por usuario**, además del global. El jugador recibe 403 (`rbac`) | Exige sesión de equipo, scout o administrador, pero cada página trae hasta 100 perfiles: el límite frena que una sola cuenta recorra a todos los jugadores. Por usuario y no por IP, porque siempre hay sesión. |
+| `/explorar` habla con `GET /scouting/jugadores` (hook `useBuscarJugadores`, en `api/scouting.ts`) y entra en `RUTAS_SIN_DATOS_DEMO`. Salen del prototipo la búsqueda por texto, el juego, la región por ciudad, la disponibilidad como filtro, «Solo verificados», el `@handle`, los roles declarados, los años de experiencia y las estadísticas de resumen | Ninguno tiene modelo detrás o contradice la verificabilidad. «Solo verificados» sobra: filtrar por posición o rango ya deja sólo a los verificados, y la vista lo explica bajo los filtros. `useJugadores` del puente se queda sólo para las recomendaciones simuladas del panel del equipo. |
+| Cada resultado muestra el icono de verificado junto al nombre (decorativo) y, en texto, «Cuenta de Riot verificada el …» con la fecha de los datos; sin cuenta, la insignia «Sin cuenta verificada». El enlace de la tarjeta lleva a `/jugador/:id` sin `aria-label`, para que el lector de pantalla lea su contenido (nombre, posición, rango, verificación) | El icono solo no le dice nada a quien no lo ve; la fecha deja claro de cuándo son los datos. Un `aria-label` en el enlace habría sustituido todo ese contenido por una frase. |
+| El rango mínimo se elige en un select de mayor a menor (Retador primero) | En un «mínimo», los valores altos son los que más se buscan. El orden del catálogo (`RANGOS_LOL`, de menor a mayor) no cambia: sólo se invierte la lista del select. |
 

@@ -3,11 +3,12 @@ import { accionSimulada, simulado } from '@/api/demo'
 import { explicarMatching, listarJugadores, obtenerRanking, obtenerRecomendaciones } from '@/mocks/api'
 import type { FiltrosBusqueda, Pesos, ResultadoMatching } from '@/mocks/modelos'
 
-// RF-08 · Buscador de talento con filtros
+// RF-13 · Jugadores de la simulacion, para las recomendaciones del panel del
+// equipo. El buscador real es useBuscarJugadores (api/scouting.ts).
 export function useJugadores(filtros: FiltrosBusqueda = {}) {
   return useQuery({
-    queryKey: ['scouting', 'jugadores', filtros],
-    // TODO: S3 — conectar con GET /api/v1/scouting/jugadores
+    queryKey: ['scouting', 'demo', filtros],
+    // TODO: S3 — sustituir por el ranking del motor de matching
     queryFn: () => simulado(() => listarJugadores(filtros), []),
     placeholderData: keepPreviousData,
   })
