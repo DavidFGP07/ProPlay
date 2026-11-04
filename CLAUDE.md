@@ -324,8 +324,8 @@ que la usen como base.
 ## 9. Estado actual
 
 **Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
-`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` (incluida la sede de la organización) y `GET /perfiles/:id` (perfil público, sin sesión). De `ofertas` están listos el contrato y el modelo (estados con `CUBIERTA` y `ENTREVISTA`, fecha de cada cambio de estado de la postulación, pesos por oferta, modalidad y ubicación, posiciones de LoL); sus endpoints siguen en `501`. Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
-`scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
+`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` (incluida la sede de la organización) y `GET /perfiles/:id` (perfil público, sin sesión). El módulo `ofertas` está implementado: ofertas con estados (`CUBIERTA` incluido), pesos por oferta, modalidad y ubicación, y postulaciones con la fecha de cada cambio de estado (`ENTREVISTA` incluido). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
+`scouting`, `matching`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
 
