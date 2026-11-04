@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
+import { limiteBusqueda } from "../../middleware/rateLimit";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./scouting.controller";
@@ -16,11 +17,13 @@ import {
  */
 export const scoutingRouter = Router();
 
-// TODO: Buscar jugadores por juego, rol, región, KDA, win rate y nivel de habilidad.
+// RF-08 · Buscador de talento: posición, rango mínimo y departamento, paginado.
+// Límite propio contra el rastreo masivo de perfiles.
 scoutingRouter.get(
   "/jugadores",
   auth,
   rbac("SCOUT", "EQUIPO", "ADMIN"),
+  limiteBusqueda,
   validate(busquedaJugadoresSchema.merge(paginacionQuerySchema), "query"),
   controlador.buscarJugadores,
 );
