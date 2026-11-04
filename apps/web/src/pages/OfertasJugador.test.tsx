@@ -60,7 +60,7 @@ function oferta(cambios: Record<string, unknown> = {}) {
     titulo: 'MID para la academia',
     juego: 'League of Legends',
     rol: 'MID',
-    rangoMinimo: 'Diamante II',
+    rangoMinimo: 'DIAMANTE_II',
     modalidad: 'PRESENCIAL',
     pais: 'CO',
     departamento: 'ATLANTICO',

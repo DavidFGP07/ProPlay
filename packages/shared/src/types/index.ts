@@ -62,7 +62,7 @@ export type {
   Matching,
 } from "../schemas/matching";
 
-export type { BusquedaJugadores } from "../schemas/scouting";
+export type { BusquedaJugadores, JugadorEncontrado } from "../schemas/scouting";
 
 export type {
   CrearConversacionInput,

@@ -100,6 +100,29 @@ export const PosicionLol = {
   SOPORTE: "SOPORTE",
 } as const satisfies Record<PosicionLol, PosicionLol>;
 
+/**
+ * Rango de clasificatoria solo/dúo de League of Legends, **de menor a mayor**:
+ * de `HIERRO_IV` a `DIAMANTE_I` con sus cuatro divisiones (IV es la más baja),
+ * y después `MAESTRO`, `GRAN_MAESTRO` y `RETADOR`, que no tienen división.
+ *
+ * El orden de la tupla es el del enum de Postgres, que compara los valores en
+ * el orden en que se declaran: «rango mínimo ORO_II» es `rango >= 'ORO_II'`.
+ * No lo reordenes. Desde la API de Riot se obtiene con `rangoDesdeRiot`.
+ */
+export const RANGOS_LOL = [
+  "HIERRO_IV", "HIERRO_III", "HIERRO_II", "HIERRO_I",
+  "BRONCE_IV", "BRONCE_III", "BRONCE_II", "BRONCE_I",
+  "PLATA_IV", "PLATA_III", "PLATA_II", "PLATA_I",
+  "ORO_IV", "ORO_III", "ORO_II", "ORO_I",
+  "PLATINO_IV", "PLATINO_III", "PLATINO_II", "PLATINO_I",
+  "ESMERALDA_IV", "ESMERALDA_III", "ESMERALDA_II", "ESMERALDA_I",
+  "DIAMANTE_IV", "DIAMANTE_III", "DIAMANTE_II", "DIAMANTE_I",
+  "MAESTRO",
+  "GRAN_MAESTRO",
+  "RETADOR",
+] as const;
+export type RangoLol = (typeof RANGOS_LOL)[number];
+
 /** Tipos de notificación que emite el sistema. */
 export const TIPOS_NOTIFICACION = [
   "NUEVA_POSTULACION",

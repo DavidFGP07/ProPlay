@@ -110,7 +110,7 @@ function Detalle({ oferta }: { oferta: Oferta }) {
   const veRecibidas = oferta.estado !== 'BORRADOR' && (esPropia || rol === 'SCOUT' || rol === 'ADMIN')
   const ficha: [string, string][] = [
     [t.posicion, es.posicionLol[oferta.rol]],
-    [t.rangoMinimo, oferta.rangoMinimo ?? t.sinRango],
+    [t.rangoMinimo, oferta.rangoMinimo ? es.rangoLol[oferta.rangoMinimo] : t.sinRango],
     [t.modalidad, es.modalidad[oferta.modalidad]],
     [t.ubicacion, lugarOferta(oferta)],
     [t.horas, oferta.horasSemana === null ? t.sinHoras : es.ofertas.horas(oferta.horasSemana)],

@@ -5,6 +5,7 @@ import {
   ESTADOS_POSTULACION,
   MODALIDADES,
   POSICIONES_LOL,
+  RANGOS_LOL,
 } from "../enums";
 import {
   PAISES,
@@ -106,7 +107,7 @@ export const ubicacionOfertaSchema = z
 const camposOferta = {
   titulo: z.string().trim().min(5, "Mínimo 5 caracteres").max(140),
   rol: z.enum(POSICIONES_LOL),
-  rangoMinimo: z.string().trim().max(60).nullable().optional(),
+  rangoMinimo: z.enum(RANGOS_LOL).nullable().optional(),
   ...camposUbicacionOferta,
   horasSemana: z.number().int().min(0).max(80).nullable().optional(),
   descripcion: z.string().trim().min(20, "Describe la oferta con más detalle").max(5000),
@@ -170,7 +171,7 @@ export const ofertaSchema = z.object({
   titulo: z.string(),
   juego: z.string(),
   rol: z.enum(POSICIONES_LOL),
-  rangoMinimo: z.string().nullable(),
+  rangoMinimo: z.enum(RANGOS_LOL).nullable(),
   modalidad: z.enum(MODALIDADES),
   pais: z.enum(PAISES).nullable(),
   departamento: z.enum(DEPARTAMENTOS).nullable(),

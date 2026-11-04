@@ -205,7 +205,7 @@ function TarjetaOferta({
         {oferta.rangoMinimo && (
           <li className="flex min-w-0 items-center gap-1.5">
             <TrendingUp size={12} className="shrink-0" aria-hidden />
-            <span className="truncate">{t.rangoMinimo(oferta.rangoMinimo)}</span>
+            <span className="truncate">{t.rangoMinimo(es.rangoLol[oferta.rangoMinimo])}</span>
           </li>
         )}
         {oferta.horasSemana !== null && (

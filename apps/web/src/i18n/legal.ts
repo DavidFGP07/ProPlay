@@ -74,6 +74,7 @@ export const legal = {
           parrafos: [
             'Tu perfil público de jugador (nombre, ubicación por país y departamento, estadísticas y habilidades) es visible para cualquier persona que tenga el enlace, para que puedas compartirlo como carta de presentación.',
             'Los equipos y scouts registrados pueden ver los perfiles de jugadores y su compatibilidad con las ofertas. Tu correo electrónico y tu contraseña nunca son públicos.',
+            'En el buscador de talento, los equipos y scouts registrados ven además tus horas disponibles por semana y si estás dispuesto a relocalizarte. Estos dos datos no aparecen en tu perfil público.',
             'Cuando te postulas a una oferta, tu postulación (nombre, foto, ubicación por país y departamento, el mensaje que escribas, el estado del proceso y sus fechas) la ven la organización que publicó la oferta y todos los scouts registrados en ProPlay, no sólo los de esa organización.',
           ],
         },
