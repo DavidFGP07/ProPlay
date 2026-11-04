@@ -1,217 +1,235 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Briefcase, CheckCircle2, Clock, MapPin, Plus, TrendingUp } from 'lucide-react'
 import {
-  Briefcase,
-  Clock,
-  MapPin,
-  Plus,
-  Search,
-  Sparkles,
-  TrendingUp,
-  Users,
-} from 'lucide-react'
+  DEPARTAMENTOS,
+  MODALIDADES,
+  POSICIONES_LOL,
+  type Departamento,
+  type EstadoPostulacion,
+  type Modalidad,
+  type Oferta,
+  type PosicionLol,
+} from '@proplay/shared'
 import {
   Avatar,
   Badge,
   Button,
   Card,
-  CardHeader,
   EmptyState,
-  Input,
+  EstadoError,
+  Field,
+  Paginacion,
   SectionTitle,
-  cn,
+  Select,
 } from '@/components/ui'
-import { es } from '@/i18n/es'
 import { useAuth } from '@/context/AuthContext'
-import { usePostulaciones, useVacantes } from '@/api/ofertas'
-import { useEquipos } from '@/api/perfiles'
+import { useMisPostulaciones, useOfertas, type FiltrosOfertas } from '@/api/ofertas'
+import { es } from '@/i18n/es'
+import { lugarOferta } from '@/lib/ubicacion'
 
+const t = es.ofertas
+
+const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' })
+
+/** Departamentos ordenados por su nombre visible, no por el código. */
+const DEPARTAMENTOS_ORDENADOS = [...DEPARTAMENTOS].sort((a, b) =>
+  es.departamento[a].localeCompare(es.departamento[b], 'es'),
+)
+
+// RF-07 · RF-09 · Explorar oportunidades: ofertas abiertas reales de
+// GET /api/v1/ofertas, paginadas y filtradas por posición, departamento y
+// modalidad. Sin puntaje: el orden por compatibilidad llega con el matching.
 export default function OfertasPage() {
   const { usuario } = useAuth()
-  const vacantes = useVacantes()
-  const { data: postulaciones = [] } = usePostulaciones()
-  const { data: perfilesEquipo = [] } = useEquipos()
-  const ofertas = vacantes.data ?? []
-  const cargando = vacantes.isLoading
-  const [query, setQuery] = useState('')
-  const [soloAbiertas, setSoloAbiertas] = useState(true)
+  const [filtros, setFiltros] = useState<FiltrosOfertas>({ page: 1 })
+  const consulta = useOfertas(filtros)
+  const esJugador = usuario?.rol === 'JUGADOR'
+  const mias = useMisPostulaciones(esJugador)
+  const postuladas = new Map(mias.data?.map((p) => [p.oferta.id, p.estado]))
+  const hayFiltros = Boolean(filtros.rol || filtros.departamento || filtros.modalidad)
 
-  const filtradas = ofertas.filter((o) => {
-    if (soloAbiertas && o.estado !== 'ABIERTA') return false
-    if (!query) return true
-    const q = query.toLowerCase()
-    return (
-      o.juego.toLowerCase().includes(q) ||
-      o.rol.toLowerCase().includes(q) ||
-      o.descripcion.toLowerCase().includes(q)
-    )
-  })
+  // Cambiar un filtro vuelve a la primera página.
+  const filtrar = (cambio: Partial<FiltrosOfertas>) =>
+    setFiltros((previos) => ({ ...previos, ...cambio, page: 1 }))
 
   return (
     <div className="space-y-6">
       <SectionTitle
-        title="Vacantes publicadas"
-        subtitle="Oportunidades de los equipos del ecosistema, con el ranking de compatibilidad calculado por el motor hibrido."
+        title={t.titulo}
+        subtitle={t.subtitulo}
         action={
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <Search
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
-              />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar vacante..."
-                className="h-9 w-48 pl-9 text-xs"
-              />
-            </div>
-            <Button
-              variante={soloAbiertas ? 'primario' : 'secundario'}
-              tamano="sm"
-              onClick={() => setSoloAbiertas((v) => !v)}
+          usuario?.rol === 'EQUIPO' && (
+            <Link
+              to="/panel-equipo"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/12 bg-white/5 px-3 text-xs font-medium text-slate-200 transition hover:border-brand-500/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
-              Solo abiertas
-            </Button>
-            {(usuario?.rol === 'EQUIPO' || usuario?.rol === 'ADMIN') && (
-              <Link to="/panel-equipo">
-                <Button variante="secundario" tamano="sm">
-                  <Plus size={14} />
-                  Publicar
-                </Button>
-              </Link>
-            )}
-          </div>
+              <Plus size={14} aria-hidden />
+              {t.publicar}
+            </Link>
+          )
         }
       />
 
-      {cargando ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+      <Card className="p-4">
+        <fieldset className="grid gap-3 sm:grid-cols-3">
+          <legend className="sr-only">{t.filtros}</legend>
+          <Field label={t.filtroRol}>
+            <Select
+              value={filtros.rol ?? ''}
+              onChange={(e) => filtrar({ rol: (e.target.value || undefined) as PosicionLol | undefined })}
+            >
+              <option value="">{t.todas}</option>
+              {POSICIONES_LOL.map((posicion) => (
+                <option key={posicion} value={posicion}>
+                  {es.posicionLol[posicion]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t.filtroDepartamento}>
+            <Select
+              value={filtros.departamento ?? ''}
+              onChange={(e) =>
+                filtrar({ departamento: (e.target.value || undefined) as Departamento | undefined })
+              }
+            >
+              <option value="">{t.todos}</option>
+              {DEPARTAMENTOS_ORDENADOS.map((departamento) => (
+                <option key={departamento} value={departamento}>
+                  {es.departamento[departamento]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t.filtroModalidad}>
+            <Select
+              value={filtros.modalidad ?? ''}
+              onChange={(e) =>
+                filtrar({ modalidad: (e.target.value || undefined) as Modalidad | undefined })
+              }
+            >
+              <option value="">{t.todas}</option>
+              {MODALIDADES.map((modalidad) => (
+                <option key={modalidad} value={modalidad}>
+                  {es.modalidad[modalidad]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </fieldset>
+      </Card>
+
+      {consulta.isPending ? (
+        <div aria-busy="true" aria-label={t.cargando} className="grid gap-4 lg:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton h-56 rounded-2xl" />
+            <div key={i} className="skeleton h-48 rounded-2xl" />
           ))}
         </div>
-      ) : filtradas.length === 0 ? (
+      ) : consulta.isError ? (
+        <Card>
+          <EstadoError titulo={t.error} onReintentar={() => void consulta.refetch()} />
+        </Card>
+      ) : consulta.data.data.length === 0 ? (
         <Card>
           <EmptyState
             icono={<Briefcase size={22} />}
-            titulo="No hay vacantes que coincidan"
-            descripcion="Prueba a desactivar el filtro de abiertas o a buscar por otro termino."
+            titulo={hayFiltros ? t.vacioFiltros : t.vacio}
+            descripcion={hayFiltros ? t.vacioFiltrosDetalle : t.vacioDetalle}
+            action={
+              hayFiltros && (
+                <Button variante="secundario" tamano="sm" onClick={() => setFiltros({ page: 1 })}>
+                  {t.limpiarFiltros}
+                </Button>
+              )
+            }
           />
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {filtradas.map((o) => {
-            const equipo = perfilesEquipo.find((e) => e.id === o.equipoId)
-            const postulacionesOferta = postulaciones.filter(
-              (p) => p.ofertaId === o.id,
-            ).length
-            return (
-              <Link key={o.id} to={`/vacantes/${o.id}`} className="card card-hover block min-w-0 p-5">
-                <div className="flex items-start gap-3">
-                  {equipo && <Avatar nombre={equipo.nombre} size="md" />}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-100">
-                          {o.rol} · {o.juego}
-                        </p>
-                        <p className="truncate text-[11px] text-slate-500">
-                          {equipo?.nombre} · {equipo?.region}
-                        </p>
-                      </div>
-                      <Badge
-                        tono={
-                          o.estado === 'ABIERTA'
-                            ? 'verde'
-                            : o.estado === 'BORRADOR'
-                              ? 'ambar'
-                              : 'neutro'
-                        }
-                      >
-                        {es.estadoOferta[o.estado]}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-400">
-                  {o.descripcion}
-                </p>
-
-                <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
-                  <span className="flex items-center gap-1.5 text-slate-500">
-                    <TrendingUp size={12} />
-                    Rank min. {o.rangoMinimo}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-slate-500">
-                    <Clock size={12} />
-                    {o.horasSemanales} h/semana
-                  </span>
-                  <span className="flex items-center gap-1.5 text-slate-500">
-                    <MapPin size={12} />
-                    {o.regionPreferida}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-slate-500">
-                    <Users size={12} />
-                    {postulacionesOferta} postulaciones
-                  </span>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
-                  <span className="text-[11px] text-slate-500">
-                    Publicada el {o.publicadaEn}
-                  </span>
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-brand-300">
-                    <Sparkles size={12} />
-                    Ver ranking de compatibilidad
-                  </span>
-                </div>
-              </Link>
-            )
-          })}
+        <div className="space-y-4">
+          <p className="text-xs text-slate-400" aria-live="polite">
+            {t.resultados(consulta.data.meta.total)}
+          </p>
+          <ul className="grid gap-4 lg:grid-cols-2">
+            {consulta.data.data.map((oferta) => (
+              <li key={oferta.id} className="min-w-0">
+                <TarjetaOferta oferta={oferta} postulacion={postuladas.get(oferta.id)} />
+              </li>
+            ))}
+          </ul>
+          <Paginacion
+            pagina={consulta.data.meta.page}
+            totalPaginas={consulta.data.meta.totalPages}
+            onCambiar={(page) => setFiltros((previos) => ({ ...previos, page }))}
+          />
         </div>
       )}
-
-      <Card>
-        <CardHeader
-          title="Como se construye el ranking"
-          subtitle="Recorrido de una peticion de matching (Nivel 3 del modelo C4)"
-          icon={<Sparkles size={16} />}
-        />
-        <div className="grid gap-3 p-5 md:grid-cols-3">
-          {[
-            {
-              n: '1',
-              t: 'Recuperador por contenido',
-              d: 'Consulta de similitud sobre el indice HNSW de pgvector con el vector de requisitos de la oferta. Devuelve los candidatos mas proximos sin recorrer la tabla completa.',
-            },
-            {
-              n: '2',
-              t: 'Componente colaborativo',
-              d: 'Ajusta el conjunto con la senal de interacciones previas entre el equipo y los jugadores. Si el historial es insuficiente, su peso permanece en cero.',
-            },
-            {
-              n: '3',
-              t: 'Ponderador y explicador',
-              d: 'Promedio ponderado de las cinco dimensiones y explicacion en lenguaje natural anclada en fuentes recuperadas en tiempo real.',
-            },
-          ].map((p) => (
-            <div
-              key={p.n}
-              className={cn(
-                'rounded-xl border border-white/8 bg-white/3 p-4',
-              )}
-            >
-              <span className="grid size-7 place-items-center rounded-lg bg-brand-500/15 font-mono text-xs text-brand-300">
-                {p.n}
-              </span>
-              <p className="mt-2.5 text-sm font-semibold text-slate-100">{p.t}</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{p.d}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
+  )
+}
+
+function TarjetaOferta({
+  oferta,
+  postulacion,
+}: {
+  oferta: Oferta
+  postulacion: EstadoPostulacion | undefined
+}) {
+  return (
+    <Link
+      to={`/vacantes/${oferta.id}`}
+      className="card card-hover block h-full p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+    >
+      <div className="flex items-start gap-3">
+        <Avatar nombre={oferta.equipo.nombreOrg} size="md" />
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold break-words text-slate-100">{oferta.titulo}</h3>
+          <p className="truncate text-[11px] text-slate-400">{oferta.equipo.nombreOrg}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Badge tono="cian">{es.posicionLol[oferta.rol]}</Badge>
+        <Badge tono="violeta">{es.modalidad[oferta.modalidad]}</Badge>
+        {postulacion && (
+          <Badge tono="verde">
+            <CheckCircle2 size={11} aria-hidden />
+            {t.yaPostulado(es.estadoPostulacion[postulacion])}
+          </Badge>
+        )}
+      </div>
+
+      <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-400">
+        {oferta.descripcion}
+      </p>
+
+      <ul className="mt-4 grid gap-1.5 text-[11px] text-slate-400 sm:grid-cols-2">
+        <li className="flex min-w-0 items-center gap-1.5">
+          <MapPin size={12} className="shrink-0" aria-hidden />
+          <span className="truncate">{lugarOferta(oferta)}</span>
+        </li>
+        {oferta.rangoMinimo && (
+          <li className="flex min-w-0 items-center gap-1.5">
+            <TrendingUp size={12} className="shrink-0" aria-hidden />
+            <span className="truncate">{t.rangoMinimo(oferta.rangoMinimo)}</span>
+          </li>
+        )}
+        {oferta.horasSemana !== null && (
+          <li className="flex items-center gap-1.5">
+            <Clock size={12} className="shrink-0" aria-hidden />
+            {t.horas(oferta.horasSemana)}
+          </li>
+        )}
+      </ul>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/6 pt-3 text-[11px]">
+        {oferta.publicadaEn && (
+          <span className="text-slate-400">
+            {t.publicadaEl(formatoFecha.format(oferta.publicadaEn))}
+          </span>
+        )}
+        <span className="font-medium text-brand-300">{t.verOferta}</span>
+      </div>
+    </Link>
   )
 }
