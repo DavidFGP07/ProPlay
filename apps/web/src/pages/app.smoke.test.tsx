@@ -232,15 +232,15 @@ describe('Aplicacion', () => {
     ).toBeInTheDocument()
   })
 
-  it('la vista de vacantes lista las oportunidades publicadas', async () => {
+  it('la vista de vacantes habla con la API real: sin servidor ofrece reintentar', async () => {
     sesionDe('JUGADOR')
     render(renderApp('/vacantes'))
     expect(
-      await screen.findByRole('heading', { name: /Vacantes publicadas/i }, { timeout: 8000 }),
+      await screen.findByRole('heading', { name: /Explorar oportunidades/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
     expect(
-      await screen.findAllByText(/Mid lane · League of Legends/i, {}, { timeout: 8000 }),
-    ).not.toHaveLength(0)
+      await screen.findByRole('button', { name: /Reintentar/i }, { timeout: 8000 }),
+    ).toBeInTheDocument()
   })
 
   it('el perfil publico de un jugador se abre sin sesion, sin pasar por el login', async () => {
