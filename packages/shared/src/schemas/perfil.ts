@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { CATEGORIAS_HABILIDAD, DEPARTAMENTOS, PLATAFORMAS } from "../enums";
-import { urlHttpSchema } from "./common";
+import { urlHttpSchema, validarPaisDepartamento } from "./common";
 import {
   NIVEL_HABILIDAD_MAX,
   NIVEL_HABILIDAD_MIN,
-  PAIS_CON_DEPARTAMENTO,
   PAISES,
 } from "../constants";
 
@@ -19,37 +18,9 @@ const camposUbicacion = {
   dispuestoRelocalizar: z.boolean().optional(),
 };
 
-/**
- * Coherencia de país y departamento: con `pais = "CO"` el departamento es
- * obligatorio; con otro país, o sin país, no se admite. Si el cuerpo trae sólo
- * el departamento, aquí no se puede comprobar: el servidor lo valida contra el
- * país guardado con este mismo esquema.
- */
-function validarUbicacion(
-  datos: { pais?: string | null; departamento?: string | null },
-  ctx: z.RefinementCtx,
-) {
-  const { pais, departamento } = datos;
-  if (pais === undefined) return;
-  if (pais === PAIS_CON_DEPARTAMENTO && !departamento) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["departamento"],
-      message: "Selecciona el departamento",
-    });
-  }
-  if (pais !== PAIS_CON_DEPARTAMENTO && departamento) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["departamento"],
-      message: "El departamento sólo aplica a Colombia",
-    });
-  }
-}
-
 export const ubicacionJugadorSchema = z
   .object(camposUbicacion)
-  .superRefine(validarUbicacion);
+  .superRefine(validarPaisDepartamento);
 
 /**
  * Edición del perfil del jugador (`PATCH /perfiles/jugador`): campo ausente,
@@ -62,19 +33,24 @@ export const perfilJugadorSchema = z
     disponibilidadHoras: z.number().int().min(0).max(80).optional(),
     avatarUrl: urlHttpSchema.nullable().optional(),
   })
-  .superRefine(validarUbicacion);
+  .superRefine(validarPaisDepartamento);
 
 /**
  * Edición del perfil del equipo (`PATCH /perfiles/equipo`): campo ausente, no
  * cambia; `null`, se borra. El nombre de la organización es obligatorio en la
- * base, así que se puede omitir pero no borrar.
+ * base, así que se puede omitir pero no borrar. La sede (`pais` +
+ * `departamento`) sigue la misma regla que la ubicación del jugador.
  */
-export const perfilEquipoSchema = z.object({
-  nombreOrg: z.string().trim().min(2).max(120).optional(),
-  descripcion: z.string().max(1000).nullable().optional(),
-  sitioWeb: urlHttpSchema.nullable().optional(),
-  logoUrl: urlHttpSchema.nullable().optional(),
-});
+export const perfilEquipoSchema = z
+  .object({
+    nombreOrg: z.string().trim().min(2).max(120).optional(),
+    descripcion: z.string().max(1000).nullable().optional(),
+    sitioWeb: urlHttpSchema.nullable().optional(),
+    logoUrl: urlHttpSchema.nullable().optional(),
+    pais: z.enum(PAISES).nullable().optional(),
+    departamento: z.enum(DEPARTAMENTOS).nullable().optional(),
+  })
+  .superRefine(validarPaisDepartamento);
 
 export const habilidadSchema = z.object({
   id: z.string(),
@@ -119,6 +95,8 @@ export const perfilEquipoRespuestaSchema = z.object({
   descripcion: z.string().nullable(),
   sitioWeb: z.string().nullable(),
   logoUrl: z.string().nullable(),
+  pais: z.enum(PAISES).nullable(),
+  departamento: z.enum(DEPARTAMENTOS).nullable(),
   creadoEn: z.coerce.date(),
   actualizadoEn: z.coerce.date(),
 });

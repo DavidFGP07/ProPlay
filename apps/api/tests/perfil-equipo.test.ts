@@ -142,4 +142,34 @@ describe(`PATCH ${RUTA}`, () => {
     expect(camposConError(respuesta.body)).toContain(campo);
     expect(await leer(token)).toEqual(antes);
   });
+
+  it("guarda la sede con país y departamento, y cambiar de país borra el departamento", async () => {
+    const enColombia = await actualizar(token, { pais: "CO", departamento: "BOLIVAR" });
+    expect(enColombia.status).toBe(200);
+    expect(enColombia.body.perfil).toMatchObject({ pais: "CO", departamento: "BOLIVAR" });
+
+    const otroDepartamento = await actualizar(token, { departamento: "ATLANTICO" });
+    expect(otroDepartamento.status).toBe(200);
+    expect(otroDepartamento.body.perfil).toMatchObject({ pais: "CO", departamento: "ATLANTICO" });
+
+    const enMexico = await actualizar(token, { pais: "MX" });
+    expect(enMexico.status).toBe(200);
+    expect(enMexico.body.perfil).toMatchObject({ pais: "MX", departamento: null });
+  });
+
+  it.each([
+    ["Colombia sin departamento", { pais: "CO" }],
+    ["un departamento con otro país", { pais: "MX", departamento: "ATLANTICO" }],
+  ])("rechaza la sede con %s (422)", async (_caso, cuerpo) => {
+    const respuesta = await actualizar(token, cuerpo);
+    expect(respuesta.status).toBe(422);
+    expect(camposConError(respuesta.body)).toContain("departamento");
+  });
+
+  it("rechaza un departamento suelto si el país guardado no es Colombia (422)", async () => {
+    await actualizar(token, { pais: "MX" });
+    const respuesta = await actualizar(token, { departamento: "ATLANTICO" });
+    expect(respuesta.status).toBe(422);
+    expect((await leer(token)).departamento).toBeNull();
+  });
 });

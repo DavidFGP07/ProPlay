@@ -29,6 +29,8 @@ const seleccionEquipo = {
   descripcion: true,
   sitioWeb: true,
   logoUrl: true,
+  pais: true,
+  departamento: true,
   creadoEn: true,
   actualizadoEn: true,
 } satisfies Prisma.PerfilEquipoSelect;

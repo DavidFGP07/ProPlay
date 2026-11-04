@@ -9,6 +9,7 @@ import type {
 import { NotFoundError } from "../../utils/errors";
 import * as repositorio from "./perfiles.repository";
 import {
+  paisDepartamentoSchema,
   perfilJugadorPublicoSchema,
   ubicacionJugadorSchema,
   type PerfilEquipoInput,
@@ -31,7 +32,7 @@ function aRespuestaJugador(
 function aRespuestaEquipo(
   perfil: repositorio.PerfilEquipoDb,
 ): PerfilEquipoRespuesta {
-  return perfil;
+  return { ...perfil, pais: perfil.pais as Pais | null };
 }
 
 /**
@@ -97,7 +98,8 @@ export async function actualizarJugador(
  * Actualización parcial del perfil de la organización: un campo ausente no
  * cambia y `null` lo borra. El esquema ya recortó el nombre y el sitio web y
  * sólo admite URL http/https. Una descripción en blanco se guarda como
- * ausente, igual que la presentación del jugador.
+ * ausente, igual que la presentación del jugador. La sede sigue la misma regla
+ * que la ubicación del jugador (ver `actualizarJugador`).
  */
 export async function actualizarEquipo(
   usuarioId: string,
@@ -106,8 +108,16 @@ export async function actualizarEquipo(
   const existente = await repositorio.buscarEquipoPorUsuario(usuarioId);
   if (!existente) throw new NotFoundError("Este usuario no tiene perfil");
 
+  if (datos.pais === undefined && datos.departamento !== undefined) {
+    paisDepartamentoSchema.parse({
+      pais: existente.pais,
+      departamento: datos.departamento,
+    });
+  }
+
   const cambios = {
     ...datos,
+    ...(datos.pais !== undefined && { departamento: datos.departamento ?? null }),
     ...(typeof datos.descripcion === "string" && {
       descripcion: datos.descripcion.trim() || null,
     }),

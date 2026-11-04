@@ -66,6 +66,8 @@ function perfil(cambios: Partial<PerfilEquipoRespuesta> = {}): PerfilEquipoRespu
     descripcion: null,
     sitioWeb: null,
     logoUrl: null,
+    pais: null,
+    departamento: null,
     creadoEn: new Date('2026-09-10T00:00:00Z'),
     actualizadoEn: new Date('2026-09-10T00:00:00Z'),
     ...cambios,
