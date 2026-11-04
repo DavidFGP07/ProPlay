@@ -41,10 +41,19 @@ export type {
 
 export type {
   ActualizarOfertaInput,
+  ActualizarPostulacionInput,
+  CambiarEstadoOfertaInput,
   CrearOfertaInput,
   CrearPostulacionInput,
+  ListarMisOfertasQuery,
   ListarOfertasQuery,
+  MiPostulacion,
   Oferta,
+  OfertaPropia,
+  PesosMatching,
+  Postulacion,
+  PostulacionRecibida,
+  UbicacionOfertaInput,
 } from "../schemas/oferta";
 
 export type {

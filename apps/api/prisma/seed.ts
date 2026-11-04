@@ -1,17 +1,25 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
+  FECHA_POR_ESTADO_POSTULACION,
+  JUEGO_PILOTO,
   PERFIL_VECTOR_DIMENSIONES,
   PERFIL_VECTOR_VERSION,
+  PESOS_MATCHING,
   type Departamento,
+  type EstadoOferta,
+  type EstadoPostulacion,
+  type Modalidad,
   type Pais,
+  type PosicionLol,
 } from "@proplay/shared";
 
 /**
  * Datos de prueba de ProPlay.
  *
  * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores con estadísticas
- * y vectores sintéticos, 5 ofertas abiertas, un scout y un administrador.
+ * y vectores sintéticos, 5 ofertas de League of Legends en todos los estados
+ * con postulaciones fechadas (para el embudo), un scout y un administrador.
  *
  * Es idempotente (usa upsert), así que se puede ejecutar varias veces:
  *   npm run db:seed
@@ -82,14 +90,23 @@ const UBICACIONES: { pais: Pais; departamento: Departamento | null }[] = [
   { pais: "MX", departamento: null },
 ];
 
-const EQUIPOS = [
+const EQUIPOS: {
+  email: string;
+  nombre: string;
+  nombreOrg: string;
+  descripcion: string;
+  sitioWeb: string;
+  pais: Pais;
+  departamento: Departamento;
+}[] = [
   {
     email: "equipo@caribeesports.gg",
     nombre: "Caribe eSports",
     nombreOrg: "Caribe eSports",
     descripcion: "Organización de la costa Caribe con divisiones de LoL y VALORANT.",
     sitioWeb: "https://caribeesports.gg",
-    region: "LAN",
+    pais: "CO",
+    departamento: "ATLANTICO",
   },
   {
     email: "equipo@andesgaming.co",
@@ -97,7 +114,8 @@ const EQUIPOS = [
     nombreOrg: "Andes Gaming",
     descripcion: "Academia de desarrollo de talento para escenas emergentes.",
     sitioWeb: "https://andesgaming.co",
-    region: "LAS",
+    pais: "CO",
+    departamento: "BOGOTA_DC",
   },
   {
     email: "equipo@uninortelegends.edu.co",
@@ -105,7 +123,180 @@ const EQUIPOS = [
     nombreOrg: "Uninorte Legends",
     descripcion: "Equipo universitario de la Universidad del Norte.",
     sitioWeb: "https://uninortelegends.edu.co",
-    region: "LAN",
+    pais: "CO",
+    departamento: "ATLANTICO",
+  },
+];
+
+/** Fecha `dias` días antes del momento del seed. */
+function haceDias(dias: number): Date {
+  return new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+}
+
+/** Paso del recorrido de una postulación: estado y hace cuántos días se alcanzó. */
+type Paso = readonly [EstadoPostulacion, number];
+
+/** Fecha de cada estado del recorrido, en su columna de `FECHA_POR_ESTADO_POSTULACION`. */
+function fechasDelRecorrido(recorrido: readonly Paso[]) {
+  return Object.fromEntries(
+    recorrido.map(([estado, dias]) => [FECHA_POR_ESTADO_POSTULACION[estado], haceDias(dias)]),
+  ) as Partial<Record<(typeof FECHA_POR_ESTADO_POSTULACION)[EstadoPostulacion], Date>>;
+}
+
+interface OfertaSemilla {
+  /** Índice en EQUIPOS. */
+  equipo: number;
+  titulo: string;
+  rol: PosicionLol;
+  rangoMinimo: string;
+  modalidad: Modalidad;
+  pais: Pais | null;
+  departamento: Departamento | null;
+  horasSemana: number;
+  descripcion: string;
+  pesos: Record<keyof typeof PESOS_MATCHING, number>;
+  estado: EstadoOferta;
+  publicadaHaceDias: number | null;
+  cerradaHaceDias: number | null;
+  /** `jugador` es el índice en NOMBRES_JUGADORES. */
+  postulaciones: { jugador: number; recorrido: readonly Paso[] }[];
+}
+
+/**
+ * Las 5 ofertas, todas de League of Legends, cubren los cuatro estados que el
+ * embudo distingue y las tres modalidades. Las postulaciones recorren todos los
+ * estados; las de la oferta cubierta que seguían abiertas al cerrarla terminan
+ * rechazadas en la fecha del cierre, como hará la API.
+ */
+const OFERTAS: OfertaSemilla[] = [
+  {
+    equipo: 0,
+    titulo: "Buscamos MID para academia de League of Legends",
+    rol: "MID",
+    rangoMinimo: "Diamante II",
+    modalidad: "PRESENCIAL",
+    pais: "CO",
+    departamento: "ATLANTICO",
+    horasSemana: 25,
+    descripcion:
+      "Roster de academia con miras al circuito nacional. Entrenamientos de lunes a viernes en Barranquilla y scrims los fines de semana.",
+    pesos: { ...PESOS_MATCHING },
+    estado: "ABIERTA",
+    publicadaHaceDias: 20,
+    cerradaHaceDias: null,
+    postulaciones: [
+      { jugador: 0, recorrido: [["ENVIADA", 19], ["EN_REVISION", 17], ["ENTREVISTA", 14]] },
+      { jugador: 1, recorrido: [["ENVIADA", 18], ["EN_REVISION", 16], ["RECHAZADA", 15]] },
+      { jugador: 2, recorrido: [["ENVIADA", 10]] },
+      { jugador: 3, recorrido: [["ENVIADA", 9], ["EN_REVISION", 6]] },
+    ],
+  },
+  {
+    equipo: 1,
+    titulo: "Jungla para el roster principal",
+    rol: "JUNGLA",
+    rangoMinimo: "Maestro",
+    modalidad: "HIBRIDA",
+    pais: "CO",
+    departamento: "BOGOTA_DC",
+    horasSemana: 30,
+    descripcion:
+      "Buscamos jungla con experiencia en torneos nacionales y buena comunicación. Bootcamp presencial en Bogotá una semana al mes; el resto, en línea.",
+    pesos: {
+      tecnica: 0.45,
+      experiencia: 0.25,
+      habilidadesBlandas: 0.1,
+      geografica: 0.05,
+      disponibilidad: 0.15,
+    },
+    estado: "ABIERTA",
+    publicadaHaceDias: 12,
+    cerradaHaceDias: null,
+    postulaciones: [
+      {
+        jugador: 4,
+        recorrido: [["ENVIADA", 11], ["EN_REVISION", 9], ["ENTREVISTA", 6], ["ACEPTADA", 2]],
+      },
+      { jugador: 5, recorrido: [["ENVIADA", 10], ["RECHAZADA", 8]] },
+      { jugador: 6, recorrido: [["ENVIADA", 3]] },
+    ],
+  },
+  {
+    equipo: 2,
+    titulo: "Soporte para la división universitaria",
+    rol: "SOPORTE",
+    rangoMinimo: "Platino I",
+    modalidad: "PRESENCIAL",
+    pais: "CO",
+    departamento: "ATLANTICO",
+    horasSemana: 15,
+    descripcion:
+      "Programa universitario que busca un soporte con buena lectura de mapa para su plantel. Compatible con los estudios.",
+    pesos: {
+      tecnica: 0.25,
+      experiencia: 0.1,
+      habilidadesBlandas: 0.3,
+      geografica: 0.2,
+      disponibilidad: 0.15,
+    },
+    estado: "CUBIERTA",
+    publicadaHaceDias: 40,
+    cerradaHaceDias: 10,
+    postulaciones: [
+      {
+        jugador: 7,
+        recorrido: [["ENVIADA", 38], ["EN_REVISION", 35], ["ENTREVISTA", 30], ["ACEPTADA", 12]],
+      },
+      {
+        jugador: 8,
+        recorrido: [["ENVIADA", 37], ["EN_REVISION", 34], ["ENTREVISTA", 29], ["RECHAZADA", 12]],
+      },
+      { jugador: 9, recorrido: [["ENVIADA", 36], ["RECHAZADA", 10]] },
+      { jugador: 10, recorrido: [["ENVIADA", 25], ["EN_REVISION", 20], ["RECHAZADA", 10]] },
+    ],
+  },
+  {
+    equipo: 0,
+    titulo: "ADC para la liga en línea",
+    rol: "ADC",
+    rangoMinimo: "Esmeralda I",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 20,
+    descripcion:
+      "Equipo de la liga en línea busca ADC para la temporada. Todo el trabajo es remoto: entrenamientos y partidas desde casa.",
+    pesos: {
+      tecnica: 0.4,
+      experiencia: 0.2,
+      habilidadesBlandas: 0.15,
+      geografica: 0,
+      disponibilidad: 0.25,
+    },
+    estado: "ABIERTA",
+    publicadaHaceDias: 5,
+    cerradaHaceDias: null,
+    postulaciones: [
+      { jugador: 11, recorrido: [["ENVIADA", 4]] },
+      { jugador: 12, recorrido: [["ENVIADA", 3], ["EN_REVISION", 1]] },
+    ],
+  },
+  {
+    equipo: 1,
+    titulo: "Top para la temporada de clausura",
+    rol: "TOP",
+    rangoMinimo: "Diamante IV",
+    modalidad: "HIBRIDA",
+    pais: "CO",
+    departamento: "BOGOTA_DC",
+    horasSemana: 22,
+    descripcion:
+      "Borrador: buscaremos un top para la temporada de clausura cuando cerremos el roster principal.",
+    pesos: { ...PESOS_MATCHING },
+    estado: "BORRADOR",
+    publicadaHaceDias: null,
+    cerradaHaceDias: null,
+    postulaciones: [],
   },
 ];
 
@@ -194,15 +385,18 @@ async function main() {
       },
     });
 
+    // La sede también va en `update`: las bases anteriores a la migración
+    // de ofertas guardaban una región de servidor y el seed la repone.
+    const sede = { pais: equipo.pais, departamento: equipo.departamento };
     const perfil = await prisma.perfilEquipo.upsert({
       where: { usuarioId: usuario.id },
-      update: {},
+      update: sede,
       create: {
         usuarioId: usuario.id,
         nombreOrg: equipo.nombreOrg,
         descripcion: equipo.descripcion,
         sitioWeb: equipo.sitioWeb,
-        region: equipo.region,
+        ...sede,
       },
     });
     perfilesEquipo.push(perfil);
@@ -211,6 +405,8 @@ async function main() {
 
   // ---------------------------------------------------------------- jugadores
   let estadisticasCreadas = 0;
+  let postulacionesCreadas = 0;
+  const perfilesJugador: { id: string }[] = [];
   for (const [indice, nombre] of NOMBRES_JUGADORES.entries()) {
     const email = `jugador${indice + 1}@proplay.gg`;
     const juego = JUEGOS[indice % JUEGOS.length]!;
@@ -243,6 +439,7 @@ async function main() {
         dispuestoRelocalizar: indice % 3 === 0,
       },
     });
+    perfilesJugador.push(jugador);
 
     // Dos habilidades técnicas y una blanda por jugador.
     const asignaciones = [
@@ -326,78 +523,58 @@ async function main() {
   );
 
   // ------------------------------------------------------------------ ofertas
-  const ofertas = [
-    {
-      titulo: "Buscamos MID para academia de League of Legends",
-      juego: "League of Legends",
-      rol: "MID",
-      rangoMinimo: "Diamante II",
-      experienciaMinAnios: 1,
-      region: "LAN",
-      horasSemana: 25,
-      descripcion:
-        "Roster de academia con miras al circuito nacional. Entrenamientos de lunes a viernes y scrims los fines de semana.",
-    },
-    {
-      titulo: "Duelista para roster principal de VALORANT",
-      juego: "VALORANT",
-      rol: "DUELISTA",
-      rangoMinimo: "Inmortal I",
-      experienciaMinAnios: 2,
-      region: "LAS",
-      horasSemana: 30,
-      descripcion:
-        "Buscamos duelista con experiencia en torneos regionales, buena comunicación y disponibilidad para bootcamp.",
-    },
-    {
-      titulo: "AWPER para equipo de Counter-Strike 2",
-      juego: "Counter-Strike 2",
-      rol: "AWPER",
-      rangoMinimo: "Faceit 8",
-      experienciaMinAnios: 2,
-      region: "LAN",
-      horasSemana: 20,
-      descripcion:
-        "Proyecto a un año con objetivo de clasificar a las ligas abiertas. Se valora disposición a relocalizarse.",
-    },
-    {
-      titulo: "Soporte para línea inferior de Dota 2",
-      juego: "Dota 2",
-      rol: "SOPORTE",
-      rangoMinimo: "Divine",
-      experienciaMinAnios: 1,
-      region: "NA",
-      horasSemana: 22,
-      descripcion:
-        "Equipo en formación busca soporte con buena lectura de mapa y experiencia en ligas amateur.",
-    },
-    {
-      titulo: "IGL para división universitaria",
-      juego: "Counter-Strike 2",
-      rol: "IGL",
-      rangoMinimo: "Faceit 6",
-      experienciaMinAnios: 0,
-      region: "LAN",
-      horasSemana: 15,
-      descripcion:
-        "Programa universitario que busca un líder en juego para su plantel de primer año. Compatible con estudios.",
-    },
-  ];
-
-  let ofertasCreadas = 0;
-  for (const [indice, oferta] of ofertas.entries()) {
-    const equipo = perfilesEquipo[indice % perfilesEquipo.length]!;
+  // Las fechas son relativas al momento del seed para que las ofertas parezcan
+  // recientes; lo que se mantiene fijo es el recorrido de cada postulación.
+  for (const [indice, datos] of OFERTAS.entries()) {
+    const {
+      equipo: indiceEquipo,
+      pesos,
+      publicadaHaceDias,
+      cerradaHaceDias,
+      postulaciones,
+      ...campos
+    } = datos;
+    const equipo = perfilesEquipo[indiceEquipo]!;
+    const data = {
+      ...campos,
+      juego: JUEGO_PILOTO,
+      pesoTecnica: pesos.tecnica,
+      pesoExperiencia: pesos.experiencia,
+      pesoHabilidadesBlandas: pesos.habilidadesBlandas,
+      pesoGeografica: pesos.geografica,
+      pesoDisponibilidad: pesos.disponibilidad,
+      publicadaEn: publicadaHaceDias === null ? null : haceDias(publicadaHaceDias),
+      cerradaEn: cerradaHaceDias === null ? null : haceDias(cerradaHaceDias),
+      equipoId: equipo.id,
+    };
     const existente = await prisma.oferta.findFirst({
-      where: { titulo: oferta.titulo, equipoId: equipo.id },
+      where: { titulo: datos.titulo, equipoId: equipo.id },
     });
-    if (!existente) {
-      await prisma.oferta.create({
-        data: { ...oferta, equipoId: equipo.id, estado: "ABIERTA" },
+    const oferta = existente
+      ? await prisma.oferta.update({ where: { id: existente.id }, data })
+      : await prisma.oferta.create({ data });
+
+    for (const { jugador, recorrido } of postulaciones) {
+      const fechas = fechasDelRecorrido(recorrido);
+      const estado = recorrido[recorrido.length - 1]![0];
+      const jugadorId = perfilesJugador[jugador]!.id;
+      await prisma.postulacion.upsert({
+        where: { ofertaId_jugadorId: { ofertaId: oferta.id, jugadorId } },
+        update: { estado, ...fechas },
+        create: {
+          ofertaId: oferta.id,
+          jugadorId,
+          estado,
+          mensaje: `Me interesa la vacante de ${datos.rol} (${indice + 1}).`,
+          ...fechas,
+        },
       });
-      ofertasCreadas += 1;
+      postulacionesCreadas += 1;
     }
   }
-  console.log(`  · ${ofertasCreadas} ofertas abiertas`);
+  console.log(
+    `  · ${OFERTAS.length} ofertas (abiertas, cubierta y borrador) y ${postulacionesCreadas} postulaciones con sus fechas`,
+  );
 
   console.log(
     `\nListo. Todas las cuentas de prueba usan la contraseña ${PASSWORD_DEMO}\n` +

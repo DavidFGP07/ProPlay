@@ -9,6 +9,7 @@ export {
   perfilJugadorSchema,
   perfilJugadorPublicoSchema,
   ubicacionJugadorSchema,
+  paisDepartamentoSchema,
   perfilEquipoSchema,
   asignarHabilidadSchema,
   crearEndorsementSchema,

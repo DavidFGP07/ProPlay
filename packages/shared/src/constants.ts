@@ -1,7 +1,7 @@
 /**
  * Constantes compartidas entre api y web.
  */
-import type { Departamento } from "./enums";
+import type { Departamento, EstadoOferta, EstadoPostulacion } from "./enums";
 
 /** Prefijo de la API REST versionada. */
 export const API_PREFIX = "/api/v1";
@@ -56,6 +56,57 @@ export const PESOS_MATCHING = {
 } as const;
 
 export type DimensionMatching = keyof typeof PESOS_MATCHING;
+
+/** Las cinco dimensiones, en el orden de la ecuación (1). */
+export const DIMENSIONES_MATCHING = Object.keys(PESOS_MATCHING) as DimensionMatching[];
+
+/**
+ * Margen admitido en la suma de los pesos de una oferta. Los deslizadores
+ * trabajan en porcentajes enteros, pero la suma en coma flotante de cinco
+ * décimas no siempre da 1 exacto.
+ */
+export const TOLERANCIA_SUMA_PESOS = 0.001;
+
+/**
+ * Transiciones permitidas de la oferta. `CUBIERTA` exige además al menos una
+ * postulación `ACEPTADA` (lo comprueba el servidor). Los estados finales no
+ * tienen salida: una vacante no se reabre, se publica otra.
+ */
+export const TRANSICIONES_OFERTA = {
+  BORRADOR: ["ABIERTA", "CERRADA"],
+  ABIERTA: ["CUBIERTA", "CERRADA"],
+  CUBIERTA: [],
+  CERRADA: [],
+} as const satisfies Record<EstadoOferta, readonly EstadoOferta[]>;
+
+/**
+ * Transiciones permitidas de la postulación: el embudo avanza de un paso en
+ * uno, sin saltos, y se puede rechazar desde cualquier estado no final. Así
+ * cada fecha de `FECHA_POR_ESTADO_POSTULACION` se escribe una sola vez.
+ */
+export const TRANSICIONES_POSTULACION = {
+  ENVIADA: ["EN_REVISION", "RECHAZADA"],
+  EN_REVISION: ["ENTREVISTA", "RECHAZADA"],
+  ENTREVISTA: ["ACEPTADA", "RECHAZADA"],
+  ACEPTADA: [],
+  RECHAZADA: [],
+} as const satisfies Record<EstadoPostulacion, readonly EstadoPostulacion[]>;
+
+/**
+ * Columna de `Postulacion` que guarda la fecha en que se alcanzó cada estado.
+ * `ENVIADA` es la creación de la postulación. Es la base del embudo de la
+ * vacante y del tiempo hasta cubrirla (H1).
+ */
+export const FECHA_POR_ESTADO_POSTULACION = {
+  ENVIADA: "creadoEn",
+  EN_REVISION: "revisadaEn",
+  ENTREVISTA: "entrevistaEn",
+  ACEPTADA: "aceptadaEn",
+  RECHAZADA: "rechazadaEn",
+} as const satisfies Record<EstadoPostulacion, string>;
+
+/** Único juego del piloto (decisión «Privacidad y piloto»). */
+export const JUEGO_PILOTO = "League of Legends";
 
 /** Umbral a partir del cual un match se considera relevante para el scout. */
 export const UMBRAL_MATCH_RELEVANTE = 0.6;

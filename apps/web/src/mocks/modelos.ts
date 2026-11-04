@@ -24,13 +24,6 @@ export type { CategoriaHabilidad, EstadoOferta, Habilidad, Plataforma, Rol }
 /** Usuario de la simulacion: es el mismo contrato que devuelve la API. */
 export type Usuario = UsuarioPublico
 
-/**
- * Propuesta de ampliacion para S3: un estado intermedio entre la revision y
- * la aceptacion («invitar a un tryout»). Hasta que entre en EstadoPostulacion
- * y en Prisma, solo existe en el prototipo.
- */
-export type EstadoPostulacionPrototipo = EstadoPostulacion | 'ENTREVISTA'
-
 /** Plataformas con ingesta de estadisticas (subconjunto del contrato). */
 export type PlataformaJuego = Extract<Plataforma, 'RIOT' | 'STEAM'>
 
@@ -174,7 +167,7 @@ export interface Postulacion {
   id: string
   ofertaId: string
   perfilId: string
-  estado: EstadoPostulacionPrototipo
+  estado: EstadoPostulacion
   mensaje: string
   fecha: string
 }

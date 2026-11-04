@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../constants";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  PAIS_CON_DEPARTAMENTO,
+  PAISES,
+} from "../constants";
+import { DEPARTAMENTOS } from "../enums";
 
 /** Identificador de recurso (cuid generado por Prisma). */
 export const idSchema = z.string().min(1, "Identificador requerido");
@@ -29,6 +35,46 @@ export const urlHttpSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.invalid_string, validation: "url" });
     }
   });
+
+/**
+ * Coherencia de país y departamento, común a la ubicación del jugador, la sede
+ * del equipo y la oferta: con `pais = "CO"` el departamento es obligatorio; con
+ * otro país, o sin país, no se admite. Si el cuerpo trae sólo el departamento,
+ * aquí no se puede comprobar: el servidor lo valida contra el país guardado
+ * con el mismo esquema.
+ */
+export function validarPaisDepartamento(
+  datos: { pais?: string | null; departamento?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  const { pais, departamento } = datos;
+  if (pais === undefined) return;
+  if (pais === PAIS_CON_DEPARTAMENTO && !departamento) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["departamento"],
+      message: "Selecciona el departamento",
+    });
+  }
+  if (pais !== PAIS_CON_DEPARTAMENTO && departamento) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["departamento"],
+      message: "El departamento sólo aplica a Colombia",
+    });
+  }
+}
+
+/**
+ * País y departamento completos, con su regla. Lo usa el servidor para
+ * comprobar un departamento recibido sin país contra el país guardado.
+ */
+export const paisDepartamentoSchema = z
+  .object({
+    pais: z.enum(PAISES).nullable().optional(),
+    departamento: z.enum(DEPARTAMENTOS).nullable().optional(),
+  })
+  .superRefine(validarPaisDepartamento);
 
 /** `/:id` en los parámetros de ruta. */
 export const idParamSchema = z.object({ id: idSchema });
