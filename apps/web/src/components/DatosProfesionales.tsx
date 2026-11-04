@@ -4,9 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { MapPin, Save } from 'lucide-react'
 import {
-  DEPARTAMENTOS,
   PAIS_CON_DEPARTAMENTO,
-  PAISES,
   perfilJugadorSchema,
   type PerfilJugadorRespuesta,
 } from '@proplay/shared'
@@ -23,7 +21,7 @@ import { aplicarErrorApi } from '@/api/errores'
 import { useActualizarPerfilJugador } from '@/api/perfiles'
 import { useToast } from '@/context/ToastContext'
 import { es } from '@/i18n/es'
-import { nombrePais } from '@/lib/ubicacion'
+import { OPCIONES_DEPARTAMENTO, opcionesPais } from '@/lib/ubicacion'
 
 const t = es.miPerfil
 
@@ -58,18 +56,6 @@ const esquemaFormulario = z
   .pipe(perfilJugadorSchema)
 
 type FormularioPerfil = z.input<typeof esquemaFormulario>
-
-/** Colombia primero (el piloto); el resto, por nombre en español. */
-function opcionesPais(): { codigo: string; nombre: string }[] {
-  const resto = PAISES.filter((codigo) => codigo !== PAIS_CON_DEPARTAMENTO)
-    .map((codigo) => ({ codigo, nombre: nombrePais(codigo) }))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  return [{ codigo: PAIS_CON_DEPARTAMENTO, nombre: nombrePais(PAIS_CON_DEPARTAMENTO) }, ...resto]
-}
-
-const opcionesDepartamento = [...DEPARTAMENTOS].sort((a, b) =>
-  es.departamento[a].localeCompare(es.departamento[b], 'es'),
-)
 
 function valoresDe(perfil: PerfilJugadorRespuesta): FormularioPerfil {
   return {
@@ -198,7 +184,7 @@ export function DatosProfesionales({ perfil }: { perfil: PerfilJugadorRespuesta 
               {...register('departamento', limpiarExito)}
             >
               <option value="">{es.ubicacion.seleccionaDepartamento}</option>
-              {opcionesDepartamento.map((departamento) => (
+              {OPCIONES_DEPARTAMENTO.map((departamento) => (
                 <option key={departamento} value={departamento}>
                   {es.departamento[departamento]}
                 </option>

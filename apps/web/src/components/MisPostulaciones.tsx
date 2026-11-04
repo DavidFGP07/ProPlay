@@ -1,37 +1,15 @@
 import { Link } from 'react-router-dom'
 import { Briefcase } from 'lucide-react'
-import {
-  ESTADOS_POSTULACION,
-  FECHA_POR_ESTADO_POSTULACION,
-  type EstadoPostulacion,
-  type MiPostulacion,
-} from '@proplay/shared'
 import { Badge, EmptyState, EstadoError } from '@/components/ui'
 import { useMisPostulaciones } from '@/api/ofertas'
 import { es } from '@/i18n/es'
+import { TONO_ESTADO_POSTULACION } from '@/lib/postulaciones'
+import { RecorridoPostulacion } from '@/components/RecorridoPostulacion'
 
 const t = es.misPostulaciones
 
-const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' })
-
-export const TONO_ESTADO_POSTULACION = {
-  ENVIADA: 'neutro',
-  EN_REVISION: 'cian',
-  ENTREVISTA: 'violeta',
-  ACEPTADA: 'verde',
-  RECHAZADA: 'rojo',
-} as const satisfies Record<EstadoPostulacion, string>
-
 const claseEnlace =
   'inline-flex items-center rounded-lg border border-white/12 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-brand-500/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
-
-/** Pasos alcanzados, en el orden del embudo, con la fecha de cada uno. */
-function recorrido(postulacion: MiPostulacion): { estado: EstadoPostulacion; fecha: Date }[] {
-  return ESTADOS_POSTULACION.flatMap((estado) => {
-    const fecha = postulacion[FECHA_POR_ESTADO_POSTULACION[estado]]
-    return fecha ? [{ estado, fecha }] : []
-  })
-}
 
 // RF-10 · Mis postulaciones: pestaña de Mi perfil con datos reales de
 // GET /api/v1/ofertas/postulaciones/me. Muestra el estado de cada proceso y la
@@ -91,16 +69,7 @@ export function MisPostulaciones() {
             </div>
           </div>
 
-          <h4 className="sr-only">{t.pasos}</h4>
-          <ol className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
-            {recorrido(postulacion).map(({ estado, fecha }) => (
-              <li key={estado} className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-brand-400" aria-hidden />
-                <span className="text-slate-300">{es.estadoPostulacion[estado]}</span>
-                <time dateTime={fecha.toISOString()}>{formatoFecha.format(fecha)}</time>
-              </li>
-            ))}
-          </ol>
+          <RecorridoPostulacion postulacion={postulacion} />
 
           <Link
             to={`/vacantes/${postulacion.oferta.id}`}

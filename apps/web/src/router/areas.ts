@@ -8,6 +8,8 @@ import type { Rol } from '@proplay/shared'
 export const AREAS = {
   jugador: ['JUGADOR'],
   equipo: ['EQUIPO', 'SCOUT', 'ADMIN'],
+  /** Crear y editar ofertas: sólo la organización que contrata, no el scout. */
+  gestionOfertas: ['EQUIPO'],
   admin: ['ADMIN'],
 } as const satisfies Record<string, readonly Rol[]>
 
@@ -25,4 +27,6 @@ export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/panel-equipo',
   '/vacantes',
   '/vacantes/:id',
+  '/panel-equipo/ofertas/nueva',
+  '/panel-equipo/ofertas/:id/editar',
 ]

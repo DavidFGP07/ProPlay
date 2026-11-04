@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Briefcase,
-  CheckCircle2,
   Clock,
   Plus,
   ShieldCheck,
@@ -10,8 +8,8 @@ import {
   Target,
   TrendingUp,
   UserPlus,
-  XCircle,
 } from 'lucide-react'
+import type { OfertaPropia } from '@proplay/shared'
 import {
   Avatar,
   Badge,
@@ -19,119 +17,56 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  Field,
-  Input,
-  Modal,
+  EstadoError,
   ScoreRing,
   SectionTitle,
-  Select,
   Stat,
-  Textarea,
-  cn,
 } from '@/components/ui'
 import { es } from '@/i18n/es'
 import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
 import { DatosOrganizacion } from '@/components/DatosOrganizacion'
 import { useAuth } from '@/context/AuthContext'
-import { useToast } from '@/context/ToastContext'
 import { useIdentidad } from '@/api/identidad'
 import { useCandidatos, useJugadores } from '@/api/matching'
-import {
-  useActualizarEstadoPostulacion,
-  useCerrarOferta,
-  useCrearOferta,
-  usePostulaciones,
-  useVacantes,
-} from '@/api/ofertas'
+import { useMisOfertas, usePostulaciones, useVacantes } from '@/api/ofertas'
 import { useEquipos, usePerfilPropio } from '@/api/perfiles'
 import { PESOS_POR_DEFECTO } from '@/lib/matching'
-import type { Oferta, Postulacion } from '@/mocks/modelos'
+import { lugarOferta } from '@/lib/ubicacion'
 
-const JUEGOS = [
-  'League of Legends',
-  'Valorant',
-  'Counter-Strike 2',
-  'Rocket League',
-  'Dota 2',
-] as const
-const REGIONES = [
-  'Cualquiera',
-  'Barranquilla',
-  'Cartagena',
-  'Santa Marta',
-  'Bogotá',
-  'Medellín',
-  'Cali',
-  'Bucaramanga',
-] as const
-const RANGOS = [
-  'Oro I',
-  'Platino I',
-  'Diamante I',
-  'Ascendente I',
-  'Inmortal I',
-  'Global Elite',
-  'Champions II',
-] as const
-const ROLES = [
-  'Top lane',
-  'Jungle',
-  'Mid lane',
-  'Bot lane',
-  'Support',
-  'Duelista',
-  'Iniciador',
-  'Controlador',
-  'Sentinel',
-  'AWPer',
-  'IGL',
-  'Portero',
-  'Carry',
-  'Flex',
-] as const
+const t = es.panelEquipo
 
-const ESTADOS: { v: Postulacion['estado']; l: string }[] = (
-  ['ENVIADA', 'EN_REVISION', 'ENTREVISTA', 'ACEPTADA', 'RECHAZADA'] as const
-).map((v) => ({ v, l: es.estadoPostulacion[v] }))
+const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' })
 
-// RF-13 · Panel del equipo. «Datos de la organización» es real (RF-07); las
-// vacantes, procesos, indicadores y recomendaciones siguen simulados, cada
-// seccion con su marca de demostracion.
+const TONO_ESTADO_OFERTA = {
+  BORRADOR: 'ambar',
+  ABIERTA: 'verde',
+  CUBIERTA: 'azul',
+  CERRADA: 'neutro',
+} as const satisfies Record<OfertaPropia['estado'], string>
+
+const claseBoton =
+  'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
+
+// RF-13 · RF-07 · Panel del equipo. Reales: «Datos de la organización» y «Tus
+// ofertas» (GET /api/v1/ofertas/me), con el acceso a publicar una oferta. Los
+// indicadores y las recomendaciones del motor siguen simulados, cada sección
+// con su marca, hasta la analítica y el motor de matching.
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
-  const { notificar } = useToast()
   const { data: ofertas = [] } = useVacantes()
   const { data: postulaciones = [] } = usePostulaciones()
   const { data: jugadores = [] } = useJugadores()
   const { data: perfilesEquipo = [] } = useEquipos()
   const { data: identidad } = useIdentidad()
-  const creacion = useCrearOferta()
-  const cierre = useCerrarOferta()
-  const cambioEstado = useActualizarEstadoPostulacion()
-  const [modal, setModal] = useState(false)
-  const enviando = creacion.isPending
-  const [form, setForm] = useState({
-    equipoId: 'e-01-team',
-    juego: 'League of Legends' as Oferta['juego'],
-    rol: 'Mid lane',
-    rangoMinimo: 'Platino I',
-    experienciaMinima: 2,
-    regionPreferida: 'Cualquiera' as Oferta['regionPreferida'],
-    horasSemanales: 24,
-    descripcion: '',
-    salario: '',
-    requisitos: '',
-  })
 
-  // El scout consulta los procesos pero no contrata: puede publicar y
-  // avanzar estados unicamente la organizacion o el administrador.
+  // El scout consulta pero no contrata: sólo el equipo publica y gestiona.
   const esScout = usuario?.rol === 'SCOUT'
   const esEquipo = usuario?.rol === 'EQUIPO'
-  const puedeGestionar = esEquipo || usuario?.rol === 'ADMIN'
   // Nombre real de la organizacion para el subtitulo; solo el equipo tiene perfil.
   const { data: propio } = usePerfilPropio(esEquipo)
   const nombreOrg = propio?.tipo === 'EQUIPO' ? propio.perfil.nombreOrg : null
 
+  // Datos de la simulación para los indicadores y las recomendaciones.
   const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
   const misOfertas = miEquipo
     ? ofertas.filter((o) => o.equipoId === miEquipo.id)
@@ -139,112 +74,48 @@ export default function PanelEquipoPage() {
   const postulacionesDeMisOfertas = postulaciones.filter((p) =>
     misOfertas.some((o) => o.id === p.ofertaId),
   )
-
-  /** Vacante abierta sobre la que se calcula el resumen de recomendaciones. */
   const abiertaPrincipal = misOfertas.find((o) => o.estado === 'ABIERTA')
-
-  // Ranking de la primera vacante abierta de la organizacion, para mostrar
-  // los candidatos mejor posicionados sin abrir el detalle.
   const ranking = useCandidatos(abiertaPrincipal?.id, PESOS_POR_DEFECTO)
   const resultadosRanking = abiertaPrincipal ? ranking.data?.resultados : []
   const trazaRanking = abiertaPrincipal ? ranking.data?.traza : null
-
   const jugadorDe = (id: string) => jugadores.find((j) => j.id === id)
-
-  const publicar = async () => {
-    if (!usuario) return
-    try {
-      await creacion.mutateAsync({
-        equipoId: form.equipoId,
-        juego: form.juego,
-        rol: form.rol,
-        rangoMinimo: form.rangoMinimo,
-        experienciaMinima: form.experienciaMinima,
-        regionPreferida: form.regionPreferida,
-        horasSemanales: form.horasSemanales,
-        descripcion: form.descripcion || 'Vacante publicada desde el panel de equipo.',
-        salario: form.salario || undefined,
-        requisitos: form.requisitos
-          .split('\n')
-          .map((r) => r.trim())
-          .filter(Boolean),
-      })
-      setModal(false)
-      notificar('Vacante publicada. El motor de matching ya la incluye en el pool.')
-    } catch (e) {
-      notificar(
-        e instanceof Error ? e.message : 'No se pudo publicar la vacante.',
-        'error',
-      )
-    }
-  }
-
-  const cambiarEstado = async (
-    id: string,
-    estado: Postulacion['estado'],
-  ) => {
-    if (!usuario) return
-    try {
-      await cambioEstado.mutateAsync({ id, estado })
-      notificar('Estado de la postulacion actualizado.')
-    } catch (e) {
-      notificar(
-        e instanceof Error ? e.message : 'No se pudo actualizar el proceso.',
-        'error',
-      )
-    }
-  }
-
-  const cerrar = async (id: string) => {
-    if (!usuario) return
-    try {
-      await cierre.mutateAsync(id)
-      notificar('Vacante cerrada.', 'info')
-    } catch (e) {
-      notificar(
-        e instanceof Error ? e.message : 'No se pudo cerrar la vacante.',
-        'error',
-      )
-    }
-  }
 
   return (
     <div className="space-y-6">
       <SectionTitle
-        title={esScout ? 'Panel de scouting' : 'Panel de equipo'}
-        subtitle={
-          nombreOrg
-            ? nombreOrg
-            : esScout
-              ? 'Consulta de vacantes y procesos de selección del ecosistema.'
-              : 'Gestión de vacantes y procesos de selección.'
-        }
+        title={esScout ? t.tituloScout : t.titulo}
+        subtitle={nombreOrg ?? (esScout ? t.subtituloScout : t.subtitulo)}
         action={
-          puedeGestionar ? (
-            <Button variante="primario" tamano="sm" onClick={() => setModal(true)}>
-              <Plus size={14} />
-              Publicar vacante
-            </Button>
-          ) : undefined
+          esEquipo && (
+            <Link
+              to="/panel-equipo/ofertas/nueva"
+              className={`${claseBoton} bg-gradient-to-r from-brand-600 to-accent-600 text-white shadow-lg shadow-brand-900/40 hover:from-brand-500 hover:to-accent-500`}
+            >
+              <Plus size={14} aria-hidden />
+              {t.publicar}
+            </Link>
+          )
         }
       />
 
       {esScout && (
         <Card className="border-accent-500/25 bg-accent-500/5 p-4">
           <p className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-300">
-            <ShieldCheck size={15} className="mt-0.5 shrink-0 text-accent-400" />
-            <span>
-              Tu rol de <strong>scout</strong> tiene las mismas capacidades de
-              consulta que el equipo: puedes revisar vacantes, procesos y
-              rankings de compatibilidad. No puedes publicar oportunidades ni
-              avanzar el estado de una postulacion, porque esa facultad
-              corresponde a la organizacion que contrata.
-            </span>
+            <ShieldCheck size={15} className="mt-0.5 shrink-0 text-accent-400" aria-hidden />
+            <span>{t.notaScout}</span>
           </p>
+          <Link
+            to="/vacantes"
+            className={`${claseBoton} mt-3 border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50`}
+          >
+            {t.verOfertas}
+          </Link>
         </Card>
       )}
 
       {esEquipo && <DatosOrganizacion />}
+
+      {esEquipo && <MisOfertas />}
 
       <div>
         <MarcaDatosDemo />
@@ -280,142 +151,6 @@ export default function PanelEquipoPage() {
             acento="verde"
           />
         </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* ---------------------------- Vacantes ---------------------------- */}
-        <Card className="min-w-0">
-          <CardHeader
-            title={esScout ? 'Vacantes del ecosistema' : 'Mis vacantes'}
-            subtitle="Ciclo de vida de la oportunidad publicada."
-            icon={<Briefcase size={16} />}
-          />
-          <MarcaDatosDemo className="mx-5 mt-4" />
-          {misOfertas.length === 0 ? (
-            <EmptyState
-              icono={<Briefcase size={22} />}
-              titulo="Sin vacantes publicadas"
-              descripcion="Publica tu primera oportunidad para activar el motor de matching."
-            />
-          ) : (
-            <ul className="divide-y divide-white/5">
-              {misOfertas.map((o) => {
-                const n = postulaciones.filter((p) => p.ofertaId === o.id).length
-                return (
-                  <li
-                    key={o.id}
-                    className="flex flex-col gap-2 px-5 py-3.5 sm:flex-row sm:items-center sm:gap-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-100">
-                        {o.rol} · {o.juego}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        {n} postulaciones · publicada el {o.publicadaEn}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <Badge
-                        tono={
-                          o.estado === 'ABIERTA'
-                            ? 'verde'
-                            : o.estado === 'BORRADOR'
-                              ? 'ambar'
-                              : 'neutro'
-                        }
-                      >
-                        {es.estadoOferta[o.estado]}
-                      </Badge>
-                      <Link to={`/vacantes/${o.id}`}>
-                        <Button variante="secundario" tamano="sm">
-                          <Sparkles size={12} />
-                          Ranking
-                        </Button>
-                      </Link>
-                      {o.estado === 'ABIERTA' && puedeGestionar && (
-                        <Button
-                          variante="fantasma"
-                          tamano="sm"
-                          onClick={() => cerrar(o.id)}
-                          title="Cerrar vacante"
-                        >
-                          <XCircle size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </Card>
-
-        {/* ------------------------- Postulaciones ------------------------- */}
-        <Card className="min-w-0">
-          <CardHeader
-            title={esScout ? 'Procesos de las vacantes' : 'Procesos de selección'}
-            subtitle={
-              esScout
-                ? 'Candidatos que se postularon. Solo la organizacion puede avanzar el estado.'
-                : 'Candidatos que se postularon a tus vacantes.'
-            }
-            icon={<UserPlus size={16} />}
-          />
-          <MarcaDatosDemo className="mx-5 mt-4" />
-          {postulacionesDeMisOfertas.length === 0 ? (
-            <EmptyState
-              icono={<UserPlus size={22} />}
-              titulo="Sin postulaciones"
-              descripcion="Cuando un jugador se postule a una de tus vacantes, aparecera aqui."
-            />
-          ) : (
-            <ul className="divide-y divide-white/5">
-              {postulacionesDeMisOfertas.map((p) => {
-                const jugador = jugadorDe(p.perfilId)
-                const oferta = misOfertas.find((o) => o.id === p.ofertaId)
-                return (
-                  <li key={p.id} className="px-5 py-3.5">
-                    <div className="flex items-start gap-3">
-                      {jugador && <Avatar nombre={jugador.nombre} size="sm" />}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-100">
-                          {jugador?.nombre ?? p.perfilId}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                          {oferta?.rol} · {oferta?.juego} · {p.fecha}
-                        </p>
-                        <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-slate-400">
-                          "{p.mensaje}"
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-12">
-                      {puedeGestionar ? (
-                        ESTADOS.map((e) => (
-                          <button
-                            key={e.v}
-                            type="button"
-                            onClick={() => cambiarEstado(p.id, e.v)}
-                            className={cn(
-                              'rounded-md px-2 py-1 text-[10px] font-medium transition',
-                              p.estado === e.v
-                                ? 'bg-brand-500/25 text-brand-200'
-                                : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-slate-300',
-                            )}
-                          >
-                            {e.l}
-                          </button>
-                        ))
-                      ) : (
-                        <Badge tono="cian">{es.estadoPostulacion[p.estado]}</Badge>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </Card>
       </div>
 
       {/* --------------------------- Recomendado --------------------------- */}
@@ -489,148 +224,79 @@ export default function PanelEquipoPage() {
         )}
       </Card>
 
-      {/* ------------------------------ Modal ------------------------------ */}
-      <Modal
-        abierto={modal}
-        onCerrar={() => setModal(false)}
-        titulo="Publicar nueva vacante"
-      >
-        <div className="space-y-4">
-          <Field label="Equipo">
-            <Select
-              value={form.equipoId}
-              onChange={(e) => setForm((f) => ({ ...f, equipoId: e.target.value }))}
-            >
-              {perfilesEquipo.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nombre}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Juego">
-              <Select
-                value={form.juego}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, juego: e.target.value as Oferta['juego'] }))
-                }
-              >
-                {JUEGOS.map((j) => (
-                  <option key={j} value={j}>
-                    {j}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Rol">
-              <Select
-                value={form.rol}
-                onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Rango minimo">
-              <Select
-                value={form.rangoMinimo}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, rangoMinimo: e.target.value }))
-                }
-              >
-                {RANGOS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Region preferida">
-              <Select
-                value={form.regionPreferida}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    regionPreferida: e.target.value as Oferta['regionPreferida'],
-                  }))
-                }
-              >
-                {REGIONES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Horas semanales">
-              <Input
-                type="number"
-                min={1}
-                max={60}
-                value={form.horasSemanales}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, horasSemanales: Number(e.target.value) }))
-                }
-              />
-            </Field>
-            <Field label="Experiencia minima (anos)">
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                value={form.experienciaMinima}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    experienciaMinima: Number(e.target.value),
-                  }))
-                }
-              />
-            </Field>
-          </div>
-          <Field label="Descripcion de la vacante">
-            <Textarea
-              rows={4}
-              value={form.descripcion}
-              onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
-              placeholder="Describe el rol, los requisitos y lo que ofrece el equipo."
-            />
-          </Field>
-          <Field label="Salario o contraprestacion (opcional)">
-            <Input
-              value={form.salario}
-              onChange={(e) => setForm((f) => ({ ...f, salario: e.target.value }))}
-              placeholder="COP 1.800.000 + bonificaciones"
-            />
-          </Field>
-          <Field
-            label="Requisitos"
-            hint="Uno por linea. Se muestran como lista en la vacante."
-          >
-            <Textarea
-              rows={4}
-              value={form.requisitos}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, requisitos: e.target.value }))
-              }
-              placeholder={'Ranked minimo Platino I\nWin rate sobre 55 %\nDisponibilidad para scrims'}
-            />
-          </Field>
-          <div className="flex justify-end gap-2">
-            <Button variante="fantasma" onClick={() => setModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={publicar} cargando={enviando}>
-              <CheckCircle2 size={14} />
-              Publicar
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
+  )
+}
+
+// RF-07 · Ofertas del equipo, en cualquier estado, con sus postulaciones.
+function MisOfertas() {
+  const consulta = useMisOfertas()
+
+  return (
+    <Card>
+      <CardHeader title={t.misOfertas} subtitle={t.misOfertasSubtitulo} icon={<Briefcase size={16} />} />
+      <div className="p-5">
+        {consulta.isPending ? (
+          <div aria-busy="true" aria-label={t.cargando} className="space-y-3">
+            <div className="skeleton h-20 rounded-xl" />
+            <div className="skeleton h-20 rounded-xl" />
+          </div>
+        ) : consulta.isError ? (
+          <EstadoError titulo={t.error} onReintentar={() => void consulta.refetch()} />
+        ) : consulta.data.data.length === 0 ? (
+          <EmptyState
+            icono={<Briefcase size={22} />}
+            titulo={t.vacio}
+            descripcion={t.vacioDetalle}
+            action={
+              <Link
+                to="/panel-equipo/ofertas/nueva"
+                className={`${claseBoton} border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50`}
+              >
+                <Plus size={14} aria-hidden />
+                {t.publicar}
+              </Link>
+            }
+          />
+        ) : (
+          <ul className="space-y-3">
+            {consulta.data.data.map((oferta) => (
+              <li
+                key={oferta.id}
+                className="flex flex-col gap-3 rounded-xl border border-white/8 bg-white/3 p-4 sm:flex-row sm:items-center"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-medium break-words text-slate-100">{oferta.titulo}</h3>
+                    <Badge tono={TONO_ESTADO_OFERTA[oferta.estado]}>{es.estadoOferta[oferta.estado]}</Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {es.posicionLol[oferta.rol]} · {es.modalidad[oferta.modalidad]}
+                    {oferta.modalidad !== 'REMOTA' && ` · ${lugarOferta(oferta)}`}
+                  </p>
+                  <p className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-slate-400">
+                    <span className="inline-flex items-center gap-1">
+                      <UserPlus size={12} aria-hidden />
+                      {t.postulaciones(oferta.totalPostulaciones)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock size={12} aria-hidden />
+                      {t.creadaEl(formatoFecha.format(oferta.creadoEn))}
+                    </span>
+                  </p>
+                </div>
+                <Link
+                  to={`/vacantes/${oferta.id}`}
+                  aria-label={`${t.gestionar}: ${oferta.titulo}`}
+                  className={`${claseBoton} justify-center border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50`}
+                >
+                  {t.gestionar}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
   )
 }

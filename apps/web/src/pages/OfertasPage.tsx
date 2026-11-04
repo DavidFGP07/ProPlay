@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Briefcase, CheckCircle2, Clock, MapPin, Plus, TrendingUp } from 'lucide-react'
 import {
-  DEPARTAMENTOS,
   MODALIDADES,
   POSICIONES_LOL,
   type Departamento,
@@ -26,16 +25,11 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { useMisPostulaciones, useOfertas, type FiltrosOfertas } from '@/api/ofertas'
 import { es } from '@/i18n/es'
-import { lugarOferta } from '@/lib/ubicacion'
+import { OPCIONES_DEPARTAMENTO, lugarOferta } from '@/lib/ubicacion'
 
 const t = es.ofertas
 
 const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' })
-
-/** Departamentos ordenados por su nombre visible, no por el código. */
-const DEPARTAMENTOS_ORDENADOS = [...DEPARTAMENTOS].sort((a, b) =>
-  es.departamento[a].localeCompare(es.departamento[b], 'es'),
-)
 
 // RF-07 · RF-09 · Explorar oportunidades: ofertas abiertas reales de
 // GET /api/v1/ofertas, paginadas y filtradas por posición, departamento y
@@ -95,7 +89,7 @@ export default function OfertasPage() {
               }
             >
               <option value="">{t.todos}</option>
-              {DEPARTAMENTOS_ORDENADOS.map((departamento) => (
+              {OPCIONES_DEPARTAMENTO.map((departamento) => (
                 <option key={departamento} value={departamento}>
                   {es.departamento[departamento]}
                 </option>

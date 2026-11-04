@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Building2, ExternalLink, Save } from 'lucide-react'
-import { perfilEquipoSchema, type PerfilEquipoRespuesta } from '@proplay/shared'
+import { Building2, ExternalLink, MapPin, Save } from 'lucide-react'
+import {
+  PAIS_CON_DEPARTAMENTO,
+  perfilEquipoSchema,
+  type PerfilEquipoRespuesta,
+} from '@proplay/shared'
 import {
   Button,
   Card,
@@ -12,12 +16,14 @@ import {
   EstadoEnvio,
   Field,
   Input,
+  Select,
   Textarea,
 } from '@/components/ui'
 import { aplicarErrorApi } from '@/api/errores'
 import { useActualizarPerfilEquipo, usePerfilPropio } from '@/api/perfiles'
 import { useToast } from '@/context/ToastContext'
 import { es } from '@/i18n/es'
+import { OPCIONES_DEPARTAMENTO, opcionesPais } from '@/lib/ubicacion'
 
 const t = es.organizacion
 
@@ -34,11 +40,16 @@ const esquemaFormulario = z
     nombreOrg: z.string(),
     descripcion: z.string(),
     sitioWeb: z.string(),
+    pais: z.string(),
+    departamento: z.string(),
   })
   .transform((valor) => ({
     nombreOrg: valor.nombreOrg,
     descripcion: valor.descripcion.trim() === '' ? null : valor.descripcion,
     sitioWeb: valor.sitioWeb.trim() === '' ? null : valor.sitioWeb,
+    pais: valor.pais === '' ? null : valor.pais,
+    departamento:
+      valor.pais === PAIS_CON_DEPARTAMENTO && valor.departamento !== '' ? valor.departamento : null,
   }))
   .pipe(perfilEquipoSchema)
 
@@ -49,10 +60,12 @@ function valoresDe(perfil: PerfilEquipoRespuesta): FormularioOrganizacion {
     nombreOrg: perfil.nombreOrg,
     descripcion: perfil.descripcion ?? '',
     sitioWeb: perfil.sitioWeb ?? '',
+    pais: perfil.pais ?? '',
+    departamento: perfil.departamento ?? '',
   }
 }
 
-// RF-07 · Datos de la organización: nombre, descripción y sitio web. API real:
+// RF-07 · Datos de la organización: nombre, descripción, sitio web y sede. API real:
 // GET /api/v1/perfiles/me y PATCH /api/v1/perfiles/equipo. Sólo la ve el rol
 // EQUIPO; el scout no tiene perfil propio.
 export function DatosOrganizacion() {
@@ -97,6 +110,8 @@ function Formulario({ perfil }: { perfil: PerfilEquipoRespuesta }) {
     defaultValues: valoresDe(perfil),
   })
   const largoDescripcion = watch('descripcion').length
+  const enColombia = watch('pais') === PAIS_CON_DEPARTAMENTO
+  const paises = useMemo(opcionesPais, [])
 
   const enviar = handleSubmit(async (valores) => {
     const datos = esquemaFormulario.parse(valores)
@@ -167,6 +182,46 @@ function Formulario({ perfil }: { perfil: PerfilEquipoRespuesta }) {
         />
         <ErrorCampo mensaje={errors.descripcion?.message} />
       </Field>
+
+      <fieldset className="space-y-3 rounded-xl border border-white/8 bg-white/3 p-4">
+        <legend className="flex items-center gap-1.5 px-1 text-xs font-semibold text-slate-200">
+          <MapPin size={13} aria-hidden />
+          {t.sede}
+        </legend>
+        <p className="text-[11px] leading-relaxed text-slate-400">{t.sedePista}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={es.ubicacion.pais}>
+            <Select
+              autoComplete="country"
+              aria-invalid={Boolean(errors.pais)}
+              {...register('pais', limpiarExito)}
+            >
+              <option value="">{es.ubicacion.seleccionaPais}</option>
+              {paises.map(({ codigo, nombre }) => (
+                <option key={codigo} value={codigo}>
+                  {nombre}
+                </option>
+              ))}
+            </Select>
+            <ErrorCampo mensaje={errors.pais?.message} />
+          </Field>
+          <Field label={es.ubicacion.departamento}>
+            <Select
+              disabled={!enColombia}
+              aria-invalid={Boolean(errors.departamento)}
+              {...register('departamento', limpiarExito)}
+            >
+              <option value="">{es.ubicacion.seleccionaDepartamento}</option>
+              {OPCIONES_DEPARTAMENTO.map((departamento) => (
+                <option key={departamento} value={departamento}>
+                  {es.departamento[departamento]}
+                </option>
+              ))}
+            </Select>
+            <ErrorCampo mensaje={errors.departamento?.message} />
+          </Field>
+        </div>
+      </fieldset>
 
       <EstadoEnvio
         exito={exito ? t.exito : ''}

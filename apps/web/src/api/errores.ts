@@ -30,3 +30,8 @@ export function aplicarErrorApi<T extends FieldValues>(
   if (status === 429) return es.comun.errores.demasiadosIntentos
   return es.comun.errores.generico
 }
+
+/** Código de error de la API (`TRANSICION_NO_PERMITIDA`…), si la respuesta lo trae. */
+export function codigoError(error: unknown): string | undefined {
+  return axios.isAxiosError<ErrorResponse>(error) ? error.response?.data?.error?.code : undefined
+}
