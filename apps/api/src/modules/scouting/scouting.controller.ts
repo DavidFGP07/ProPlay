@@ -1,17 +1,20 @@
+import { queryValidada } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import * as servicio from "./scouting.service";
+import { busquedaJugadoresSchema, paginacionQuerySchema } from "./scouting.schema";
 
 /**
  * Controladores del módulo `scouting`: sólo traducen entre HTTP y el
- * servicio. Andamiaje: todos responden 501 NOT_IMPLEMENTED por ahora.
+ * servicio. La ficha ampliada y las búsquedas guardadas responden 501.
  */
 
 /**
  * GET /api/v1/scouting/jugadores
- * TODO: Buscar jugadores por juego, rol, región, KDA, win rate y nivel de habilidad.
+ * RF-08 · Jugadores filtrados por posición, rango mínimo y departamento.
  */
 export const buscarJugadores = asyncHandler(async (req, res) => {
-  res.json(await servicio.buscarJugadores(req.body ?? req.validado));
+  const query = queryValidada(req, busquedaJugadoresSchema.merge(paginacionQuerySchema));
+  res.status(200).json(await servicio.buscarJugadores(query));
 });
 
 /**

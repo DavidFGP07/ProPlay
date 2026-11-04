@@ -1,15 +1,30 @@
+import { calcularRango, paginar, type OpcionesPaginacion } from "../../utils/pagination";
 import * as repositorio from "./scouting.repository";
+import { jugadorEncontradoSchema, type BusquedaJugadores } from "./scouting.schema";
 
 /**
  * Lógica de negocio del módulo `scouting`: Búsqueda y descubrimiento de jugadores por parte de scouts y equipos.
  *
- * Andamiaje: cada función delega en el repositorio, que todavía lanza
- * NotImplementedError (501).
+ * La ficha ampliada y las búsquedas guardadas siguen en andamiaje: delegan en
+ * el repositorio, que lanza NotImplementedError (501).
  */
 
-/** TODO: Buscar jugadores por juego, rol, región, KDA, win rate y nivel de habilidad. */
-export async function buscarJugadores(datos?: unknown) {
-  return repositorio.buscarJugadores(datos);
+/**
+ * RF-08 · Buscador de talento. Cada resultado pasa por
+ * `jugadorEncontradoSchema`, la lista blanca: lo que la consulta traiga de más
+ * no sale. La verificación sólo existe si hay cuenta de Riot verificada.
+ */
+export async function buscarJugadores(query: BusquedaJugadores & OpcionesPaginacion) {
+  const { page, pageSize, ...filtros } = query;
+  const rango = calcularRango({ page, pageSize });
+  const [filas, total] = await repositorio.buscarJugadores(filtros, rango);
+  const data = filas.map(({ plataforma, verificadaEn, ...jugador }) =>
+    jugadorEncontradoSchema.parse({
+      ...jugador,
+      verificacion: plataforma && verificadaEn ? { plataforma, verificadaEn } : null,
+    }),
+  );
+  return paginar(data, total, rango);
 }
 
 /** TODO: Devolver la ficha ampliada de un jugador (perfil, habilidades y estadísticas). */
