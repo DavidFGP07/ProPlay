@@ -38,17 +38,29 @@ export const Plataforma = {
   YOUTUBE: "YOUTUBE",
 } as const satisfies Record<Plataforma, Plataforma>;
 
-export const ESTADOS_OFERTA = ["BORRADOR", "ABIERTA", "CERRADA"] as const;
+/**
+ * Estados de la oferta. `CUBIERTA` y `CERRADA` son finales: la primera cierra
+ * con al menos un jugador aceptado (mide el tiempo hasta cubrir la vacante,
+ * H1); la segunda, sin contratar. Transiciones en `TRANSICIONES_OFERTA`.
+ */
+export const ESTADOS_OFERTA = ["BORRADOR", "ABIERTA", "CUBIERTA", "CERRADA"] as const;
 export type EstadoOferta = (typeof ESTADOS_OFERTA)[number];
 export const EstadoOferta = {
   BORRADOR: "BORRADOR",
   ABIERTA: "ABIERTA",
+  CUBIERTA: "CUBIERTA",
   CERRADA: "CERRADA",
 } as const satisfies Record<EstadoOferta, EstadoOferta>;
 
+/**
+ * Estados de la postulación, en el orden del embudo. `ENTREVISTA` es el tryout
+ * («invitar a un tryout» del documento). `ACEPTADA` y `RECHAZADA` son finales.
+ * Transiciones en `TRANSICIONES_POSTULACION`.
+ */
 export const ESTADOS_POSTULACION = [
   "ENVIADA",
   "EN_REVISION",
+  "ENTREVISTA",
   "ACEPTADA",
   "RECHAZADA",
 ] as const;
@@ -56,9 +68,37 @@ export type EstadoPostulacion = (typeof ESTADOS_POSTULACION)[number];
 export const EstadoPostulacion = {
   ENVIADA: "ENVIADA",
   EN_REVISION: "EN_REVISION",
+  ENTREVISTA: "ENTREVISTA",
   ACEPTADA: "ACEPTADA",
   RECHAZADA: "RECHAZADA",
 } as const satisfies Record<EstadoPostulacion, EstadoPostulacion>;
+
+/**
+ * Modalidad de la oferta, insumo de la dimensión geográfica. `REMOTA` no lleva
+ * ubicación: es la oferta «sin restricción».
+ */
+export const MODALIDADES = ["PRESENCIAL", "HIBRIDA", "REMOTA"] as const;
+export type Modalidad = (typeof MODALIDADES)[number];
+export const Modalidad = {
+  PRESENCIAL: "PRESENCIAL",
+  HIBRIDA: "HIBRIDA",
+  REMOTA: "REMOTA",
+} as const satisfies Record<Modalidad, Modalidad>;
+
+/**
+ * Posiciones de League of Legends, el único juego del piloto. Corresponden a
+ * `teamPosition` de la API de partidas de Riot (TOP, JUNGLE, MIDDLE, BOTTOM,
+ * UTILITY), así la dimensión técnica compara la oferta con lo jugado.
+ */
+export const POSICIONES_LOL = ["TOP", "JUNGLA", "MID", "ADC", "SOPORTE"] as const;
+export type PosicionLol = (typeof POSICIONES_LOL)[number];
+export const PosicionLol = {
+  TOP: "TOP",
+  JUNGLA: "JUNGLA",
+  MID: "MID",
+  ADC: "ADC",
+  SOPORTE: "SOPORTE",
+} as const satisfies Record<PosicionLol, PosicionLol>;
 
 /** Tipos de notificación que emite el sistema. */
 export const TIPOS_NOTIFICACION = [

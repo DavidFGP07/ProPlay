@@ -42,14 +42,30 @@ enum Plataforma {
 enum EstadoOferta {
   BORRADOR
   ABIERTA
+  CUBIERTA
   CERRADA
 }
 
 enum EstadoPostulacion {
   ENVIADA
   EN_REVISION
+  ENTREVISTA
   ACEPTADA
   RECHAZADA
+}
+
+enum Modalidad {
+  PRESENCIAL
+  HIBRIDA
+  REMOTA
+}
+
+enum PosicionLol {
+  TOP
+  JUNGLA
+  MID
+  ADC
+  SOPORTE
 }
 
 enum Departamento {
@@ -157,14 +173,17 @@ model PerfilEquipo {
   descripcion   String?
   sitioWeb      String?
   logoUrl       String?
-  region        String?
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  /// Sede de la organización, con la misma regla que la ubicación del jugador:
+  /// país ISO 3166-1 alfa-2 y departamento sólo si es "CO".
+  pais          String?       @db.Char(2)
+  departamento  Departamento?
+  creadoEn      DateTime      @default(now())
+  actualizadoEn DateTime      @updatedAt
 
   usuario Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ofertas Oferta[]
 
-  @@index([region])
+  @@index([pais, departamento])
 }
 
 // ----------------------------- Habilidades ---------------------------------
@@ -292,28 +311,45 @@ model Publicacion {
 // ----------------------------- Ofertas -------------------------------------
 
 model Oferta {
-  id                  String       @id @default(cuid())
-  equipoId            String
-  titulo              String
-  juego               String
-  rol                 String
-  rangoMinimo         String?
-  experienciaMinAnios Int          @default(0)
-  region              String?
-  horasSemana         Int?
-  descripcion         String
-  estado              EstadoOferta @default(BORRADOR)
-  creadoEn            DateTime     @default(now())
-  actualizadoEn       DateTime     @updatedAt
+  id           String        @id @default(cuid())
+  equipoId     String
+  titulo       String
+  /// Siempre League of Legends en el piloto (JUEGO_PILOTO en @proplay/shared).
+  juego        String
+  rol          PosicionLol
+  rangoMinimo  String?
+  /// REMOTA no lleva ubicación; PRESENCIAL e HIBRIDA, país y (en "CO") departamento.
+  modalidad    Modalidad
+  pais         String?       @db.Char(2)
+  departamento Departamento?
+  horasSemana  Int?
+  descripcion  String
+
+  /// Pesos de las cinco dimensiones de la ecuación (1), elegidos por el equipo.
+  /// Suman 1 (pesosMatchingSchema); por defecto, PESOS_MATCHING de @proplay/shared.
+  pesoTecnica            Float
+  pesoExperiencia        Float
+  pesoHabilidadesBlandas Float
+  pesoGeografica         Float
+  pesoDisponibilidad     Float
+
+  estado        EstadoOferta @default(BORRADOR)
+  /// Paso a ABIERTA. Inicio del embudo y del tiempo hasta cubrir la vacante.
+  publicadaEn   DateTime?
+  /// Paso a CUBIERTA o CERRADA.
+  cerradaEn     DateTime?
+  creadoEn      DateTime     @default(now())
+  actualizadoEn DateTime     @updatedAt
 
   equipo        PerfilEquipo  @relation(fields: [equipoId], references: [id], onDelete: Cascade)
   postulaciones Postulacion[]
   matchings     Matching[]
 
   @@index([equipoId])
-  @@index([juego])
-  @@index([region])
-  @@index([estado])
+  @@index([estado, publicadaEn])
+  @@index([rol])
+  @@index([modalidad])
+  @@index([pais, departamento])
 }
 
 model Postulacion {
@@ -322,8 +358,16 @@ model Postulacion {
   jugadorId     String
   estado        EstadoPostulacion @default(ENVIADA)
   mensaje       String?
+  /// Envío de la postulación (estado ENVIADA).
   creadoEn      DateTime          @default(now())
   actualizadoEn DateTime          @updatedAt
+
+  /// Fecha de cada cambio de estado, para el embudo de la vacante (H1). Las
+  /// transiciones son lineales, así que cada una se escribe una sola vez.
+  revisadaEn   DateTime?
+  entrevistaEn DateTime?
+  aceptadaEn   DateTime?
+  rechazadaEn  DateTime?
 
   oferta  Oferta        @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)

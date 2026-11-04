@@ -1,11 +1,12 @@
 import type {
   Departamento,
   EstadoOferta,
+  EstadoPostulacion,
   Macrorregion,
   Plataforma,
   Rol,
 } from '@proplay/shared'
-import type { EstadoPostulacionPrototipo, PlataformaJuego } from '@/mocks/modelos'
+import type { PlataformaJuego } from '@/mocks/modelos'
 
 /**
  * Textos visibles de la interfaz (CLAUDE.md §6). Las vistas heredadas del
@@ -230,15 +231,16 @@ export const es = {
   estadoOferta: {
     BORRADOR: 'Borrador',
     ABIERTA: 'Abierta',
+    CUBIERTA: 'Cubierta',
     CERRADA: 'Cerrada',
   } satisfies Record<EstadoOferta, string>,
   estadoPostulacion: {
     ENVIADA: 'Recibida',
     EN_REVISION: 'En revision',
-    ENTREVISTA: 'Entrevista',
+    ENTREVISTA: 'Tryout / entrevista',
     ACEPTADA: 'Aceptada',
     RECHAZADA: 'Rechazada',
-  } satisfies Record<EstadoPostulacionPrototipo, string>,
+  } satisfies Record<EstadoPostulacion, string>,
   departamento: {
     AMAZONAS: 'Amazonas',
     ANTIOQUIA: 'Antioquia',
