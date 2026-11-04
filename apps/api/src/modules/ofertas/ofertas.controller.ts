@@ -1,63 +1,117 @@
+import type { Request } from "express";
+import { queryValidada } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./ofertas.service";
+import {
+  listarMisOfertasQuerySchema,
+  listarOfertasQuerySchema,
+  paginacionQuerySchema,
+  type ActualizarOfertaInput,
+  type ActualizarPostulacionInput,
+  type CambiarEstadoOfertaInput,
+  type CrearOfertaInput,
+  type CrearPostulacionInput,
+} from "./ofertas.schema";
 
 /**
- * Controladores del módulo `ofertas`: sólo traducen entre HTTP y el
- * servicio. Andamiaje: todos responden 501 NOT_IMPLEMENTED por ahora.
+ * Controladores del módulo `ofertas`: sólo traducen entre HTTP y el servicio.
  */
+
+/** Petición con `:id` en la ruta y el body ya validado por validate(). */
+type PeticionCon<Body> = Request<{ id: string }, unknown, Body>;
+
+function actor(req: Request) {
+  if (!req.usuario) throw new UnauthorizedError();
+  return { id: req.usuario.id, rol: req.usuario.rol };
+}
 
 /**
  * GET /api/v1/ofertas
- * TODO: Listar ofertas abiertas con filtros de juego, región, rol y estado.
+ * RF-07 · Ofertas abiertas, paginadas y filtradas por rol, departamento y modalidad.
  */
 export const listar = asyncHandler(async (req, res) => {
-  res.json(await servicio.listar(req.body ?? req.validado));
+  const query = queryValidada(req, listarOfertasQuerySchema.merge(paginacionQuerySchema));
+  res.status(200).json(await servicio.listar(query));
+});
+
+/**
+ * GET /api/v1/ofertas/me
+ * RF-07 · Ofertas del equipo autenticado, en cualquier estado.
+ */
+export const listarPropias = asyncHandler(async (req, res) => {
+  const query = queryValidada(req, listarMisOfertasQuerySchema.merge(paginacionQuerySchema));
+  res.status(200).json(await servicio.listarPropias(actor(req).id, query));
 });
 
 /**
  * POST /api/v1/ofertas
- * TODO: Crear una oferta asociada al PerfilEquipo del usuario autenticado.
+ * RF-07 · Publicar o guardar como borrador una oferta del equipo autenticado.
  */
-export const crear = asyncHandler(async (req, res) => {
-  res.json(await servicio.crear(req.body ?? req.validado));
+export const crear = asyncHandler<PeticionCon<CrearOfertaInput>>(async (req, res) => {
+  res.status(201).json(await servicio.crear(actor(req).id, req.body));
 });
 
 /**
  * GET /api/v1/ofertas/:id
- * TODO: Devolver el detalle de una oferta.
+ * RF-07 · Detalle de una oferta.
  */
-export const obtener = asyncHandler(async (req, res) => {
-  res.json(await servicio.obtener(req.body ?? req.validado));
+export const obtener = asyncHandler<PeticionCon<unknown>>(async (req, res) => {
+  res.status(200).json(await servicio.obtener(req.params.id, actor(req)));
 });
 
 /**
  * PATCH /api/v1/ofertas/:id
- * TODO: Actualizar los datos o el estado de una oferta propia.
+ * RF-07 · Edición parcial de una oferta propia.
  */
-export const actualizar = asyncHandler(async (req, res) => {
-  res.json(await servicio.actualizar(req.body ?? req.validado));
+export const actualizar = asyncHandler<PeticionCon<ActualizarOfertaInput>>(async (req, res) => {
+  res.status(200).json(await servicio.actualizar(req.params.id, actor(req), req.body));
 });
 
 /**
- * POST /api/v1/ofertas/:id/postulaciones
- * TODO: Registrar la postulación del jugador autenticado a una oferta.
+ * PATCH /api/v1/ofertas/:id/estado
+ * RF-07 · Publicar, cubrir o cerrar una oferta propia.
  */
-export const postular = asyncHandler(async (req, res) => {
-  res.json(await servicio.postular(req.body ?? req.validado));
+export const cambiarEstado = asyncHandler<PeticionCon<CambiarEstadoOfertaInput>>(
+  async (req, res) => {
+    res
+      .status(200)
+      .json(await servicio.cambiarEstado(req.params.id, actor(req), req.body.estado));
+  },
+);
+
+/**
+ * POST /api/v1/ofertas/:id/postulaciones
+ * RF-10 · Postulación del jugador autenticado.
+ */
+export const postular = asyncHandler<PeticionCon<CrearPostulacionInput>>(async (req, res) => {
+  res.status(201).json(await servicio.postular(req.params.id, actor(req), req.body.mensaje));
 });
 
 /**
  * GET /api/v1/ofertas/:id/postulaciones
- * TODO: Listar las postulaciones recibidas por una oferta propia.
+ * RF-10 · Postulaciones recibidas por una oferta.
  */
-export const listarPostulaciones = asyncHandler(async (req, res) => {
-  res.json(await servicio.listarPostulaciones(req.body ?? req.validado));
+export const listarPostulaciones = asyncHandler<PeticionCon<unknown>>(async (req, res) => {
+  res.status(200).json(await servicio.listarPostulaciones(req.params.id, actor(req)));
+});
+
+/**
+ * GET /api/v1/ofertas/postulaciones/me
+ * RF-10 · Postulaciones del jugador autenticado.
+ */
+export const misPostulaciones = asyncHandler(async (req, res) => {
+  res.status(200).json(await servicio.misPostulaciones(actor(req).id));
 });
 
 /**
  * PATCH /api/v1/ofertas/postulaciones/:id
- * TODO: Cambiar el estado de una postulación (revisión, aceptada, rechazada).
+ * RF-10 · Avanzar o rechazar una postulación recibida.
  */
-export const actualizarPostulacion = asyncHandler(async (req, res) => {
-  res.json(await servicio.actualizarPostulacion(req.body ?? req.validado));
-});
+export const actualizarPostulacion = asyncHandler<PeticionCon<ActualizarPostulacionInput>>(
+  async (req, res) => {
+    res
+      .status(200)
+      .json(await servicio.actualizarPostulacion(req.params.id, actor(req), req.body.estado));
+  },
+);

@@ -6,20 +6,24 @@ import * as controlador from "./ofertas.controller";
 import {
   actualizarOfertaSchema,
   actualizarPostulacionSchema,
+  cambiarEstadoOfertaSchema,
   crearOfertaSchema,
   crearPostulacionSchema,
   idParamSchema,
+  listarMisOfertasQuerySchema,
   listarOfertasQuerySchema,
   paginacionQuerySchema,
 } from "./ofertas.schema";
 
 /**
  * Rutas del módulo `ofertas`: /api/v1/ofertas
- * Ofertas publicadas por los equipos y postulaciones de los jugadores.
+ * Ofertas publicadas por los equipos y postulaciones de los jugadores. El
+ * equipo gestiona; el scout y el administrador sólo leen. Las rutas fijas
+ * (`/me`, `/postulaciones/...`) van antes de `/:id`.
  */
 export const ofertasRouter = Router();
 
-// TODO: Listar ofertas abiertas con filtros de juego, región, rol y estado.
+// RF-07 · Explorar ofertas abiertas (paginadas, por fecha de publicación)
 ofertasRouter.get(
   "/",
   auth,
@@ -27,7 +31,34 @@ ofertasRouter.get(
   controlador.listar,
 );
 
-// TODO: Crear una oferta asociada al PerfilEquipo del usuario autenticado.
+// RF-07 · Ofertas propias del equipo, en cualquier estado
+ofertasRouter.get(
+  "/me",
+  auth,
+  rbac("EQUIPO"),
+  validate(listarMisOfertasQuerySchema.merge(paginacionQuerySchema), "query"),
+  controlador.listarPropias,
+);
+
+// RF-10 · Postulaciones del jugador autenticado (pestaña de Mi perfil)
+ofertasRouter.get(
+  "/postulaciones/me",
+  auth,
+  rbac("JUGADOR"),
+  controlador.misPostulaciones,
+);
+
+// RF-10 · Avanzar o rechazar una postulación de una oferta propia
+ofertasRouter.patch(
+  "/postulaciones/:id",
+  auth,
+  rbac("EQUIPO"),
+  validate(idParamSchema, "params"),
+  validate(actualizarPostulacionSchema),
+  controlador.actualizarPostulacion,
+);
+
+// RF-07 · Crear una oferta con los pesos de las cinco dimensiones
 ofertasRouter.post(
   "/",
   auth,
@@ -36,7 +67,7 @@ ofertasRouter.post(
   controlador.crear,
 );
 
-// TODO: Devolver el detalle de una oferta.
+// RF-07 · Detalle de una oferta
 ofertasRouter.get(
   "/:id",
   auth,
@@ -44,38 +75,41 @@ ofertasRouter.get(
   controlador.obtener,
 );
 
-// TODO: Actualizar los datos o el estado de una oferta propia.
+// RF-07 · Editar una oferta propia
 ofertasRouter.patch(
   "/:id",
   auth,
   rbac("EQUIPO"),
+  validate(idParamSchema, "params"),
   validate(actualizarOfertaSchema),
   controlador.actualizar,
 );
 
-// TODO: Registrar la postulación del jugador autenticado a una oferta.
+// RF-07 · Publicar, cubrir o cerrar una oferta propia
+ofertasRouter.patch(
+  "/:id/estado",
+  auth,
+  rbac("EQUIPO"),
+  validate(idParamSchema, "params"),
+  validate(cambiarEstadoOfertaSchema),
+  controlador.cambiarEstado,
+);
+
+// RF-10 · Postularse a una oferta abierta
 ofertasRouter.post(
   "/:id/postulaciones",
   auth,
   rbac("JUGADOR"),
+  validate(idParamSchema, "params"),
   validate(crearPostulacionSchema),
   controlador.postular,
 );
 
-// TODO: Listar las postulaciones recibidas por una oferta propia.
+// RF-10 · Postulaciones recibidas: el equipo, de sus ofertas; scout y admin, de cualquiera
 ofertasRouter.get(
   "/:id/postulaciones",
   auth,
-  rbac("EQUIPO", "ADMIN"),
+  rbac("EQUIPO", "SCOUT", "ADMIN"),
   validate(idParamSchema, "params"),
   controlador.listarPostulaciones,
-);
-
-// TODO: Cambiar el estado de una postulación (revisión, aceptada, rechazada).
-ofertasRouter.patch(
-  "/postulaciones/:id",
-  auth,
-  rbac("EQUIPO", "ADMIN"),
-  validate(actualizarPostulacionSchema),
-  controlador.actualizarPostulacion,
 );
