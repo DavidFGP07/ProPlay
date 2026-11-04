@@ -7,6 +7,7 @@
  */
 export {
   busquedaJugadoresSchema,
+  jugadorEncontradoSchema,
   guardarBusquedaSchema,
   paginacionQuerySchema,
   idParamSchema,
@@ -14,4 +15,5 @@ export {
 
 export type {
   BusquedaJugadores,
+  JugadorEncontrado,
 } from "@proplay/shared";

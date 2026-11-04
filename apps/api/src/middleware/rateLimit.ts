@@ -130,3 +130,27 @@ export const limitePerfilPublico = rateLimit({
   ...respuestaLimite,
   ...opcionesLimitePerfilPublico,
 });
+
+/**
+ * Configuración del límite del buscador de talento (RF-08): 120 búsquedas cada
+ * 15 minutos por usuario. Exige sesión de equipo, scout o administrador, pero
+ * cada página trae varios perfiles: frena que una cuenta recorra a todos los
+ * jugadores. El límite global sigue aplicando por encima. Se exporta para
+ * poder probarla sin el `skip` de los tests.
+ */
+export const opcionesLimiteBusqueda: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Has hecho demasiadas búsquedas, espera unos minutos",
+    },
+  },
+};
+
+export const limiteBusqueda = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimiteBusqueda,
+});
