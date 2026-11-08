@@ -324,9 +324,15 @@ que la usen como base.
 
 ## 9. Estado actual
 
-**Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
-`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` y `GET /perfiles/:id` (perfil público, sin sesión). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
-`scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
+**Backend.** El módulo `usuarios` está implementado; de `perfiles`, `GET /perfiles/me`,
+`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo`, `GET /perfiles/:id` (perfil público, sin
+sesión) y las cuentas vinculadas (`GET`, `DELETE /perfiles/cuentas-gaming/:plataforma` y la
+vinculación con Riot por desafío de icono en `/perfiles/cuentas-gaming/riot` y `/riot/verificar`).
+`estadisticas` está implementado (sincronizar desde Riot, histórico y resumen); la integración
+con Riot vive en `src/integrations/riot/` (cliente con control de cuota, normalización pura y
+proveedor) y su porqué en `docs/decisiones.md`, «Integración con Riot». Los demás endpoints de
+`perfiles` (habilidades, endorsements y la vinculación OAuth, que necesita RSO) y los otros
+módulos (`scouting`, `matching`, `ofertas`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
 

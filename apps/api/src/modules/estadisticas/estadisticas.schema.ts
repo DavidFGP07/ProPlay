@@ -9,10 +9,16 @@ export {
   idParamSchema,
   listarEstadisticasQuerySchema,
   sincronizarEstadisticasSchema,
+  sincronizarEstadisticasRespuestaSchema,
+  resumenEstadisticasSchema,
   estadisticaSchema,
+  metricasLolSchema,
 } from "@proplay/shared";
 
 export type {
   Estadistica,
   ListarEstadisticasQuery,
+  ResumenEstadisticas,
+  SincronizarEstadisticasInput,
+  SincronizarEstadisticasRespuesta,
 } from "@proplay/shared";

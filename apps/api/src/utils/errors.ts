@@ -71,6 +71,23 @@ export class TooManyRequestsError extends AppError {
 }
 
 /**
+ * Un servicio externo (la API de Riot) respondió mal o no respondió: el fallo
+ * no es del cliente ni de nuestra lógica.
+ */
+export class ServicioExternoError extends AppError {
+  constructor(message = "El servicio externo no está disponible", details?: unknown) {
+    super(502, "SERVICIO_EXTERNO", message, details);
+  }
+}
+
+/** Falta configuración para atender la petición (p. ej. RIOT_API_KEY vacía). */
+export class ServicioNoConfiguradoError extends AppError {
+  constructor(message = "El servicio no está configurado", details?: unknown) {
+    super(503, "SERVICIO_NO_CONFIGURADO", message, details);
+  }
+}
+
+/**
  * Marca el andamiaje pendiente de implementar. Los módulos que todavía no
  * tienen lógica de negocio devuelven este error (501).
  */

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Plataforma, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { NotImplementedError } from "../../utils/errors";
 
@@ -139,4 +139,77 @@ export async function vincularCuenta(_datos?: unknown): Promise<never> {
   throw new NotImplementedError(
     "perfiles.repository.vincularCuenta todavía no consulta la base de datos",
   );
+}
+
+/** Campos de `CuentaGaming` que ve su dueño: nunca el puuid ni los tokens. */
+const seleccionCuenta = {
+  id: true,
+  plataforma: true,
+  handle: true,
+  servidor: true,
+  verificadaEn: true,
+  sincronizadaEn: true,
+  creadoEn: true,
+} satisfies Prisma.CuentaGamingSelect;
+
+export type CuentaGamingDb = Prisma.CuentaGamingGetPayload<{
+  select: typeof seleccionCuenta;
+}>;
+
+export async function listarCuentas(jugadorId: string): Promise<CuentaGamingDb[]> {
+  return prisma.cuentaGaming.findMany({
+    where: { jugadorId },
+    select: seleccionCuenta,
+    orderBy: { creadoEn: "asc" },
+  });
+}
+
+/** Dueño actual de una identidad externa (p. ej. un puuid), si la hay. */
+export async function buscarDuenoCuenta(
+  plataforma: Plataforma,
+  externalId: string,
+): Promise<{ jugadorId: string } | null> {
+  return prisma.cuentaGaming.findUnique({
+    where: { plataforma_externalId: { plataforma, externalId } },
+    select: { jugadorId: true },
+  });
+}
+
+/**
+ * Guarda la cuenta verificada. Un jugador tiene como mucho una cuenta por
+ * plataforma: si ya tenía otra de Riot, se sustituye.
+ */
+export async function guardarCuentaVerificada(datos: {
+  jugadorId: string;
+  plataforma: Plataforma;
+  externalId: string;
+  handle: string;
+  servidor: string;
+  verificadaEn: Date;
+}): Promise<CuentaGamingDb> {
+  const { jugadorId, plataforma, ...resto } = datos;
+  return prisma.cuentaGaming.upsert({
+    where: { jugadorId_plataforma: { jugadorId, plataforma } },
+    create: { jugadorId, plataforma, ...resto },
+    update: { ...resto, sincronizadaEn: null },
+    select: seleccionCuenta,
+  });
+}
+
+/** Borra la cuenta; devuelve cuántas filas se borraron (0 o 1). */
+export async function borrarCuenta(jugadorId: string, plataforma: Plataforma): Promise<number> {
+  const { count } = await prisma.cuentaGaming.deleteMany({ where: { jugadorId, plataforma } });
+  return count;
+}
+
+/** Traza de RF-14 / RNF-06: vincular y desvincular cuentas son tratamiento de datos. */
+export async function registrarAuditoria(datos: {
+  usuarioId: string;
+  accion: string;
+  entidadId: string | null;
+  metadata: Prisma.InputJsonValue;
+}): Promise<void> {
+  await prisma.auditLog.create({
+    data: { ...datos, entidad: "CuentaGaming" },
+  });
 }

@@ -162,3 +162,65 @@ export const MACROREGION_POR_DEPARTAMENTO = {
   VAUPES: "AMAZONIA",
   VICHADA: "ORINOQUIA",
 } as const satisfies Record<Departamento, Macrorregion>;
+
+// ------------------------- Integración con Riot ----------------------------
+
+/** Único juego del piloto (decisión 0.3): League of Legends vía la API de Riot. */
+export const JUEGO_LOL = "League of Legends";
+
+/**
+ * Servidores (plataformas) de League of Legends, en el formato que usa la API
+ * de Riot. El piloto vive en LA1 (Latinoamérica Norte, donde juega Colombia).
+ * No es enum de Prisma: se guarda como texto en `CuentaGaming.servidor`.
+ */
+export const SERVIDORES_LOL = [
+  "LA1",
+  "LA2",
+  "NA1",
+  "BR1",
+  "EUW1",
+  "EUN1",
+  "TR1",
+  "RU",
+  "ME1",
+  "KR",
+  "JP1",
+  "OC1",
+  "SG2",
+  "TW2",
+  "VN2",
+] as const;
+export type ServidorLol = (typeof SERVIDORES_LOL)[number];
+export const SERVIDOR_LOL_POR_DEFECTO: ServidorLol = "LA1";
+
+/** Posiciones de la Grieta tal como las reporta Riot (`teamPosition`). */
+export const POSICIONES_LOL = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"] as const;
+export type PosicionLol = (typeof POSICIONES_LOL)[number];
+
+/** Ligas clasificatorias de menor a mayor: el orden sirve para comparar rangos. */
+export const LIGAS_LOL = [
+  "IRON",
+  "BRONZE",
+  "SILVER",
+  "GOLD",
+  "PLATINUM",
+  "EMERALD",
+  "DIAMOND",
+  "MASTER",
+  "GRANDMASTER",
+  "CHALLENGER",
+] as const;
+export type LigaLol = (typeof LIGAS_LOL)[number];
+
+/** Partidas recientes que se analizan en cada sincronización. */
+export const PARTIDAS_POR_SINCRONIZACION = 20;
+/** Minutos mínimos entre dos sincronizaciones del mismo jugador (cuota de Riot). */
+export const MINUTOS_ENTRE_SINCRONIZACIONES = 10;
+/** Vigencia del desafío de verificación de la cuenta de Riot. */
+export const MINUTOS_DESAFIO_VERIFICACION = 15;
+/**
+ * Iconos de invocador que toda cuenta tiene desbloqueados (0 a 28): la
+ * verificación pide poner uno de ellos, así cualquiera puede completarla.
+ */
+export const ICONO_VERIFICACION_MIN = 0;
+export const ICONO_VERIFICACION_MAX = 28;

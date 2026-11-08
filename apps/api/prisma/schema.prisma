@@ -214,17 +214,21 @@ model Endorsement {
 // ----------------------------- Cuentas externas ----------------------------
 
 model CuentaGaming {
-  id           String     @id @default(cuid())
-  jugadorId    String
-  plataforma   Plataforma
-  externalId   String
-  handle       String?
+  id             String     @id @default(cuid())
+  jugadorId      String
+  plataforma     Plataforma
+  externalId     String
+  handle         String?
   /// Cifrados con AES-256-GCM (src/utils/crypto.ts). Nunca en claro.
-  accessToken  String?
-  refreshToken String?
-  expiraEn     DateTime?
-  verificadaEn DateTime?
-  creadoEn     DateTime   @default(now())
+  accessToken    String?
+  refreshToken   String?
+  expiraEn       DateTime?
+  /// Servidor del juego (Riot: «LA1», «NA1»…). Nulo en plataformas sin servidor.
+  servidor       String?
+  verificadaEn   DateTime?
+  /// Última ingesta correcta de estadísticas desde la plataforma.
+  sincronizadaEn DateTime?
+  creadoEn       DateTime   @default(now())
 
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
 
