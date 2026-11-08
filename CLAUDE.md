@@ -210,8 +210,8 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 | ----------------------------------------------------------------------------------------------- | --------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Feed                                                                                            | `/`             | RF-08         | Futuro (descartada)                                                                                                                     |
 | Mi perfil (cabecera y datos profesionales reales; el resto, simulado)                           | `/mi-perfil`    | RF-05         | Núcleo                                                                                                                                  |
-| Cuentas vinculadas (estado, última sincronización)                                              | —               | RF-02, RF-03  | Núcleo. Absorbe el contenido del onboarding                                                                                             |
-| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | —               | RF-04, RF-13  | Núcleo                                                                                                                                  |
+| Cuentas vinculadas (estado, última sincronización)                                              | `/cuentas-vinculadas`| RF-02, RF-03  | Núcleo. Absorbe el contenido del onboarding                                                                                             |
+| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | `/mis-estadisticas`| RF-04, RF-13  | Núcleo                                                                                                                                  |
 | Habilidades y endorsements                                                                      | —               | RF-06         | Soporte: catálogo fijo; endorsements sólo de equipos                                                                                    |
 | Explorar oportunidades                                                                          | `/vacantes`     | RF-07, RF-09  | Núcleo                                                                                                                                  |
 | Detalle de la oferta y postulación                                                              | `/vacantes/:id` | RF-07, RF-10  | Núcleo                                                                                                                                  |
@@ -346,7 +346,8 @@ sustituye el stub del repository por Prisma real: **no cambies la estructura de 
 hooks de TanStack Query. Cada hook simulado lleva `// TODO: Sx — conectar con GET /api/v1/...`
 indicando el sprint que lo conecta. Hablan ya con la API real la autenticación, `/cuenta`
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
-sesión), en `/mi-perfil` la cabecera y los datos profesionales, y en `/panel-equipo` la
+sesión), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y desvincular),
+`/mis-estadisticas` (rango, métricas y tendencia), en `/mi-perfil` la cabecera y los datos profesionales, y en `/panel-equipo` la
 tarjeta «Datos de la organización» (sólo el rol `EQUIPO`); `/legal/privacidad` es texto
 estático. El resto de `/mi-perfil` (cuentas, habilidades, portafolio, postulaciones,
 privacidad y laterales) y de `/panel-equipo` (indicadores, vacantes, procesos y

@@ -97,12 +97,40 @@ RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 - La clave de **desarrollo** se saca en <https://developer.riotgames.com> y
-  **caduca cada 24 horas**: hay que regenerarla y pegarla otra vez cada día.
+  **caduca cada 24 horas**: hay que regenerarla y pegarla otra vez cada día
+  (ver «Renovar la clave» más abajo).
   Con una clave caducada, los endpoints de Riot responden `502` con el mensaje
   «Riot rechazó la clave de la API: es inválida o caducó».
 - Sin clave, responden `503 SERVICIO_NO_CONFIGURADO`; el resto de la API
   funciona igual.
 - La clave nunca va al repositorio ni a variables `VITE_*`.
+
+#### Renovar la clave cuando caduque
+
+1. Entra en <https://developer.riotgames.com> con tu cuenta de Riot y, en el
+   panel, pulsa **Regenerate API Key**.
+2. Copia la clave nueva (`RGAPI-…`).
+3. Abre **`apps/api/.env`** (no el `.env.example` ni el de `apps/web`) y
+   reemplaza el valor de la línea `RIOT_API_KEY=`:
+
+   ```bash
+   RIOT_API_KEY=RGAPI-la-clave-nueva
+   ```
+
+4. Reinicia la API (`Ctrl+C` y otra vez `npm run dev`): la clave se lee al
+   arrancar.
+
+No hay que tocar el código, la base de datos ni el cliente web, y las cuentas ya
+verificadas y sus estadísticas siguen ahí.
+
+### En la aplicación web
+
+Con la sesión de un jugador, el menú lateral tiene dos vistas nuevas:
+
+- **Cuentas vinculadas** (`/cuentas-vinculadas`): buscar la cuenta por Riot ID,
+  ver el icono que hay que ponerse, verificarla, sincronizar y desvincular.
+- **Mis estadísticas** (`/mis-estadisticas`): rango, métricas, posiciones,
+  campeones más jugados y la gráfica de la tendencia entre sincronizaciones.
 
 Límites de la clave de desarrollo: 20 peticiones por segundo y 100 cada dos
 minutos para toda la aplicación. Una sincronización gasta unas 24 peticiones,

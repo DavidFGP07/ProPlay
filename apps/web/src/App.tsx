@@ -26,6 +26,8 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const MensajesPage = lazy(() => import('@/pages/MensajesPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
 const CuentaPage = lazy(() => import('@/pages/CuentaPage'))
+const CuentasVinculadasPage = lazy(() => import('@/pages/CuentasVinculadasPage'))
+const MisEstadisticasPage = lazy(() => import('@/pages/MisEstadisticasPage'))
 
 /**
  * Guarda de rutas. Es una ruta de layout sin path: sin roles exige sesion; con
@@ -109,6 +111,10 @@ export default function App() {
           {/* Area del jugador */}
           <Route element={<Privado roles={AREAS.jugador} />}>
             <Route path="mi-perfil" element={diferida(MiPerfilPage)} />
+            {/* RF-02 · RF-03 · Cuentas vinculadas (Riot, verificada por icono) */}
+            <Route path="cuentas-vinculadas" element={diferida(CuentasVinculadasPage)} />
+            {/* RF-04 · RF-13 · Mis estadisticas con la tendencia del rendimiento */}
+            <Route path="mis-estadisticas" element={diferida(MisEstadisticasPage)} />
           </Route>
 
           {/* Area de equipo y scout */}
