@@ -30,4 +30,6 @@ export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/panel-equipo/ofertas/nueva',
   '/panel-equipo/ofertas/:id/editar',
   '/explorar',
+  '/cuentas-vinculadas',
+  '/mis-estadisticas',
 ]

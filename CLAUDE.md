@@ -209,8 +209,8 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 |---|---|---|---|
 | Feed | `/` | RF-08 | Futuro (descartada) |
 | Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 | Núcleo |
-| Cuentas vinculadas (estado, última sincronización) | — | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
-| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | — | RF-04, RF-13 | Núcleo |
+| Cuentas vinculadas (estado, última sincronización) | `/cuentas-vinculadas` | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
+| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | `/mis-estadisticas` | RF-04, RF-13 | Núcleo |
 | Habilidades y endorsements | — | RF-06 | Soporte: catálogo fijo; endorsements sólo de equipos |
 | Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
@@ -342,7 +342,8 @@ indicando el sprint que lo conecta. Hablan ya con la API real la autenticación,
 sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
 (`/vacantes/:id`, que para el equipo dueño incluye la gestión de la oferta y las postulaciones
 recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), el buscador de talento
-(`/explorar`), en
+(`/explorar`), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y
+desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
 `/panel-equipo` las tarjetas «Datos de la organización», con la sede, y «Tus ofertas» (sólo
 el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
