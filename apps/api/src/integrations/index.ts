@@ -9,8 +9,10 @@ import { YouTubeProvider } from "./youtube/youtube.provider";
  * Registro de integraciones. El módulo `estadisticas` resuelve el proveedor
  * por plataforma y trabaja siempre contra la interfaz GameStatsProvider.
  */
+const riot = new RiotProvider();
+
 const proveedores: Record<Plataforma, GameStatsProvider> = {
-  RIOT: new RiotProvider(),
+  RIOT: riot,
   STEAM: new SteamProvider(),
   TWITCH: new TwitchProvider(),
   YOUTUBE: new YouTubeProvider(),
@@ -20,4 +22,14 @@ export function obtenerProveedor(plataforma: Plataforma): GameStatsProvider {
   return proveedores[plataforma];
 }
 
+/**
+ * Riot con sus operaciones propias (búsqueda por Riot ID y verificación por
+ * icono), que no forman parte de la interfaz común.
+ */
+export function obtenerProveedorRiot(): RiotProvider {
+  return riot;
+}
+
+export { esServidorLol } from "./riot/riot.provider";
+export type { CuentaRiotEncontrada } from "./riot/riot.provider";
 export type { GameStatsProvider } from "./GameStatsProvider";

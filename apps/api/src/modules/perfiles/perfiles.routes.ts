@@ -10,7 +10,10 @@ import {
   idParamSchema,
   perfilEquipoSchema,
   perfilJugadorSchema,
+  plataformaParamSchema,
+  verificarCuentaRiotSchema,
   vincularCuentaGamingSchema,
+  vincularCuentaRiotSchema,
 } from "./perfiles.schema";
 
 /**
@@ -69,13 +72,50 @@ perfilesRouter.post(
   controlador.endosar,
 );
 
-// TODO: Vincular una cuenta externa vía OAuth y guardar sus tokens cifrados.
+// TODO: Vincular una cuenta externa vía OAuth (RSO) y guardar sus tokens
+// cifrados. Necesita la clave de producción de Riot; hasta entonces, las dos
+// rutas de /cuentas-gaming/riot.
 perfilesRouter.post(
   "/cuentas-gaming",
   auth,
   rbac("JUGADOR"),
   validate(vincularCuentaGamingSchema),
   controlador.vincularCuenta,
+);
+
+// RF-02, RF-03 · Cuentas vinculadas del jugador, con su última sincronización
+perfilesRouter.get(
+  "/cuentas-gaming",
+  auth,
+  rbac("JUGADOR"),
+  controlador.listarCuentas,
+);
+
+// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse
+perfilesRouter.post(
+  "/cuentas-gaming/riot",
+  auth,
+  rbac("JUGADOR"),
+  validate(vincularCuentaRiotSchema),
+  controlador.iniciarVinculacionRiot,
+);
+
+// RF-02 · Vinculación con Riot, paso 2: se comprueba el icono y queda verificada
+perfilesRouter.post(
+  "/cuentas-gaming/riot/verificar",
+  auth,
+  rbac("JUGADOR"),
+  validate(verificarCuentaRiotSchema),
+  controlador.verificarCuentaRiot,
+);
+
+// RF-02 · Desvincular la cuenta de una plataforma
+perfilesRouter.delete(
+  "/cuentas-gaming/:plataforma",
+  auth,
+  rbac("JUGADOR"),
+  validate(plataformaParamSchema, "params"),
+  controlador.desvincularCuenta,
 );
 
 // RF-05 · Perfil público del jugador, compartible y sin sesión. Va al final:

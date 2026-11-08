@@ -1,4 +1,12 @@
+import {
+  ICONO_VERIFICACION_MAX,
+  ICONO_VERIFICACION_MIN,
+  MINUTOS_DESAFIO_VERIFICACION,
+  type Plataforma,
+} from "@proplay/shared";
 import type {
+  CuentaGaming,
+  DesafioVerificacionRiot,
   Pais,
   PerfilEquipoRespuesta,
   PerfilJugadorPublico,
@@ -6,7 +14,15 @@ import type {
   PerfilPropioResponse,
   Rol,
 } from "@proplay/shared";
-import { NotFoundError } from "../../utils/errors";
+import { randomInt } from "node:crypto";
+import { esServidorLol, obtenerProveedorRiot } from "../../integrations";
+import {
+  AppError,
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from "../../utils/errors";
+import { firmarDesafioRiot, verificarDesafioRiot } from "../../utils/jwt";
 import * as repositorio from "./perfiles.repository";
 import {
   paisDepartamentoSchema,
@@ -14,6 +30,8 @@ import {
   ubicacionJugadorSchema,
   type PerfilEquipoInput,
   type PerfilJugadorInput,
+  type VerificarCuentaRiotInput,
+  type VincularCuentaRiotInput,
 } from "./perfiles.schema";
 
 /**
@@ -141,9 +159,152 @@ export async function endosar(datos?: unknown) {
   return repositorio.endosar(datos);
 }
 
-/** TODO: Vincular una cuenta externa vía OAuth y guardar sus tokens cifrados. */
+/**
+ * TODO: Vincular una cuenta externa vía OAuth (RSO) y guardar sus tokens
+ * cifrados. Requiere una clave de producción de Riot con RSO aprobado; mientras
+ * tanto la vinculación usa el desafío del icono (`iniciarVinculacionRiot`).
+ */
 export async function vincularCuenta(datos?: unknown) {
   return repositorio.vincularCuenta(datos);
+}
+
+async function jugadorDelUsuario(usuarioId: string): Promise<repositorio.PerfilJugadorDb> {
+  const perfil = await repositorio.buscarJugadorPorUsuario(usuarioId);
+  if (!perfil) throw new NotFoundError("Este usuario no tiene perfil de jugador");
+  return perfil;
+}
+
+/** Cuentas vinculadas del jugador autenticado, con su última sincronización. */
+export async function listarCuentas(usuarioId: string): Promise<CuentaGaming[]> {
+  const perfil = await jugadorDelUsuario(usuarioId);
+  return repositorio.listarCuentas(perfil.id);
+}
+
+/** Icono de los básicos, distinto del que tiene puesto ahora. */
+function elegirIcono(actual: number): number {
+  let icono = actual;
+  while (icono === actual) {
+    icono = randomInt(ICONO_VERIFICACION_MIN, ICONO_VERIFICACION_MAX + 1);
+  }
+  return icono;
+}
+
+async function comprobarQueNoEsDeOtro(jugadorId: string, puuid: string): Promise<void> {
+  const dueno = await repositorio.buscarDuenoCuenta("RIOT", puuid);
+  if (dueno && dueno.jugadorId !== jugadorId) {
+    throw new ConflictError("Esa cuenta de Riot ya está vinculada a otro jugador de ProPlay");
+  }
+}
+
+/**
+ * Paso 1 de la vinculación con Riot (RF-02): busca el Riot ID en el servidor
+ * indicado y devuelve el icono de invocador que el jugador debe ponerse para
+ * demostrar que la cuenta es suya. No guarda nada: el desafío viaja firmado.
+ */
+export async function iniciarVinculacionRiot(
+  usuarioId: string,
+  datos: VincularCuentaRiotInput,
+): Promise<DesafioVerificacionRiot> {
+  const perfil = await jugadorDelUsuario(usuarioId);
+  const riot = obtenerProveedorRiot();
+
+  const cuenta = await riot.buscarCuenta(datos.gameName, datos.tagLine, datos.servidor);
+  if (!cuenta) {
+    throw new NotFoundError(
+      `No hay ninguna cuenta de League of Legends con el Riot ID ${datos.gameName}#${datos.tagLine} en ${datos.servidor}`,
+    );
+  }
+  await comprobarQueNoEsDeOtro(perfil.id, cuenta.puuid);
+
+  const iconoRequerido = elegirIcono(cuenta.iconoActual);
+  const tokenDesafio = firmarDesafioRiot(
+    {
+      sub: usuarioId,
+      puuid: cuenta.puuid,
+      riotId: cuenta.riotId,
+      servidor: cuenta.servidor,
+      icono: iconoRequerido,
+    },
+    MINUTOS_DESAFIO_VERIFICACION,
+  );
+
+  return {
+    riotId: cuenta.riotId,
+    servidor: cuenta.servidor,
+    nivelInvocador: cuenta.nivelInvocador,
+    iconoActual: cuenta.iconoActual,
+    iconoRequerido,
+    iconoRequeridoUrl: riot.urlIcono(iconoRequerido),
+    expiraEn: new Date(Date.now() + MINUTOS_DESAFIO_VERIFICACION * 60_000),
+    tokenDesafio,
+  };
+}
+
+/**
+ * Paso 2: comprueba en Riot que el invocador lleva el icono pedido y, si es
+ * así, guarda la cuenta como verificada. Desde ese momento sus estadísticas
+ * cuentan como verificadas (RF-02, RF-05).
+ */
+export async function verificarCuentaRiot(
+  usuarioId: string,
+  datos: VerificarCuentaRiotInput,
+): Promise<CuentaGaming> {
+  const perfil = await jugadorDelUsuario(usuarioId);
+  const desafio = verificarDesafioRiot(datos.tokenDesafio, usuarioId);
+  if (!desafio || !esServidorLol(desafio.servidor)) {
+    throw new BadRequestError(
+      "El desafío de verificación no es válido o caducó; vuelve a empezar la vinculación",
+    );
+  }
+
+  const iconoActual = await obtenerProveedorRiot().iconoActual(desafio.puuid, desafio.servidor);
+  if (iconoActual === null) {
+    throw new NotFoundError("La cuenta de Riot ya no tiene invocador en ese servidor");
+  }
+  if (iconoActual !== desafio.icono) {
+    throw new AppError(
+      409,
+      "VERIFICACION_PENDIENTE",
+      "Tu invocador todavía no tiene el icono pedido. Cámbialo en el cliente de League of Legends y vuelve a intentarlo (Riot puede tardar uno o dos minutos en reflejarlo)",
+      { iconoActual, iconoRequerido: desafio.icono },
+    );
+  }
+
+  await comprobarQueNoEsDeOtro(perfil.id, desafio.puuid);
+  const cuenta = await repositorio.guardarCuentaVerificada({
+    jugadorId: perfil.id,
+    plataforma: "RIOT",
+    externalId: desafio.puuid,
+    handle: desafio.riotId,
+    servidor: desafio.servidor,
+    verificadaEn: new Date(),
+  });
+  await repositorio.registrarAuditoria({
+    usuarioId,
+    accion: "VINCULAR_CUENTA",
+    entidadId: cuenta.id,
+    metadata: { plataforma: "RIOT", servidor: desafio.servidor, metodo: "ICONO" },
+  });
+  return cuenta;
+}
+
+/**
+ * Desvincula la cuenta de la plataforma. Las estadísticas ya capturadas se
+ * conservan: son históricas y siguen llevando su fuente.
+ */
+export async function desvincularCuenta(
+  usuarioId: string,
+  plataforma: Plataforma,
+): Promise<void> {
+  const perfil = await jugadorDelUsuario(usuarioId);
+  const borradas = await repositorio.borrarCuenta(perfil.id, plataforma);
+  if (borradas === 0) throw new NotFoundError("No tienes una cuenta vinculada en esa plataforma");
+  await repositorio.registrarAuditoria({
+    usuarioId,
+    accion: "DESVINCULAR_CUENTA",
+    entidadId: null,
+    metadata: { plataforma },
+  });
 }
 
 /**

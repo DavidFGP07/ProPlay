@@ -14,6 +14,11 @@ export {
   asignarHabilidadSchema,
   crearEndorsementSchema,
   vincularCuentaGamingSchema,
+  vincularCuentaRiotSchema,
+  verificarCuentaRiotSchema,
+  cuentaGamingSchema,
+  desafioVerificacionRiotSchema,
+  plataformaParamSchema,
   idParamSchema,
   habilidadSchema,
 } from "@proplay/shared";
@@ -24,5 +29,9 @@ export type {
   PerfilEquipoInput,
   AsignarHabilidadInput,
   VincularCuentaGamingInput,
+  VincularCuentaRiotInput,
+  VerificarCuentaRiotInput,
+  CuentaGaming,
+  DesafioVerificacionRiot,
   Habilidad,
 } from "@proplay/shared";

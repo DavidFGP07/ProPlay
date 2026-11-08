@@ -74,3 +74,50 @@ export function segundosDeVidaAcceso(): number {
   const minutos = Number.parseInt(ACCESS_TOKEN_TTL, 10);
   return Number.isFinite(minutos) ? minutos * 60 : 900;
 }
+
+/**
+ * Desafío de verificación de una cuenta de Riot: qué icono debe poner el
+ * jugador en qué cuenta. Va firmado para que la API no tenga que guardar
+ * nada entre el paso 1 y el 2 y para que el cliente no pueda cambiar el puuid
+ * ni el icono pedido. Sólo vale para el usuario que lo pidió (`sub`).
+ */
+export interface PayloadDesafioRiot {
+  sub: string;
+  puuid: string;
+  riotId: string;
+  servidor: string;
+  icono: number;
+}
+
+const AUDIENCIA_DESAFIO_RIOT = "proplay-verificacion-riot";
+
+export function firmarDesafioRiot(
+  payload: PayloadDesafioRiot,
+  minutosVigencia: number,
+): string {
+  return jwt.sign(payload, env.JWT_SECRET, {
+    issuer: EMISOR,
+    audience: AUDIENCIA_DESAFIO_RIOT,
+    expiresIn: minutosVigencia * 60,
+  });
+}
+
+/** `null` si el token no es válido, caducó o es de otro usuario. */
+export function verificarDesafioRiot(
+  token: string,
+  usuarioId: string,
+): PayloadDesafioRiot | null {
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET, {
+      issuer: EMISOR,
+      audience: AUDIENCIA_DESAFIO_RIOT,
+      subject: usuarioId,
+    });
+    if (typeof payload === "string") return null;
+    const datos = payload as unknown as PayloadDesafioRiot;
+    if (typeof datos.puuid !== "string" || typeof datos.icono !== "number") return null;
+    return datos;
+  } catch {
+    return null;
+  }
+}

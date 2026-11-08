@@ -1,31 +1,41 @@
+import type { Request } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./estadisticas.service";
+import type {
+  ListarEstadisticasQuery,
+  SincronizarEstadisticasInput,
+} from "./estadisticas.schema";
 
 /**
  * Controladores del módulo `estadisticas`: sólo traducen entre HTTP y el
- * servicio. Andamiaje: todos responden 501 NOT_IMPLEMENTED por ahora.
+ * servicio.
  */
 
 /**
  * GET /api/v1/estadisticas/jugador/:id
- * TODO: Listar las estadísticas de un jugador filtradas por juego y rango de fechas.
+ * Histórico de capturas de un jugador, filtrable por juego y fechas.
  */
-export const listarPorJugador = asyncHandler(async (req, res) => {
-  res.json(await servicio.listarPorJugador(req.body ?? req.validado));
+export const listarPorJugador = asyncHandler<Request<{ id: string }>>(async (req, res) => {
+  const filtro = (req.validado?.query ?? {}) as ListarEstadisticasQuery;
+  res.status(200).json(await servicio.listarPorJugador(req.params.id, filtro));
 });
 
 /**
  * GET /api/v1/estadisticas/jugador/:id/resumen
- * TODO: Agregar KDA, win rate y partidas del jugador por juego.
+ * Última captura por juego con su tendencia.
  */
-export const resumenPorJugador = asyncHandler(async (req, res) => {
-  res.json(await servicio.resumenPorJugador(req.body ?? req.validado));
+export const resumenPorJugador = asyncHandler<Request<{ id: string }>>(async (req, res) => {
+  res.status(200).json(await servicio.resumenPorJugador(req.params.id));
 });
 
 /**
  * POST /api/v1/estadisticas/sincronizar
- * TODO: Pedir al GameStatsProvider de la plataforma las estadísticas y persistirlas.
+ * Ingesta bajo demanda desde la plataforma del juego.
  */
-export const sincronizar = asyncHandler(async (req, res) => {
-  res.json(await servicio.sincronizar(req.body ?? req.validado));
+export const sincronizar = asyncHandler<
+  Request<Record<string, string>, unknown, SincronizarEstadisticasInput>
+>(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.sincronizar(req.usuario.id, req.body));
 });
