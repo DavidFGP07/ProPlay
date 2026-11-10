@@ -182,16 +182,6 @@ export const matchingSchema = z.object({
   calculadoEn: z.coerce.date(),
 });
 
-/**
- * Cuerpo de `POST /matching/calcular` del andamiaje. Lo sustituye
- * `POST /matching/ofertas/:id/recalcular` (la oferta va en la ruta) en el PR
- * del motor, que lo retira.
- */
-export const calcularMatchingSchema = z.object({
-  ofertaId: z.string().min(1),
-  limite: z.number().int().positive().max(100).default(20),
-});
-
 export type DesgloseMatching = z.infer<typeof desgloseMatchingSchema>;
 export type ExplicacionMatching = z.infer<typeof explicacionMatchingSchema>;
 export type ExplicacionTecnica = z.infer<typeof explicacionTecnicaSchema>;
@@ -203,4 +193,3 @@ export type RankingOfertaQuery = z.infer<typeof rankingOfertaQuerySchema>;
 export type CandidatoRanking = z.infer<typeof candidatoRankingSchema>;
 export type RankingOferta = z.infer<typeof rankingOfertaSchema>;
 export type Matching = z.infer<typeof matchingSchema>;
-export type CalcularMatchingInput = z.infer<typeof calcularMatchingSchema>;

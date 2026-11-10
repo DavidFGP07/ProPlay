@@ -72,7 +72,6 @@ export type {
 } from "../schemas/oferta";
 
 export type {
-  CalcularMatchingInput,
   DesgloseMatching,
   CandidatoRanking,
   ExplicacionDisponibilidad,

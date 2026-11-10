@@ -3,10 +3,7 @@ import { auth } from "../../middleware/auth";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./matching.controller";
-import {
-  calcularMatchingSchema,
-  idParamSchema,
-} from "./matching.schema";
+import { idParamSchema } from "./matching.schema";
 
 /**
  * Rutas del módulo `matching`: /api/v1/matching
@@ -19,7 +16,6 @@ matchingRouter.post(
   "/calcular",
   auth,
   rbac("EQUIPO", "SCOUT", "ADMIN"),
-  validate(calcularMatchingSchema),
   controlador.calcular,
 );
 
