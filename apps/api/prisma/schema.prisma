@@ -434,13 +434,22 @@ model Postulacion {
 // ----------------------------- Matching ------------------------------------
 
 model Matching {
-  id          String   @id @default(cuid())
-  ofertaId    String
-  jugadorId   String
-  puntaje     Float // 0..1
+  id              String   @id @default(cuid())
+  ofertaId        String
+  jugadorId       String
+  puntaje         Float // 0..1
   /// Desglose de las cinco dimensiones (ver PESOS_MATCHING en @proplay/shared)
-  desglose    Json
-  calculadoEn DateTime @default(now())
+  desglose        Json
+  /// Por qué vale cada dimensión, con las cifras y los pesos que usó el motor
+  /// (explicacionMatchingSchema en @proplay/shared).
+  explicacion     Json
+  /// Similitud coseno con el vector de requisitos de la oferta (recuperador).
+  /// Nula si el candidato entró por su postulación y no por el índice HNSW.
+  similitud       Float?
+  /// Versión de las fórmulas con que se calculó (VERSION_FORMULAS_MATCHING).
+  /// Un ranking de una versión anterior se recalcula al leerlo.
+  versionFormulas Int
+  calculadoEn     DateTime @default(now())
 
   oferta  Oferta        @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
