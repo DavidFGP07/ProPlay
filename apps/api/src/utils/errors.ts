@@ -88,6 +88,39 @@ export class ServicioNoConfiguradoError extends AppError {
 }
 
 /**
+ * No hay cupo en la cuota de Riot (de toda la aplicación) ni se liberará
+ * pronto. No es un fallo: quien llama decide si reintenta, reprograma o
+ * responde «mucha demanda». Si llega al usuario, es un 503 con la espera.
+ */
+export class CuotaRiotAgotadaError extends AppError {
+  readonly esperaMs: number;
+
+  constructor(esperaMs: number) {
+    super(
+      503,
+      "MUCHA_DEMANDA",
+      "Hay mucha demanda en este momento; inténtalo en un momento",
+      { reintentarEnSegundos: Math.max(1, Math.ceil(esperaMs / 1000)) },
+    );
+    this.esperaMs = esperaMs;
+  }
+}
+
+/**
+ * La clave de Riot falta, caducó o Riot la rechazó. El detalle va a los
+ * registros; al usuario sólo se le pide volver más tarde.
+ */
+export class IntegracionRiotNoDisponibleError extends AppError {
+  constructor() {
+    super(
+      503,
+      "RIOT_NO_DISPONIBLE",
+      "La conexión con Riot no está disponible en este momento; inténtalo más tarde",
+    );
+  }
+}
+
+/**
  * Marca el andamiaje pendiente de implementar. Los módulos que todavía no
  * tienen lógica de negocio devuelven este error (501).
  */

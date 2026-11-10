@@ -44,6 +44,13 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     cuerpo.error.details = { stack: error.stack?.split("\n").slice(0, 5) };
   }
 
+  // 429 y 503 con una espera conocida: la cabecera estándar, además del cuerpo.
+  const espera = (cuerpo.error.details as { reintentarEnSegundos?: unknown } | undefined)
+    ?.reintentarEnSegundos;
+  if ((status === 429 || status === 503) && typeof espera === "number") {
+    res.set("Retry-After", String(espera));
+  }
+
   res.status(status).json(cuerpo);
 };
 
@@ -62,7 +69,9 @@ function traducirError(error: unknown): {
           ...(error.details === undefined ? {} : { details: error.details }),
         },
       },
-      esInesperado: !error.esOperacional || error.status >= 500,
+      // Un 503 es una indisponibilidad temporal esperada (sin cupo en la cuota
+      // de Riot, clave caducada, Redis caído), no un fallo del código.
+      esInesperado: !error.esOperacional || (error.status >= 500 && error.status !== 503),
     };
   }
 

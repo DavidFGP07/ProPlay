@@ -82,6 +82,28 @@ export async function reservarIntentoSincronizacion(
   return count === 1;
 }
 
+/**
+ * Jugadores con cuenta verificada en la plataforma cuyo último intento de
+ * sincronización es anterior a `antesDe` (o que nunca se sincronizaron), de
+ * cuentas activas. Los más atrasados primero.
+ */
+export async function jugadoresParaSincronizar(
+  plataforma: Plataforma,
+  antesDe: Date,
+): Promise<string[]> {
+  const cuentas = await prisma.cuentaGaming.findMany({
+    where: {
+      plataforma,
+      verificadaEn: { not: null },
+      jugador: { usuario: { activo: true } },
+      OR: [{ intentoSincronizacionEn: null }, { intentoSincronizacionEn: { lt: antesDe } }],
+    },
+    select: { jugadorId: true },
+    orderBy: { intentoSincronizacionEn: { sort: "asc", nulls: "first" } },
+  });
+  return cuentas.map((cuenta) => cuenta.jugadorId);
+}
+
 /** Última captura del jugador para un juego y una fuente. */
 export async function ultimaEstadistica(
   jugadorId: string,

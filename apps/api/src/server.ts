@@ -3,7 +3,12 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { desconectarPrisma, pingPostgres } from "./config/prisma";
 import { conectarRedis, desconectarRedis } from "./config/redis";
+import { cerrarColaIngesta } from "./ingesta/cola";
+import { arrancarIngesta, type Ingesta } from "./ingesta/ingesta";
 import { crearApp } from "./app";
+
+/** Worker de ingesta de Riot en este proceso (INGESTA_ACTIVA), si arrancó. */
+let ingesta: Ingesta | null = null;
 
 /**
  * Arranque y parada ordenada del servidor.
@@ -22,6 +27,16 @@ async function arrancar(): Promise<void> {
     await conectarRedis();
   } catch (error) {
     logger.warn({ error }, "No se pudo conectar a Redis al arrancar");
+  }
+
+  // La ingesta corre en el mismo proceso en el piloto (docs/decisiones.md,
+  // «Cuota de Riot e ingesta»). Si no arranca, la API sigue sirviendo.
+  if (env.INGESTA_ACTIVA) {
+    try {
+      ingesta = await arrancarIngesta();
+    } catch (error) {
+      logger.error({ error }, "No se pudo arrancar la ingesta de Riot");
+    }
   }
 
   const servidor: Server = app.listen(env.PORT, () => {
@@ -43,7 +58,8 @@ function registrarApagado(servidor: Server): void {
 
     servidor.close(async () => {
       try {
-        await Promise.allSettled([desconectarPrisma(), desconectarRedis()]);
+        await ingesta?.detener();
+        await Promise.allSettled([cerrarColaIngesta(), desconectarPrisma(), desconectarRedis()]);
         logger.info("Conexiones cerradas, adiós");
         process.exit(0);
       } catch (error) {

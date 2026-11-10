@@ -72,6 +72,23 @@ export function rangoSoloDuo(entradas: EntradaLigaRiot[]): RangoLol | null {
   return entrada ? rangoDesdeRiot(entrada.tier, entrada.rank) : null;
 }
 
+/** Rango del jugador tal como se guarda en una captura. */
+export interface RangosLol {
+  /** Columna `Estadistica.rango` (catálogo `RangoLol`, solo/dúo). */
+  rango: RangoLol | null;
+  /** `metricas.rangoSoloDuo` y `metricas.rangoFlex`, con LP. */
+  rangoSoloDuo: RangoColaLol | null;
+  rangoFlex: RangoColaLol | null;
+}
+
+export function rangosLol(ligas: EntradaLigaRiot[]): RangosLol {
+  return {
+    rango: rangoSoloDuo(ligas),
+    rangoSoloDuo: rangoDeCola(ligas, COLA_LIGA_SOLO_DUO),
+    rangoFlex: rangoDeCola(ligas, "RANKED_FLEX_SR"),
+  };
+}
+
 export interface DatosSincronizacionLol {
   puuid: string;
   servidor: ServidorLol;

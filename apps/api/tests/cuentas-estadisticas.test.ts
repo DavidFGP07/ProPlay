@@ -1,9 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { API_PREFIX, cuentaGamingSchema, resumenEstadisticasSchema } from "@proplay/shared";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../src/config/prisma";
+import { estadoClaveRiot, obtenerProveedor } from "../src/integrations";
+import * as servicioEstadisticas from "../src/modules/estadisticas/estadisticas.service";
+import { ServicioExternoError } from "../src/utils/errors";
 import { opcionesLimiteVinculacionRiot } from "../src/middleware/rateLimit";
 import * as repositorioPerfiles from "../src/modules/perfiles/perfiles.repository";
 import {
@@ -41,6 +44,14 @@ async function registrar(etiqueta: string, rol: "JUGADOR" | "EQUIPO") {
 }
 
 describe("cuentas vinculadas y estadísticas", () => {
+  // La clave de Riot de cada entorno (ninguna en el CI) no debe cambiar las pruebas.
+  beforeEach(() => {
+    vi.spyOn(estadoClaveRiot, "estado").mockResolvedValue("ok");
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   let jugador: Awaited<ReturnType<typeof registrar>>;
   let equipo: Awaited<ReturnType<typeof registrar>>;
 
@@ -218,12 +229,13 @@ describe("cuentas vinculadas y estadísticas", () => {
           verificadaEn: new Date(),
         },
       });
-      // En las pruebas no hay clave de Riot: el primer intento falla sin red.
-      const primero = await request(app)
-        .post(`${API_PREFIX}/estadisticas/sincronizar`)
-        .set("Authorization", `Bearer ${otro.token}`)
-        .send({});
-      expect(primero.status).toBeGreaterThanOrEqual(500);
+      // El worker la ejecuta y Riot falla: el intento queda marcado igual.
+      vi.spyOn(obtenerProveedor("RIOT"), "obtenerEstadisticas").mockRejectedValue(
+        new ServicioExternoError("La API de Riot respondió 500"),
+      );
+      await expect(
+        servicioEstadisticas.sincronizarCuenta(otro.perfilId, "MANUAL"),
+      ).rejects.toBeInstanceOf(ServicioExternoError);
 
       const segundo = await request(app)
         .post(`${API_PREFIX}/estadisticas/sincronizar`)

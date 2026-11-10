@@ -9,7 +9,7 @@ export {
   idParamSchema,
   listarEstadisticasQuerySchema,
   sincronizarEstadisticasSchema,
-  sincronizarEstadisticasRespuestaSchema,
+  estadoSincronizacionSchema,
   resumenEstadisticasSchema,
   estadisticaSchema,
   metricasLolSchema,
@@ -20,5 +20,6 @@ export type {
   ListarEstadisticasQuery,
   ResumenEstadisticas,
   SincronizarEstadisticasInput,
-  SincronizarEstadisticasRespuesta,
+  EstadoSincronizacion,
+  ResultadoSincronizacion,
 } from "@proplay/shared";
