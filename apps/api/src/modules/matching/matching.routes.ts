@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
+import { limiteRanking, limiteRecalculoRanking } from "../../middleware/rateLimit";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./matching.controller";
-import { idParamSchema } from "./matching.schema";
+import { idParamSchema, rankingOfertaQuerySchema } from "./matching.schema";
 
 /**
  * Rutas del módulo `matching`: /api/v1/matching
@@ -11,21 +12,29 @@ import { idParamSchema } from "./matching.schema";
  */
 export const matchingRouter = Router();
 
-// TODO: Calcular y persistir el ranking de jugadores compatibles con una oferta.
-matchingRouter.post(
-  "/calcular",
+// RF-09 · Ranking de candidatos de una oferta con puntaje de compatibilidad y
+// desglose por dimensión, paginado. El equipo dueño (también en borrador), y
+// el scout y el administrador en ofertas publicadas.
+matchingRouter.get(
+  "/ofertas/:id/ranking",
   auth,
   rbac("EQUIPO", "SCOUT", "ADMIN"),
-  controlador.calcular,
+  limiteRanking,
+  validate(idParamSchema, "params"),
+  validate(rankingOfertaQuerySchema, "query"),
+  controlador.ranking,
 );
 
-// TODO: Devolver el ranking ya calculado de una oferta, ordenado por puntaje.
-matchingRouter.get(
-  "/oferta/:id",
+// RF-09 · Recalcular el ranking a demanda. El equipo dueño y el scout; una
+// oferta cubierta o cerrada responde 409 OFERTA_FINALIZADA.
+matchingRouter.post(
+  "/ofertas/:id/recalcular",
   auth,
-  rbac("EQUIPO", "SCOUT", "ADMIN"),
+  rbac("EQUIPO", "SCOUT"),
+  limiteRecalculoRanking,
   validate(idParamSchema, "params"),
-  controlador.rankingPorOferta,
+  validate(rankingOfertaQuerySchema, "query"),
+  controlador.recalcular,
 );
 
 // TODO: Devolver las ofertas más compatibles con el jugador autenticado.

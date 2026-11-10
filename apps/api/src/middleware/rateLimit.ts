@@ -156,6 +156,52 @@ export const limiteBusqueda = rateLimit({
 });
 
 /**
+ * RF-09 · Límite del ranking de candidatos: 60 consultas por minuto por
+ * usuario. Leer el ranking puede recalcularlo (vectores y cinco dimensiones de
+ * hasta 200 candidatos), así que se frena el uso abusivo sin estorbar a quien
+ * pagina o cambia de oferta. Se exporta para poder probarla sin el `skip` de
+ * los tests.
+ */
+export const opcionesLimiteRanking: Partial<Options> = {
+  windowMs: 60 * 1000,
+  limit: 60,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Has consultado el ranking demasiadas veces, espera un momento",
+    },
+  },
+};
+
+export const limiteRanking = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimiteRanking,
+});
+
+/**
+ * RF-09 · Límite del recálculo forzado del ranking: 10 cada 15 minutos por
+ * usuario. El ranking ya se recalcula solo cuando cambian sus datos; forzarlo
+ * es la operación más cara del motor.
+ */
+export const opcionesLimiteRecalculoRanking: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Has recalculado el ranking demasiadas veces, espera unos minutos",
+    },
+  },
+};
+
+export const limiteRecalculoRanking = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimiteRecalculoRanking,
+});
+
+/**
  * Configuración del límite de la vinculación con Riot: 10 peticiones cada 15
  * minutos por usuario, sumando pedir el desafío y «generar otro icono». Cada
  * una consulta la API de Riot, cuya cuota (100 peticiones cada dos minutos con

@@ -61,7 +61,11 @@ export const explicacionTecnicaSchema = z.object({
   partidasAnalizadas: z.number().int().min(0).nullable(),
   /** Fecha de la captura de la que salen los datos. */
   datosDel: z.coerce.date().nullable(),
-  /** Las tres partes de la técnica, cada una en [0, 1]; nulas sin captura. */
+  /**
+   * Las tres partes de la técnica, cada una en [0, 1]; nulas sin captura.
+   * `posicion` es el factor que multiplica a las otras dos:
+   * técnica = posicion × (0,45·rango + 0,55·rendimiento).
+   */
   componentes: z
     .object({
       posicion: valorDimension,
