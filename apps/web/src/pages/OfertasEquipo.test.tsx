@@ -162,9 +162,14 @@ describe('Crear oferta con pesos (/panel-equipo/ofertas/nueva)', () => {
     expect(tecnica).toHaveValue('50')
     fireEvent.change(tecnica, { target: { value: '61' } })
 
-    // 39 puntos entre 0/0/25/25: la experiencia sigue en 0 y el resto se reparte a medias.
-    expect(screen.getByRole('slider', { name: 'Experiencia' })).toHaveValue('0')
+    // Sólo hay tres deslizadores: experiencia y habilidades blandas no tienen datos en el piloto.
+    expect(screen.getAllByRole('slider')).toHaveLength(3)
+    expect(screen.queryByRole('slider', { name: 'Experiencia' })).toBeNull()
+    expect(screen.queryByRole('slider', { name: 'Habilidades blandas' })).toBeNull()
+    expect(screen.queryByText(/Experiencia|Habilidades blandas/)).toBeNull()
+    // 39 puntos entre 25/25: se reparten a medias.
     expect(screen.getByRole('slider', { name: 'Geográfica' })).toHaveValue('20')
+    expect(screen.getByRole('slider', { name: 'Disponibilidad' })).toHaveValue('19')
     expect(screen.getByText('Total: 100 %')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Restablecer/ }))

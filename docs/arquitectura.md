@@ -160,7 +160,8 @@ sólo los **pesos por defecto**: los valores con los que arranca el formulario d
 la oferta y los que se aplican si el equipo no los ajusta. En el piloto,
 experiencia y habilidades blandas van con peso 0 porque no hay datos verificables
 con que medirlas (`DIMENSIONES_SIN_DATOS_PILOTO`; `docs/decisiones.md`, «Motor de
-matching»): el motor las sigue calculando y el formulario las fija en 0.
+matching»): el motor las sigue calculando y la interfaz no las muestra (las vistas
+iteran sobre `DIMENSIONES_VISIBLES`, de `apps/web/src/lib/pesos.ts`).
 
 | Dimensión | Peso por defecto (piloto) | Qué mide (Sección VIII) |
 | --- | --- | --- |

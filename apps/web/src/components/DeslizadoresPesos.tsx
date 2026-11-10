@@ -1,18 +1,26 @@
 import { useId } from 'react'
 import { RotateCcw } from 'lucide-react'
-import { DIMENSIONES_MATCHING, PESOS_MATCHING } from '@proplay/shared'
+import { PESOS_MATCHING } from '@proplay/shared'
 import { Button } from '@/components/ui'
 import { es } from '@/i18n/es'
-import { aPorcentajes, reajustarPesos, redondear, type Porcentajes } from '@/lib/pesos'
+import {
+  DIMENSIONES_VISIBLES,
+  aPorcentajes,
+  reajustarPesos,
+  redondear,
+  type Porcentajes,
+} from '@/lib/pesos'
 
 const t = es.formularioOferta
 
 /** Pesos por defecto de ProPlay (`PESOS_MATCHING`) en porcentajes. */
 export const PORCENTAJES_POR_DEFECTO = aPorcentajes(PESOS_MATCHING)
 
-// RF-09 · Pesos de las cinco dimensiones de la ecuación (1): siempre suman
-// 100 %. Mover uno reajusta los demás en proporción (lib/pesos.ts), con ratón,
-// táctil o teclado (flechas, Inicio, Fin), porque son `input type="range"`.
+// RF-09 · Pesos de las dimensiones de la ecuación (1): siempre suman 100 %.
+// Mover uno reajusta los demás en proporción (lib/pesos.ts), con ratón, táctil
+// o teclado (flechas, Inicio, Fin), porque son `input type="range"`. Sólo se
+// muestran las dimensiones con datos en el piloto (DIMENSIONES_VISIBLES); las
+// otras van siempre en 0.
 export function DeslizadoresPesos({
   valor,
   onCambiar,
@@ -23,11 +31,11 @@ export function DeslizadoresPesos({
   const base = useId()
   // Se muestran enteros que suman 100; el estado conserva los decimales.
   const enteros = redondear(valor)
-  const total = DIMENSIONES_MATCHING.reduce((suma, d) => suma + enteros[d], 0)
+  const total = DIMENSIONES_VISIBLES.reduce((suma, d) => suma + enteros[d], 0)
 
   return (
     <div className="space-y-4">
-      {DIMENSIONES_MATCHING.map((dimension) => {
+      {DIMENSIONES_VISIBLES.map((dimension) => {
         const id = `${base}-${dimension}`
         const nombre = es.dimension[dimension]
         return (

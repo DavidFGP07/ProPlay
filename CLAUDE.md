@@ -233,7 +233,7 @@ dentro de cada vista.
 |---|---|---|---|
 | Panel del equipo (datos de la organización y «Tus ofertas» reales; indicadores y recomendaciones, simulados) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
 | Buscador de talento (datos reales; posición y rango sólo de cuentas de Riot verificadas) | `/explorar` | RF-08 | Soporte: filtros por posición, rango mínimo y departamento |
-| Crear oferta, **con ajuste de los pesos de las cinco dimensiones** (también su edición) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
+| Crear oferta, **con ajuste de los pesos de las dimensiones** (también su edición; en el piloto sólo se ven las tres con datos, `DIMENSIONES_SIN_DATOS_PILOTO` oculta experiencia y habilidades blandas) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
 | **Ranking de candidatos con desglose por dimensión** | — | RF-09 | Núcleo |
 | Detalle del candidato con la explicación del matching | — | RF-09, RF-11 | Núcleo |
 | Comparador de candidatos | — | RF-09 | Futuro (descartada) |

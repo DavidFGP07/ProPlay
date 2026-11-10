@@ -456,10 +456,10 @@ export const es = {
       'Estás viendo la oferta como scout: puedes consultarla, pero la postulación la hace el jugador.',
     pesosTitulo: 'Cómo pondera este equipo',
     pesosSubtitulo:
-      'Pesos de las cinco dimensiones que el equipo eligió para esta oferta. Suman 100 %.',
+      'Pesos de las dimensiones que el equipo eligió para esta oferta. Suman 100 %.',
     metodologiaTitulo: 'Cómo se calculará la compatibilidad',
     metodologia:
-      'La compatibilidad entre un jugador y una oferta es el promedio ponderado de cinco dimensiones normalizadas entre 0 y 1, con los pesos que elige el equipo: S(j, o) = Σ wₖ · dₖ(j, o), con Σ wₖ = 1. El cálculo llegará con el motor de matching.',
+      'La compatibilidad entre un jugador y una oferta es el promedio ponderado de las dimensiones, normalizadas entre 0 y 1, con los pesos que elige el equipo: S(j, o) = Σ wₖ · dₖ(j, o), con Σ wₖ = 1. El cálculo llegará con el motor de matching.',
     modalTitulo: 'Postularme a la oferta',
     mensaje: 'Mensaje para el equipo (opcional)',
     mensajeAyuda:
@@ -483,7 +483,7 @@ export const es = {
     verOferta: 'Ver la oferta',
     pasos: 'Recorrido de la postulación',
   },
-  // RF-07 · RF-09 · Crear y editar oferta, con los pesos de las cinco dimensiones
+  // RF-07 · RF-09 · Crear y editar oferta, con los pesos de las dimensiones
   formularioOferta: {
     tituloNueva: 'Publicar una oferta',
     tituloEditar: 'Editar la oferta',
