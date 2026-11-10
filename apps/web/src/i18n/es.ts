@@ -167,19 +167,30 @@ export const es = {
     tagLinePista: 'Lo que va después de la # en tu Riot ID.',
     buscar: 'Buscar mi cuenta',
     desafioTitulo: 'Paso 2 · Demuestra que la cuenta es tuya',
-    desafioPasos: (minutos: number) => [
+    cargandoDesafio: 'Comprobando si tienes una verificación en curso',
+    desafioPasos: (segundos: number) => [
       'Abre el cliente de League of Legends.',
       'Entra en tu perfil y cambia el icono de invocador por el que ves aquí.',
-      'Vuelve y pulsa «Ya lo cambié». Riot puede tardar uno o dos minutos en reflejarlo.',
-      `Tienes ${minutos} minutos; después tendrás que empezar de nuevo.`,
+      `Mientras tengas esta página abierta lo comprobamos solos cada ${segundos} segundos. También puedes pulsar «Ya lo cambié».`,
     ],
+    demoraRiot: 'Después de cambiar el icono, Riot puede tardar unos minutos en reflejarlo.',
     iconoActual: 'Icono actual',
     iconoRequerido: 'Icono que debes poner',
     iconoAlt: (id: number) => `Icono de invocador número ${id}`,
     nivel: (nivel: number) => `Nivel ${nivel}`,
     expira: (fecha: string) => `El desafío caduca el ${fecha}`,
+    caducaEn: (tiempo: string) => `El desafío caduca en ${tiempo}`,
     verificar: 'Ya lo cambié, verificar',
+    generarOtroIcono: 'Generar otro icono',
     empezarDeNuevo: 'Usar otra cuenta',
+    comprobando: 'Comprobando el icono en Riot…',
+    comprobacionAutomatica: (segundos: number) =>
+      `Haremos la primera comprobación en ${segundos} segundos.`,
+    aunNoVemosElCambio:
+      'Aún no vemos el cambio. Puede tardar unos minutos; vuelve a intentarlo en un momento.',
+    ultimaComprobacion: (hora: string) => `Última comprobación: ${hora}`,
+    comprobacionesAgotadas:
+      'Este icono ya se comprobó demasiadas veces. Genera otro icono para seguir intentándolo.',
     verificadaExito: 'Cuenta verificada. Ya puedes sincronizar tus estadísticas.',
     avisoTitulo: 'Qué datos leemos y para qué',
     avisoDatos: [

@@ -15,6 +15,8 @@ import { crearQueryClient } from '@/api/queryClient'
  */
 const doble = vi.hoisted(() => ({
   usuario: null as UsuarioPublico | null,
+  /** Desafio activo que devuelve GET /perfiles/cuentas-gaming/riot/desafio. */
+  desafio: null as unknown,
   get: vi.fn(),
   post: vi.fn(),
   delete: vi.fn(),
@@ -141,6 +143,7 @@ function renderRuta(ruta: string) {
 function responderGet(cuentas: unknown[], resumen?: unknown, historial: unknown[] = []) {
   doble.get.mockImplementation(async (url: string) => {
     if (url === '/perfiles/cuentas-gaming') return { data: cuentas }
+    if (url === '/perfiles/cuentas-gaming/riot/desafio') return { data: { desafio: doble.desafio } }
     if (url === '/perfiles/me') return { data: PERFIL_ME }
     if (url.endsWith('/resumen')) return { data: resumen ?? { jugadorId: 'perfil-1', juegos: [] } }
     if (url.startsWith('/estadisticas/jugador/')) return { data: historial }
@@ -150,9 +153,30 @@ function responderGet(cuentas: unknown[], resumen?: unknown, historial: unknown[
 
 const espera = { timeout: 8000 }
 
+/** Desafio activo tal como lo devuelve la API (fechas en ISO). */
+function desafioRiot(cambios: Record<string, unknown> = {}) {
+  const ahora = Date.now()
+  return {
+    riotId: 'Vale#LAN',
+    servidor: 'LA1',
+    nivelInvocador: 245,
+    iconoActual: 7,
+    iconoRequerido: 12,
+    iconoRequeridoUrl: 'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/12.png',
+    creadoEn: new Date(ahora).toISOString(),
+    expiraEn: new Date(ahora + 15 * 60_000).toISOString(),
+    tokenDesafio: 'token-firmado',
+    ultimaComprobacionEn: null,
+    iconoVisto: null,
+    comprobacionesRestantes: 40,
+    ...cambios,
+  }
+}
+
 describe('Cuentas vinculadas', () => {
   beforeEach(() => {
     doble.usuario = JUGADOR
+    doble.desafio = null
     doble.get.mockReset()
     doble.post.mockReset()
     doble.delete.mockReset()
@@ -163,21 +187,19 @@ describe('Cuentas vinculadas', () => {
     doble.post.mockImplementation(async (url: string, cuerpo: unknown) => {
       if (url === '/perfiles/cuentas-gaming/riot') {
         expect(cuerpo).toEqual({ gameName: 'Vale', tagLine: 'LAN', servidor: 'LA1' })
-        return {
-          data: {
-            riotId: 'Vale#LAN',
-            servidor: 'LA1',
-            nivelInvocador: 245,
-            iconoActual: 7,
-            iconoRequerido: 12,
-            iconoRequeridoUrl: 'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/12.png',
-            expiraEn: '2026-11-08T18:00:00.000Z',
-            tokenDesafio: 'token-firmado',
-          },
-        }
+        return { data: desafioRiot() }
       }
       if (url === '/perfiles/cuentas-gaming/riot/verificar') {
-        throw errorApi(409, 'VERIFICACION_PENDIENTE', 'Tu invocador todavía no tiene el icono pedido.')
+        return {
+          data: {
+            estado: 'PENDIENTE',
+            desafio: desafioRiot({
+              ultimaComprobacionEn: new Date().toISOString(),
+              iconoVisto: 7,
+              comprobacionesRestantes: 39,
+            }),
+          },
+        }
       }
       throw new Error(`POST inesperado ${url}`)
     })
@@ -190,11 +212,94 @@ describe('Cuentas vinculadas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Buscar mi cuenta' }))
 
     expect(await screen.findByAltText('Icono de invocador número 12')).toBeInTheDocument()
+    expect(screen.getByText(/Riot puede tardar unos minutos en reflejarlo/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Ya lo cambié, verificar' }))
-    expect(await screen.findByText(/todavía no tiene el icono pedido/)).toBeInTheDocument()
+    // Que aún no coincida es un aviso con la hora de la comprobación, no un error.
+    expect(await screen.findByText(/Aún no vemos el cambio/)).toBeInTheDocument()
+    expect(screen.getByText(/Última comprobación:/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(doble.post).toHaveBeenCalledWith('/perfiles/cuentas-gaming/riot/verificar', {
       tokenDesafio: 'token-firmado',
     })
+  })
+
+  it('al volver a la vista retoma el desafío activo con el mismo icono', async () => {
+    doble.desafio = desafioRiot({ iconoRequerido: 21 })
+    responderGet([])
+    renderRuta('/cuentas-vinculadas')
+
+    expect(await screen.findByAltText('Icono de invocador número 21', {}, espera)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Nombre de invocador (Riot ID)')).toBeNull()
+    expect(screen.getByText(/El desafío caduca en 1[45]:\d\d/)).toBeInTheDocument()
+  })
+
+  it('«Generar otro icono» sustituye el desafío que se muestra', async () => {
+    doble.desafio = desafioRiot()
+    responderGet([])
+    doble.post.mockImplementation(async (url: string) => {
+      if (url === '/perfiles/cuentas-gaming/riot/desafio/regenerar') {
+        return { data: desafioRiot({ iconoRequerido: 3, tokenDesafio: 'token-nuevo' }) }
+      }
+      throw new Error(`POST inesperado ${url}`)
+    })
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Generar otro icono' }, espera))
+    expect(await screen.findByAltText('Icono de invocador número 3')).toBeInTheDocument()
+  })
+
+  it('comprueba sola cuando toca y, al verificarse, la vista se actualiza', async () => {
+    // Creado hace un minuto: la comprobación automática ya toca.
+    doble.desafio = desafioRiot({ creadoEn: new Date(Date.now() - 60_000).toISOString() })
+    let cuentas: unknown[] = []
+    doble.get.mockImplementation(async (url: string) => {
+      if (url === '/perfiles/cuentas-gaming') return { data: cuentas }
+      if (url === '/perfiles/cuentas-gaming/riot/desafio') return { data: { desafio: doble.desafio } }
+      if (url === '/perfiles/me') return { data: PERFIL_ME }
+      throw new Error(`GET inesperado ${url}`)
+    })
+    doble.post.mockImplementation(async (url: string) => {
+      if (url === '/perfiles/cuentas-gaming/riot/verificar') {
+        cuentas = [CUENTA_RIOT]
+        doble.desafio = null
+        return { data: { estado: 'VERIFICADA', cuenta: CUENTA_RIOT } }
+      }
+      throw new Error(`POST inesperado ${url}`)
+    })
+    renderRuta('/cuentas-vinculadas')
+
+    expect(await screen.findByText('Verificada', {}, espera)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sincronizar estadísticas' })).toBeInTheDocument()
+    expect(screen.queryByAltText('Icono de invocador número 12')).toBeNull()
+    expect(doble.post).toHaveBeenCalledTimes(1)
+  })
+
+  it('con el cupo agotado pide generar otro icono y deja de comprobar', async () => {
+    doble.desafio = desafioRiot()
+    responderGet([])
+    doble.post.mockRejectedValue(
+      errorApi(429, 'COMPROBACIONES_AGOTADAS', 'Este icono ya se comprobó demasiadas veces.'),
+    )
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ya lo cambié, verificar' }, espera))
+    expect(await screen.findByText(/Genera otro icono para seguir intentándolo/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ya lo cambié, verificar' })).toBeDisabled()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('no comprueba sola con la pestaña oculta', async () => {
+    const visibilidad = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    try {
+      doble.desafio = desafioRiot({ creadoEn: new Date(Date.now() - 60_000).toISOString() })
+      responderGet([])
+      renderRuta('/cuentas-vinculadas')
+      expect(await screen.findByAltText('Icono de invocador número 12', {}, espera)).toBeInTheDocument()
+      await new Promise((resolver) => setTimeout(resolver, 1500))
+      expect(doble.post).not.toHaveBeenCalled()
+    } finally {
+      visibilidad.mockRestore()
+    }
   })
 
   it('con la cuenta verificada permite sincronizar y desvincular', async () => {
