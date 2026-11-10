@@ -307,6 +307,10 @@ async function main(): Promise<void> {
 >
 > **Resultado (${fecha}): ${cumple ? "se cumple" : "NO se cumple"}.** p95 con recálculo completo:
 > **${ms(rFrio.p95)}**; leyendo el ranking guardado: **${ms(rCaliente.p95)}**.
+>
+> **Medición en local** (${cpu}, base de datos en la misma máquina), no en la infraestructura
+> del despliegue. **Se repetirá en la infraestructura del despliegue antes de la sustentación**
+> y el resultado sustituirá a éste.
 
 Generado por \`npm run rnf01 -w api\` (\`apps/api/scripts/rnf01.ts\`). No editar a mano: se
 reescribe en cada medición.
@@ -364,8 +368,9 @@ ${notaPlan}
 ## Límites de la medición
 
 - Las peticiones son secuenciales: mide la latencia de una consulta, no la carga concurrente.
-- La base está en la misma máquina, sin latencia de red; en el despliegue habrá que sumar la
-  del proveedor.
+- Es una medición **en local**: la base está en la misma máquina, sin latencia de red, y la
+  máquina de desarrollo (${cpu}) no es la del despliegue. Antes de la sustentación se repite en
+  la infraestructura del despliegue (API y base del proveedor) con el mismo script.
 - Los datos son sintéticos. El tamaño (1.000 perfiles) es el del criterio; la distribución de
   rangos y métricas no pretende ser la del piloto.
 

@@ -328,7 +328,9 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 0,
     titulo: "ADC para la liga en línea",
     rol: "ADC",
-    rangoMinimo: "ESMERALDA_I",
+    // Al alcance de los ADC del seed (Platino IV y Oro II): con un mínimo que
+    // ninguno cumple, el ranking de la demostración no tendría a quién premiar.
+    rangoMinimo: "PLATINO_IV",
     modalidad: "REMOTA",
     pais: null,
     departamento: null,
