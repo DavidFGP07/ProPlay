@@ -154,30 +154,33 @@ Notas:
 la media ponderada de cinco dimensiones, según la ecuación (1) de la Sección
 VIII del documento: S(j, o) = Σ wₖ·dₖ(j, o), con Σ wₖ = 1.
 
-Los pesos wₖ los **configura el equipo que publica la oferta**. `PESOS_MATCHING`
-(`@proplay/shared/constants`) son sólo los **pesos por defecto**: los valores con
-los que arranca el formulario de la oferta y los que se aplican si el equipo no
-los ajusta. Hoy `Oferta` todavía no guarda pesos propios, así que el cálculo usa
-siempre los de por defecto; los pesos por oferta llegan con las tareas 3.6 y 3.10
-del plan, y la justificación de estos valores, con la tarea que los lleva a la
-Sección VIII.
+Los pesos wₖ los **configura el equipo que publica la oferta** y se guardan en
+ella (`Oferta.pesoTecnica`…). `PESOS_MATCHING` (`@proplay/shared/constants`) son
+sólo los **pesos por defecto**: los valores con los que arranca el formulario de
+la oferta y los que se aplican si el equipo no los ajusta. En el piloto,
+experiencia y habilidades blandas van con peso 0 porque no hay datos verificables
+con que medirlas (`DIMENSIONES_SIN_DATOS_PILOTO`; `docs/decisiones.md`, «Motor de
+matching»): el motor las sigue calculando y el formulario las fija en 0.
 
-| Dimensión | Peso por defecto | Qué mide (Sección VIII) |
+| Dimensión | Peso por defecto (piloto) | Qué mide (Sección VIII) |
 | --- | --- | --- |
-| `tecnica` | 0.35 | Estadísticas de rendimiento del jugador en los videojuegos y roles en los que participa |
-| `experiencia` | 0.20 | Historial en equipos, torneos, competencias y logros obtenidos |
-| `habilidadesBlandas` | 0.15 | Endorsements de comunicación, trabajo en equipo y liderazgo (habilidades de categoría `BLANDA`) |
-| `geografica` | 0.15 | Región del jugador y disponibilidad para relocalización o participación en línea |
-| `disponibilidad` | 0.15 | Horarios de práctica y preferencias de compromiso |
+| `tecnica` | 0,50 | Estadísticas de rendimiento del jugador en los videojuegos y roles en los que participa |
+| `experiencia` | 0 (sin datos en el piloto) | Historial en equipos, torneos, competencias y logros obtenidos |
+| `habilidadesBlandas` | 0 (sin datos en el piloto) | Endorsements de comunicación, trabajo en equipo y liderazgo (habilidades de categoría `BLANDA`) |
+| `geografica` | 0,25 | Región del jugador y disponibilidad para relocalización o participación en línea |
+| `disponibilidad` | 0,25 | Horarios de práctica y preferencias de compromiso |
 
-La experiencia **no se mide en años**. El modelo de trayectoria que la sostiene
-(equipos anteriores, torneos y logros) aún no existe en `schema.prisma`; está en
-`docs/decisiones.md`, «Pendientes», para resolverse antes del S3 junto con la
-tarea 3.5. El campo `Oferta.experienciaMinAnios` es anterior a esta definición y
-se revisará entonces.
+La experiencia **no se mide en años**. El modelo de trayectoria que la sostendría
+(equipos anteriores, torneos y logros) es trabajo futuro.
 
-Hoy devuelve un valor fijo: el contrato y el desglose ya están cerrados; la
-implementación de cada dimensión es lo siguiente que toca.
+El ranking de una oferta lleva, por candidato, los cinco dₖ y una explicación con
+datos por dimensión (`rankingOfertaSchema` en `@proplay/shared`). Cuando falta el
+dato del jugador, la dimensión se puntúa con 0 (técnica sin cuenta verificada,
+experiencia, habilidades blandas) o con el neutro 0,5 (ubicación u horas), y la
+explicación lo marca como «faltan datos».
+
+Hoy `calcularCompatibilidad` todavía devuelve un valor fijo: el contrato está
+cerrado y las fórmulas de cada dimensión llegan con el PR del motor.
 
 ## Flujo de autenticación
 

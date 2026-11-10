@@ -46,19 +46,112 @@ export const PERFIL_VECTOR_VERSION = 1;
  * publicar su oferta; estos son los valores iniciales del formulario y los que
  * se aplican si no se ajustan. api y web deben leerlos de aquí (CLAUDE.md
  * §3.1). La suma debe ser 1.
+ *
+ * Son los del piloto: experiencia y habilidades blandas en 0 porque todavía no
+ * hay datos verificables con que medirlas (`DIMENSIONES_SIN_DATOS_PILOTO`;
+ * decisión «Motor de matching» en docs/decisiones.md).
  */
 export const PESOS_MATCHING = {
-  tecnica: 0.35,
-  experiencia: 0.2,
-  habilidadesBlandas: 0.15,
-  geografica: 0.15,
-  disponibilidad: 0.15,
+  tecnica: 0.5,
+  experiencia: 0,
+  habilidadesBlandas: 0,
+  geografica: 0.25,
+  disponibilidad: 0.25,
 } as const;
 
 export type DimensionMatching = keyof typeof PESOS_MATCHING;
 
 /** Las cinco dimensiones, en el orden de la ecuación (1). */
 export const DIMENSIONES_MATCHING = Object.keys(PESOS_MATCHING) as DimensionMatching[];
+
+/**
+ * Dimensiones sin datos en el piloto (arranque en frío, el mismo argumento que
+ * el componente colaborativo): la experiencia no tiene modelo de trayectoria y
+ * las habilidades blandas no tienen endorsements todavía. El motor las sigue
+ * calculando (valen 0 sin datos) y el formulario de la oferta las fija en 0.
+ */
+export const DIMENSIONES_SIN_DATOS_PILOTO = [
+  "experiencia",
+  "habilidadesBlandas",
+] as const satisfies readonly DimensionMatching[];
+
+/**
+ * Versión de las fórmulas de las cinco dimensiones. Se guarda en cada
+ * `Matching`: al cambiar una fórmula, una escala o un subpeso se sube, y los
+ * rankings calculados con la anterior se recalculan al leerlos.
+ */
+export const VERSION_FORMULAS_MATCHING = 1;
+
+/**
+ * Por qué una dimensión vale lo que vale cuando no sale del cálculo normal.
+ * Los que implican «faltan datos» (la dimensión se puntúa con 0 o con el
+ * neutro 0,5) están en `MOTIVOS_FALTAN_DATOS`; los otros dos son casos en los
+ * que la oferta no pide nada que medir.
+ */
+export const MOTIVOS_DIMENSION = [
+  /** Técnica: el jugador no tiene cuenta de Riot verificada (vale 0). */
+  "SIN_CUENTA_VERIFICADA",
+  /** Técnica: cuenta verificada, pero todavía sin captura de estadísticas (vale 0). */
+  "SIN_CAPTURA",
+  /** Experiencia: no hay modelo de trayectoria en el piloto (vale 0). */
+  "SIN_DATOS_PILOTO",
+  /** Habilidades blandas: ningún equipo ha avalado sus habilidades blandas (vale 0). */
+  "SIN_ENDORSEMENTS",
+  /** Geográfica: el jugador no tiene ubicación y la oferta no es remota (neutro). */
+  "SIN_UBICACION",
+  /** Disponibilidad: el jugador no ha declarado sus horas (neutro). */
+  "SIN_HORAS",
+  /** Geográfica: la oferta es remota, así que la ubicación no cuenta (vale 1). */
+  "OFERTA_REMOTA",
+  /** Disponibilidad: la oferta no pide horas (vale 1). */
+  "OFERTA_SIN_HORAS",
+] as const;
+export type MotivoDimension = (typeof MOTIVOS_DIMENSION)[number];
+
+/** Motivos que significan «faltan datos»: la interfaz los marca en el desglose. */
+export const MOTIVOS_FALTAN_DATOS = [
+  "SIN_CUENTA_VERIFICADA",
+  "SIN_CAPTURA",
+  "SIN_DATOS_PILOTO",
+  "SIN_ENDORSEMENTS",
+  "SIN_UBICACION",
+  "SIN_HORAS",
+] as const satisfies readonly MotivoDimension[];
+
+/** Puntaje de una dimensión cuando falta el dato del jugador y no se puede afirmar nada. */
+export const VALOR_NEUTRO_DIMENSION = 0.5;
+
+/** Cercanía entre la ubicación del jugador y la de la oferta (dimensión geográfica). */
+export const CERCANIAS_GEOGRAFICAS = [
+  "MISMO_DEPARTAMENTO",
+  "MISMA_MACRORREGION",
+  "MISMO_PAIS",
+  "OTRO_PAIS",
+] as const;
+export type CercaniaGeografica = (typeof CERCANIAS_GEOGRAFICAS)[number];
+
+/**
+ * Métricas de `metricasLolSchema` y de `Estadistica` que entran en el
+ * rendimiento de la dimensión técnica. Qué métricas cuentan para cada posición
+ * y contra qué escala se normalizan lo fija el motor (docs/arquitectura.md).
+ */
+export const METRICAS_TECNICA_LOL = [
+  "winRate",
+  "kda",
+  "csPorMinuto",
+  "oroPorMinuto",
+  "danoPorMinuto",
+  "visionPorMinuto",
+  "participacionKills",
+] as const;
+export type MetricaTecnicaLol = (typeof METRICAS_TECNICA_LOL)[number];
+
+/**
+ * Modo del motor: `CONTENIDO` mientras el componente colaborativo tiene peso 0
+ * (arranque en frío, Sección VIII-C); `HIBRIDO` cuando lo tenga.
+ */
+export const MODOS_MATCHING = ["CONTENIDO", "HIBRIDO"] as const;
+export type ModoMatching = (typeof MODOS_MATCHING)[number];
 
 /**
  * Margen admitido en la suma de los pesos de una oferta. Los deslizadores

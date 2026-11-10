@@ -9,16 +9,24 @@ import {
 } from '@/lib/pesos'
 
 const suma = (p: Porcentajes) => DIMENSIONES_MATCHING.reduce((total, d) => total + p[d], 0)
-const POR_DEFECTO = aPorcentajes(PESOS_MATCHING)
+// Las pruebas del reparto usan pesos con las cinco dimensiones activas, para
+// que se vea la proporción; las de los valores por defecto, PESOS_MATCHING.
+const POR_DEFECTO: Porcentajes = {
+  tecnica: 35,
+  experiencia: 20,
+  habilidadesBlandas: 15,
+  geografica: 15,
+  disponibilidad: 15,
+}
 
 describe('deslizadores de pesos (RF-09)', () => {
-  it('los pesos por defecto se muestran como 35/20/15/15/15', () => {
-    expect(redondear(POR_DEFECTO)).toEqual({
-      tecnica: 35,
-      experiencia: 20,
-      habilidadesBlandas: 15,
-      geografica: 15,
-      disponibilidad: 15,
+  it('los pesos por defecto del piloto se muestran como 50/0/0/25/25', () => {
+    expect(redondear(aPorcentajes(PESOS_MATCHING))).toEqual({
+      tecnica: 50,
+      experiencia: 0,
+      habilidadesBlandas: 0,
+      geografica: 25,
+      disponibilidad: 25,
     })
   })
 
