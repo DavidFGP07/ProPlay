@@ -68,7 +68,7 @@ export const DIMENSIONES_MATCHING = Object.keys(PESOS_MATCHING) as DimensionMatc
  * Dimensiones sin datos en el piloto (arranque en frío, el mismo argumento que
  * el componente colaborativo): la experiencia no tiene modelo de trayectoria y
  * las habilidades blandas no tienen endorsements todavía. El motor las sigue
- * calculando (valen 0 sin datos) y el formulario de la oferta las fija en 0.
+ * calculando (valen 0 sin datos) y la interfaz no las muestra.
  */
 export const DIMENSIONES_SIN_DATOS_PILOTO = [
   "experiencia",

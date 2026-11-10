@@ -222,6 +222,9 @@ describe('Detalle de la oferta (/vacantes/:id)', () => {
     expect(await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).toBeInTheDocument()
     expect(screen.getByText('Diamante II')).toBeInTheDocument()
     expect(screen.getByText('50 %')).toBeInTheDocument()
+    // Los pesos de la oferta muestran sólo las dimensiones con datos en el piloto.
+    expect(screen.queryByText('Experiencia')).toBeNull()
+    expect(screen.queryByText('Habilidades blandas')).toBeNull()
     expect(screen.queryByText(/Ranking de compatibilidad/i)).toBeNull()
   })
 
