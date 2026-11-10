@@ -47,7 +47,7 @@ import {
   useRegenerarDesafioRiot,
   useVerificarCuentaRiot,
 } from '@/api/cuentasGaming'
-import { useSincronizarEstadisticas } from '@/api/estadisticas'
+import { SincronizacionRiot } from '@/components/SincronizacionRiot'
 import { es } from '@/i18n/es'
 
 const t = es.cuentasVinculadas
@@ -145,7 +145,6 @@ function TarjetaRiot({ cuenta }: { cuenta: CuentaGaming | undefined }) {
 /* ----------------------------- Cuenta verificada ---------------------------- */
 
 function CuentaVerificada({ cuenta }: { cuenta: CuentaGaming }) {
-  const sincronizar = useSincronizarEstadisticas()
   const desvincular = useDesvincularPlataforma()
   const [confirmando, setConfirmando] = useState(false)
 
@@ -168,11 +167,8 @@ function CuentaVerificada({ cuenta }: { cuenta: CuentaGaming }) {
         />
       </dl>
 
-      <div className="flex flex-wrap gap-2">
-        <Button cargando={sincronizar.isPending} onClick={() => sincronizar.mutate()}>
-          <RefreshCw size={14} aria-hidden />
-          {t.sincronizar}
-        </Button>
+      <div className="flex flex-wrap items-start gap-2">
+        <SincronizacionRiot etiqueta={t.sincronizar} />
         <Link
           to="/mis-estadisticas"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/12 bg-white/5 px-4 text-sm font-medium text-slate-200 transition hover:border-brand-500/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
@@ -188,12 +184,6 @@ function CuentaVerificada({ cuenta }: { cuenta: CuentaGaming }) {
         )}
       </div>
 
-      {sincronizar.isSuccess && (
-        <p role="status" className="text-xs text-emerald-300">
-          {sincronizar.data.hayDatosNuevos ? t.sincronizadaNueva : t.sincronizadaSinCambios}
-        </p>
-      )}
-      {sincronizar.isError && <ErrorAccion error={sincronizar.error} />}
 
       {confirmando && (
         <div
@@ -231,7 +221,18 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   )
 }
 
+/** Codigos que son una espera (sin cupo en Riot, Riot no disponible), no un fallo. */
+const CODIGOS_DE_ESPERA = ['MUCHA_DEMANDA', 'RIOT_NO_DISPONIBLE']
+
 function ErrorAccion({ error }: { error: Error }) {
+  // RF-02 · Sin cupo o sin Riot no es culpa del jugador: aviso, no error rojo.
+  if (CODIGOS_DE_ESPERA.includes(codigoDeError(error) ?? '')) {
+    return (
+      <p role="status" className="text-xs text-amber-300">
+        {mensajeDeError(error)}
+      </p>
+    )
+  }
   return (
     <p role="alert" className="text-xs text-rose-300">
       {mensajeDeError(error)}
@@ -437,6 +438,7 @@ function Desafio({ desafio }: { desafio: DesafioVerificacionRiot }) {
 
           <EstadoComprobacion
             desafio={desafio}
+            muchaDemanda={verificar.data?.estado === 'PENDIENTE' && verificar.data.motivo === 'MUCHA_DEMANDA'}
             comprobando={verificar.isPending}
             agotadas={bloqueada}
             error={verificar.isError && codigo !== 'COMPROBACIONES_AGOTADAS' ? verificar.error : null}
@@ -455,11 +457,14 @@ function Desafio({ desafio }: { desafio: DesafioVerificacionRiot }) {
  */
 function EstadoComprobacion({
   desafio,
+  muchaDemanda,
   comprobando,
   agotadas,
   error,
 }: {
   desafio: DesafioVerificacionRiot
+  /** La ultima comprobacion no llego a Riot por falta de cupo: se reintenta sola. */
+  muchaDemanda: boolean
   comprobando: boolean
   agotadas: boolean
   error: Error | null
@@ -476,6 +481,13 @@ function EstadoComprobacion({
     return (
       <p role="status" className="text-xs text-slate-400">
         {t.comprobando}
+      </p>
+    )
+  }
+  if (muchaDemanda) {
+    return (
+      <p role="status" className="text-xs text-amber-300">
+        {t.muchaDemanda}
       </p>
     )
   }

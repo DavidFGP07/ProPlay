@@ -50,9 +50,9 @@ import { useCuentasGaming } from '@/api/cuentasGaming'
 import {
   useHistorialEstadisticas,
   useResumenEstadisticas,
-  useSincronizarEstadisticas,
 } from '@/api/estadisticas'
 import { usePerfilPropio } from '@/api/perfiles'
+import { SincronizacionRiot } from '@/components/SincronizacionRiot'
 import { es } from '@/i18n/es'
 
 const t = es.misEstadisticas
@@ -126,16 +126,9 @@ function Contenido({
   resumen: ResumenEstadisticas | undefined
   historial: Estadistica[]
 }) {
-  const sincronizar = useSincronizarEstadisticas()
   const lol = resumen?.juegos.find((j) => j.juego === JUEGO_PILOTO && j.fuente === 'RIOT')
   const metricas = lol ? metricasLolSchema.safeParse(lol.actual.metricas) : null
 
-  const botonSincronizar = (
-    <Button cargando={sincronizar.isPending} onClick={() => sincronizar.mutate()}>
-      <RefreshCw size={14} aria-hidden />
-      {t.sincronizar}
-    </Button>
-  )
 
   if (!lol || !metricas?.success) {
     return (
@@ -145,10 +138,7 @@ function Contenido({
           titulo={t.sinDatos}
           descripcion={t.sinDatosDetalle}
           action={
-            <div className="flex flex-col items-center gap-2">
-              {botonSincronizar}
-              {sincronizar.isError && <ErrorAccion error={sincronizar.error} />}
-            </div>
+            <SincronizacionRiot etiqueta={t.sincronizar} alinear="centro" />
           }
         />
       </Card>
@@ -166,15 +156,7 @@ function Contenido({
           {es.servidor[m.servidor as keyof typeof es.servidor] ?? m.servidor} ·{' '}
           {t.nivel(m.nivelInvocador)}
         </p>
-        <div className="flex flex-col items-end gap-1">
-          {botonSincronizar}
-          {sincronizar.isSuccess && !sincronizar.data.hayDatosNuevos && (
-            <p role="status" className="text-[11px] text-slate-400">
-              {es.cuentasVinculadas.sincronizadaSinCambios}
-            </p>
-          )}
-          {sincronizar.isError && <ErrorAccion error={sincronizar.error} />}
-        </div>
+        <SincronizacionRiot etiqueta={t.sincronizar} alinear="fin" />
       </div>
 
       {/* --------------------------------- Rango -------------------------------- */}
@@ -469,14 +451,6 @@ function ErrorCarga({ error, onReintentar }: { error: Error; onReintentar: () =>
         />
       </div>
     </Card>
-  )
-}
-
-function ErrorAccion({ error }: { error: Error }) {
-  return (
-    <p role="alert" className="text-xs text-rose-300">
-      {mensajeDeError(error)}
-    </p>
   )
 }
 

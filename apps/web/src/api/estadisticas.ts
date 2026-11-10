@@ -1,8 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   estadisticaSchema,
+  estadoSincronizacionSchema,
   resumenEstadisticasSchema,
-  sincronizarEstadisticasRespuestaSchema,
 } from '@proplay/shared'
 import { api } from '@/api/client'
 import { CLAVE_CUENTAS } from '@/api/cuentasGaming'
@@ -35,19 +36,51 @@ export function useHistorialEstadisticas(jugadorId: string | undefined) {
   })
 }
 
-// RF-03 · Ingesta bajo demanda desde la API de Riot. API real.
-export function useSincronizarEstadisticas() {
+export const CLAVE_SINCRONIZACION = ['estadisticas', 'sincronizacion'] as const
+
+/** Cada cuanto se consulta una sincronizacion en cola o en curso. */
+const MS_CONSULTA_SINCRONIZACION = 3_000
+
+// RF-03 · Ingesta desde la API de Riot. API real. Pedirla la encola (202) y la
+// hace el worker cuando hay cupo en la cuota de Riot: la vista consulta el
+// estado mientras esta en cola o en curso y, al terminar, recarga los datos.
+export function useSincronizacion() {
   const cliente = useQueryClient()
-  return useMutation({
+
+  const estado = useQuery({
+    queryKey: CLAVE_SINCRONIZACION,
+    queryFn: async () => {
+      const { data } = await api.get<unknown>('/estadisticas/sincronizacion')
+      return estadoSincronizacionSchema.parse(data)
+    },
+    retry: false,
+    refetchInterval: (consulta) =>
+      consulta.state.data && consulta.state.data.estado !== 'INACTIVA'
+        ? MS_CONSULTA_SINCRONIZACION
+        : false,
+  })
+
+  const sincronizar = useMutation({
     mutationFn: async () => {
       const { data } = await api.post<unknown>('/estadisticas/sincronizar', {})
-      return sincronizarEstadisticasRespuestaSchema.parse(data)
+      return estadoSincronizacionSchema.parse(data)
     },
-    onSuccess: () => {
-      void cliente.invalidateQueries({ queryKey: ['estadisticas'] })
-      void cliente.invalidateQueries({ queryKey: CLAVE_CUENTAS })
-    },
+    onSuccess: (nuevo) => cliente.setQueryData(CLAVE_SINCRONIZACION, nuevo),
   })
+
+  // Al pasar de en cola o en curso a terminada, los datos ya son otros.
+  const anterior = useRef(estado.data?.estado)
+  const actual = estado.data?.estado
+  useEffect(() => {
+    if (anterior.current && anterior.current !== 'INACTIVA' && actual === 'INACTIVA') {
+      void cliente.invalidateQueries({ queryKey: ['estadisticas', 'resumen'] })
+      void cliente.invalidateQueries({ queryKey: ['estadisticas', 'historial'] })
+      void cliente.invalidateQueries({ queryKey: CLAVE_CUENTAS, exact: true })
+    }
+    anterior.current = actual
+  }, [actual, cliente])
+
+  return { estado, sincronizar }
 }
 
 // RF-03 · Estado del worker de ingesta de estadisticas (barra superior)
