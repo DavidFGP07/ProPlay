@@ -12,6 +12,7 @@
     "admin:promover": "tsx src/cli/promoverAdministrador.ts",
     "ingesta:estado": "tsx src/cli/estadoIngesta.ts",
     "matching:revectorizar": "tsx src/cli/revectorizar.ts",
+    "rnf01": "tsx scripts/rnf01.ts",
     "lint": "eslint .",
     "check:indice-hnsw": "node scripts/verificar-indice-hnsw.mjs",
     "typecheck": "tsc --noEmit",

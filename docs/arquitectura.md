@@ -284,6 +284,29 @@ cuando: ni un especialista llega al 100 %. Se calibra con las capturas del pilot
 (si los jugadores que se declaran especialistas quedan habitualmente por debajo
 o muy por encima, se ajusta y se sube la versión).
 
+**Caso límite conocido: nadie de la posición pedida alcanza el rango mínimo.** Si
+todos los especialistas de la posición están muy por debajo del mínimo, un jugador
+de otra posición que sí lo alcanza y la juega a ratos puede quedar por encima. La
+fórmula lo produce así: el rango baja linealmente y llega a 0 una liga (cuatro
+divisiones) por debajo del mínimo, de modo que el especialista pierde entera la
+parte de rango (0,45 de lo que multiplica el factor) y su técnica se queda en
+0,55·rendimiento. El de otra posición cumple el rango y conserva factor ×
+(0,45 + 0,55·rendimiento). Con un 20 % de partidas en la posición pedida (factor
+1/3) y el mismo rendimiento r, el de otra posición ya iguala o supera en técnica al
+especialista cuando r ≤ 0,41; y aunque no lo supere, la diferencia en técnica es
+pequeña y decide otra dimensión. Ejemplo, fijado en `tests/matching-motor.test.ts`:
+oferta de ADC con mínimo Esmeralda I, un ADC Platino IV (técnica 0,264) y un MID
+Diamante IV con un 20 % de partidas de ADC (técnica 0,238); el MID queda por encima
+porque cubre las horas de la oferta y el ADC no.
+
+Se deja así para el piloto, como limitación conocida: aparece sólo cuando el mínimo
+de la oferta está fuera del alcance de los candidatos de la posición, y el equipo lo
+ve en el desglose (rango 0 del especialista, factor de posición del otro). **Se
+revisará con los datos del piloto.** Las salidas posibles son que el rango no llegue a 0 para
+un especialista (un suelo en la parte de rango) o que el factor de posición también
+multiplique la parte de rango de forma distinta; cualquiera sube
+`VERSION_FORMULAS_MATCHING`.
+
 Dentro del factor, el rango (0,45) es la señal más difícil de falsificar de la API
 y el rendimiento (0,55) es lo que más se acerca a «cómo juega». Cualquier cambio de
 escala, de métrica de una posición, de subpeso o del umbral sube

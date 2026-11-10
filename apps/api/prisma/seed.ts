@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { desconectarPrisma } from "../src/config/prisma";
+import { revectorizarTodos } from "../src/modules/matching/matching.service";
 import {
   COLA_SOLO_DUO,
   PARTIDAS_POR_SINCRONIZACION,
@@ -23,7 +25,7 @@ import {
  *
  * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores (10 con cuenta
  * de Riot verificada y estadísticas de LoL con posición y rango; sus vectores
- * los calcula el motor de matching), 5 ofertas de League of Legends en todos los estados
+ * los calcula el motor de matching), endorsements de equipos a tres de ellos, 5 ofertas de League of Legends en todos los estados
  * con postulaciones fechadas (para el embudo), un scout y un administrador.
  *
  * Es idempotente (usa upsert), así que se puede ejecutar varias veces:
@@ -91,6 +93,16 @@ const DATOS_RIOT: ({ posicion: PosicionLol; rango: RangoLol; rangoAnterior: Rang
   null,
 ];
 
+
+/**
+ * Endorsements del seed: índice del jugador → índices de los equipos que
+ * avalan su habilidad blanda. Tres jugadores, con uno, dos y tres avales.
+ */
+const ENDORSEMENTS_SEED: [number, number[]][] = [
+  [0, [0, 1, 2]],
+  [2, [0, 1]],
+  [9, [1]],
+];
 
 /**
  * Ubicación de los 15 jugadores, en orden: mayoría del Caribe colombiano (el
@@ -316,7 +328,9 @@ const OFERTAS: OfertaSemilla[] = [
     equipo: 0,
     titulo: "ADC para la liga en línea",
     rol: "ADC",
-    rangoMinimo: "ESMERALDA_I",
+    // Al alcance de los ADC del seed (Platino IV y Oro II): con un mínimo que
+    // ninguno cumple, el ranking de la demostración no tendría a quién premiar.
+    rangoMinimo: "PLATINO_IV",
     modalidad: "REMOTA",
     pais: null,
     departamento: null,
@@ -612,6 +626,32 @@ async function main() {
     `  · ${NOMBRES_JUGADORES.length} jugadores (${DATOS_RIOT.filter(Boolean).length} con cuenta de Riot verificada), ${estadisticasCreadas} capturas de estadísticas de LoL`,
   );
 
+  // ------------------------------------------------------------ endorsements
+  // Los equipos avalan habilidades blandas de tres jugadores (decisión 0.10:
+  // endorsements sólo de equipos), para que la dimensión de habilidades
+  // blandas tenga datos en la demostración aunque su peso del piloto sea 0.
+  let endorsementsCreados = 0;
+  for (const [indiceJugador, equiposQueAvalan] of ENDORSEMENTS_SEED) {
+    const blanda = await prisma.habilidadJugador.findFirst({
+      where: { jugadorId: perfilesJugador[indiceJugador]!.id, habilidad: { categoria: "BLANDA" } },
+    });
+    if (!blanda) continue;
+    for (const indiceEquipo of equiposQueAvalan) {
+      const autorId = perfilesEquipo[indiceEquipo]!.usuarioId;
+      await prisma.endorsement.upsert({
+        where: { habilidadJugadorId_autorId: { habilidadJugadorId: blanda.id, autorId } },
+        update: {},
+        create: {
+          habilidadJugadorId: blanda.id,
+          autorId,
+          comentario: "Buena comunicación en las scrims con nuestro equipo.",
+        },
+      });
+      endorsementsCreados += 1;
+    }
+  }
+  console.log(`  · ${endorsementsCreados} endorsements de equipos a habilidades blandas`);
+
   // ------------------------------------------------------------------ ofertas
   // Las fechas son relativas al momento del seed para que las ofertas parezcan
   // recientes; lo que se mantiene fijo es el recorrido de cada postulación.
@@ -666,6 +706,13 @@ async function main() {
     `  · ${OFERTAS.length} ofertas (abiertas, cubierta y borrador) y ${postulacionesCreadas} postulaciones con sus fechas`,
   );
 
+  // ---------------------------------------------------------------- vectores
+  // Con el vectorizador del motor de matching, a partir de las capturas que
+  // se acaban de cargar: el ranking de la demostración sale de datos reales
+  // del seed, no de vectores aleatorios.
+  const vectores = await revectorizarTodos();
+  console.log(`  · ${vectores} vectores de perfil (versión ${PERFIL_VECTOR_VERSION})`);
+
   console.log(
     `\nListo. Todas las cuentas de prueba usan la contraseña ${PASSWORD_DEMO}\n` +
       "  admin@proplay.gg (ADMIN) · scout@proplay.gg (SCOUT)\n" +
@@ -680,4 +727,5 @@ main()
   })
   .finally(() => {
     void prisma.$disconnect();
+    void desconectarPrisma();
   });
