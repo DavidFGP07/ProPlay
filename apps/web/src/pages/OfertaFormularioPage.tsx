@@ -104,7 +104,7 @@ function valoresDe(oferta: Oferta): FormularioOferta {
   }
 }
 
-// RF-07 · RF-09 · Crear oferta con el ajuste de los pesos de las cinco
+// RF-07 · RF-09 · Crear oferta con el ajuste de los pesos de las
 // dimensiones (POST /api/v1/ofertas) y editarla (PATCH /api/v1/ofertas/:id).
 // Sólo el rol EQUIPO llega aquí (área `gestionOfertas` del enrutador).
 export default function OfertaFormularioPage() {

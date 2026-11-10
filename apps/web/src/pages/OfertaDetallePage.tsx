@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Briefcase, CheckCircle2, Send, Sigma, Weight } from 'lucide-react'
 import {
-  DIMENSIONES_MATCHING,
   crearPostulacionSchema,
   type CrearPostulacionInput,
   type Oferta,
@@ -32,6 +31,7 @@ import { PostulacionesRecibidas } from '@/components/PostulacionesRecibidas'
 import { aplicarErrorApi, codigoError } from '@/api/errores'
 import { useMisPostulaciones, useOferta, usePostular } from '@/api/ofertas'
 import { es } from '@/i18n/es'
+import { DIMENSIONES_VISIBLES, aPorcentajes, redondear } from '@/lib/pesos'
 import { lugarOferta } from '@/lib/ubicacion'
 
 const t = es.ofertaDetalle
@@ -108,6 +108,8 @@ function Detalle({ oferta }: { oferta: Oferta }) {
     propio.data?.tipo === 'EQUIPO' && propio.data.perfil.id === oferta.equipo.id
   // El equipo ve las de sus ofertas; el scout y el administrador, las de cualquiera publicada.
   const veRecibidas = oferta.estado !== 'BORRADOR' && (esPropia || rol === 'SCOUT' || rol === 'ADMIN')
+  // Sólo las dimensiones con datos en el piloto, en porcentajes que suman 100.
+  const porcentajes = redondear(aPorcentajes(oferta.pesos))
   const ficha: [string, string][] = [
     [t.posicion, es.posicionLol[oferta.rol]],
     [t.rangoMinimo, oferta.rangoMinimo ? es.rangoLol[oferta.rangoMinimo] : t.sinRango],
@@ -171,15 +173,15 @@ function Detalle({ oferta }: { oferta: Oferta }) {
         <Card className="min-w-0">
           <CardHeader title={t.pesosTitulo} subtitle={t.pesosSubtitulo} icon={<Weight size={16} />} />
           <dl className="space-y-3.5 p-5">
-            {DIMENSIONES_MATCHING.map((dimension) => (
+            {DIMENSIONES_VISIBLES.map((dimension) => (
               <div key={dimension}>
                 <div className="flex items-center justify-between text-xs">
                   <dt className="text-slate-300">{es.dimension[dimension]}</dt>
                   <dd className="font-mono text-brand-300">
-                    {Math.round(oferta.pesos[dimension] * 100)} %
+                    {porcentajes[dimension]} %
                   </dd>
                 </div>
-                <Progress valor={oferta.pesos[dimension]} className="mt-1.5" />
+                <Progress valor={porcentajes[dimension] / 100} className="mt-1.5" />
               </div>
             ))}
           </dl>
