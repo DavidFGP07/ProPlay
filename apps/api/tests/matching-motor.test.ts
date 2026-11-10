@@ -404,6 +404,54 @@ describe("oferta ADC del seed («ADC para la liga en línea»)", () => {
   });
 });
 
+describe("caso límite conocido: nadie de la posición pedida alcanza el rango mínimo", () => {
+  // Fija el comportamiento actual (docs/arquitectura.md, «Caso límite»): oferta
+  // de ADC que pide Esmeralda I; el único ADC es Platino IV (una liga entera por
+  // debajo) y un MID Diamante IV juega el 20 % de sus partidas de ADC. Si se
+  // cambia la fórmula tras el piloto, esta prueba cambia con ella.
+  const ofertaAdc = oferta({
+    rol: "ADC",
+    rangoMinimo: "ESMERALDA_I",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 20,
+    pesos: { tecnica: 0.6, experiencia: 0, habilidadesBlandas: 0, geografica: 0, disponibilidad: 0.4 },
+  });
+  const metricas = {
+    winRate: 0.52,
+    kda: 2.8,
+    csPorMinuto: 6.5,
+    oroPorMinuto: 390,
+    danoPorMinuto: 560,
+    visionPorMinuto: 1,
+    participacionKills: 0.55,
+  };
+  const adc = jugador({
+    jugadorId: "adc-platino",
+    disponibilidadHoras: 15,
+    captura: { ...jugador().captura!, posicion: "ADC", rango: "PLATINO_IV", distribucionRoles: { ADC: 16, SOPORTE: 4 }, metricas },
+  });
+  const mid = jugador({
+    jugadorId: "mid-diamante",
+    disponibilidadHoras: 20,
+    captura: { ...jugador().captura!, posicion: "MID", rango: "DIAMANTE_IV", distribucionRoles: { MID: 16, ADC: 4 }, metricas },
+  });
+
+  it("el ADC pierde la parte de rango y el MID con un 20 % de ADC queda por encima", () => {
+    const pAdc = puntuar(adc, ofertaAdc);
+    const pMid = puntuar(mid, ofertaAdc);
+    // El ADC es especialista, pero una liga por debajo del mínimo: rango 0.
+    expect(pAdc.explicacion.dimensiones.tecnica.componentes).toMatchObject({ posicion: 1, rango: 0 });
+    // El MID cumple el rango, pero sólo cuenta un tercio (20 % / 60 %).
+    expect(pMid.explicacion.dimensiones.tecnica.componentes!.posicion).toBeCloseTo(1 / 3, 12);
+    expect(pMid.explicacion.dimensiones.tecnica.componentes!.rango).toBe(1);
+    // En la técnica quedan casi empatados y decide otra dimensión (aquí, la disponibilidad).
+    expect(Math.abs(pAdc.desglose.tecnica - pMid.desglose.tecnica)).toBeLessThan(0.05);
+    expect(ordenarRanking([pAdc, pMid]).map((p) => p.jugadorId)).toEqual(["mid-diamante", "adc-platino"]);
+  });
+});
+
 describe("orden del ranking", () => {
   const candidato = (jugadorId: string, puntaje: number, tecnica: number) => ({
     jugadorId,
