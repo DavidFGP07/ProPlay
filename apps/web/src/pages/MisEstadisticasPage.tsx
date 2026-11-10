@@ -26,12 +26,12 @@ import {
   Flame,
 } from 'lucide-react'
 import {
-  JUEGO_LOL,
+  JUEGO_PILOTO,
   POSICIONES_LOL,
   metricasLolSchema,
   type Estadistica,
   type MetricasLol,
-  type RangoLol,
+  type RangoColaLol,
   type ResumenEstadisticas,
 } from '@proplay/shared'
 import {
@@ -127,7 +127,7 @@ function Contenido({
   historial: Estadistica[]
 }) {
   const sincronizar = useSincronizarEstadisticas()
-  const lol = resumen?.juegos.find((j) => j.juego === JUEGO_LOL && j.fuente === 'RIOT')
+  const lol = resumen?.juegos.find((j) => j.juego === JUEGO_PILOTO && j.fuente === 'RIOT')
   const metricas = lol ? metricasLolSchema.safeParse(lol.actual.metricas) : null
 
   const botonSincronizar = (
@@ -247,7 +247,7 @@ function textoTendencia(
   return t.tendencia(valor > 0 ? '+' : '−', formato(Math.abs(valor)))
 }
 
-function TarjetaRango({ titulo, rango }: { titulo: string; rango: RangoLol | null }) {
+function TarjetaRango({ titulo, rango }: { titulo: string; rango: RangoColaLol | null }) {
   return (
     <Card className="p-4">
       <div className="flex items-start gap-3">
@@ -279,31 +279,38 @@ function TarjetaRango({ titulo, rango }: { titulo: string; rango: RangoLol | nul
 }
 
 function Posiciones({ metricas, principal }: { metricas: MetricasLol; principal: string | null }) {
-  const total = Math.max(1, metricas.partidasAnalizadas)
+  // Sólo cuentan las partidas de solo/dúo (cola 420), así que el total es el
+  // de esas partidas y no el de toda la muestra.
+  const conPosicion = Object.values(metricas.distribucionRoles).reduce((a, b) => a + (b ?? 0), 0)
+  const total = Math.max(1, conPosicion)
   return (
     <Card>
       <CardHeader icon={<Crosshair size={18} />} title={t.rolesTitulo} subtitle={t.rolesSubtitulo} />
-      <ul className="space-y-3 p-5">
-        {POSICIONES_LOL.map((posicion) => {
-          const partidas = metricas.distribucionRoles[posicion] ?? 0
-          return (
-            <li key={posicion}>
-              <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-                <span className={cn('font-medium', partidas ? 'text-slate-200' : 'text-slate-500')}>
-                  {es.posicion[posicion]}
-                  {principal === posicion && (
-                    <Badge tono="violeta" className="ml-2">
-                      {t.rolPrincipal}
-                    </Badge>
-                  )}
-                </span>
-                <span className="text-slate-400">{t.partidasDe(partidas)}</span>
-              </div>
-              <Progress valor={partidas / total} />
-            </li>
-          )
-        })}
-      </ul>
+      {conPosicion === 0 ? (
+        <p className="p-5 text-xs text-slate-400">{t.rolesVacio}</p>
+      ) : (
+        <ul className="space-y-3 p-5">
+          {POSICIONES_LOL.map((posicion) => {
+            const partidas = metricas.distribucionRoles[posicion] ?? 0
+            return (
+              <li key={posicion}>
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                  <span className={cn('font-medium', partidas ? 'text-slate-200' : 'text-slate-500')}>
+                    {es.posicionLol[posicion]}
+                    {principal === posicion && (
+                      <Badge tono="violeta" className="ml-2">
+                        {t.rolPrincipal}
+                      </Badge>
+                    )}
+                  </span>
+                  <span className="text-slate-400">{t.partidasDe(partidas)}</span>
+                </div>
+                <Progress valor={partidas / total} />
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </Card>
   )
 }
@@ -338,7 +345,7 @@ function Campeones({ metricas }: { metricas: MetricasLol }) {
 // RF-13 · Tendencia del rendimiento del jugador (tarea 2.16)
 function Tendencia({ historial }: { historial: Estadistica[] }) {
   const puntos = historial
-    .filter((e) => e.juego === JUEGO_LOL && e.fuente === 'RIOT')
+    .filter((e) => e.juego === JUEGO_PILOTO && e.fuente === 'RIOT')
     .sort((a, b) => a.capturadaEn.getTime() - b.capturadaEn.getTime())
     .map((e) => ({
       fecha: formatoCorto.format(e.capturadaEn),

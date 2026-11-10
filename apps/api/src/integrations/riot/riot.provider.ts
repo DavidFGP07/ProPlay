@@ -1,5 +1,6 @@
 import {
-  JUEGO_LOL,
+  COLA_SOLO_DUO,
+  JUEGO_PILOTO,
   PARTIDAS_POR_SINCRONIZACION,
   SERVIDORES_LOL,
   type ServidorLol,
@@ -25,7 +26,8 @@ import type { PartidaRiot } from "./riot.tipos";
  *   - account-v1: Riot ID (`gameName#tagLine`) → puuid.
  *   - summoner-v4: icono y nivel del invocador (el icono sirve para verificar
  *     que la cuenta es del jugador).
- *   - league-v4: rango en Solo/Duo y Flex.
+ *   - league-v4: rango en Solo/Duo (al catálogo `RangoLol` con `rangoDesdeRiot`)
+ *     y Flex (sólo como dato de `metricas`).
  *   - match-v5: historial de partidas, de donde salen partidas, victorias,
  *     KDA, win rate, CS/min, oro/min, daño/min, visión/min, participación en
  *     kills, rol principal y campeones más jugados.
@@ -109,8 +111,8 @@ export class RiotProvider implements GameStatsProvider {
     parametros: ParametrosEstadisticas,
   ): Promise<EstadisticasExternas[]> {
     const { externalId: puuid, juego, region } = parametros;
-    if (juego !== JUEGO_LOL) {
-      throw new NotImplementedError(`La integración con Riot sólo cubre ${JUEGO_LOL}`);
+    if (juego !== JUEGO_PILOTO) {
+      throw new NotImplementedError(`La integración con Riot sólo cubre ${JUEGO_PILOTO}`);
     }
     if (!esServidorLol(region)) {
       throw new BadRequestError("La cuenta de Riot no tiene un servidor válido");
@@ -137,11 +139,16 @@ export class RiotProvider implements GameStatsProvider {
     throw new NotImplementedError("Riot Sign On necesita una clave de producción");
   }
 
-  /** Clasificatorias primero; si son pocas, se completa con normales. */
+  /**
+   * Clasificatoria solo/dúo (cola 420) primero; si son pocas, se completa con
+   * normales. Flex (440) no entra: el contrato de shared/riot.ts cuenta sólo
+   * solo/dúo como clasificatoria. La posición sale sólo de las de la cola 420
+   * (ver `construirEstadisticaLol`).
+   */
   private async idsRecientes(puuid: string, servidor: ServidorLol): Promise<string[]> {
     const cantidad = PARTIDAS_POR_SINCRONIZACION;
     const clasificatorias = await this.cliente.idsPartidas(puuid, servidor, {
-      tipo: "ranked",
+      cola: COLA_SOLO_DUO,
       cantidad,
     });
     if (clasificatorias.length >= MINIMO_PARTIDAS_CLASIFICATORIAS) return clasificatorias;

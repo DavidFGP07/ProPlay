@@ -45,7 +45,7 @@ export type {
   Estadistica,
   ListarEstadisticasQuery,
   MetricasLol,
-  RangoLol,
+  RangoColaLol,
   ResumenEstadisticas,
   SincronizarEstadisticasInput,
   SincronizarEstadisticasRespuesta,

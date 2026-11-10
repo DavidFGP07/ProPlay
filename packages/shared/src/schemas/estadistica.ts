@@ -1,12 +1,15 @@
 import { z } from "zod";
-import { PLATAFORMAS } from "../enums";
-import { JUEGO_LOL, LIGAS_LOL, POSICIONES_LOL } from "../constants";
+import { PLATAFORMAS, POSICIONES_LOL, RANGOS_LOL } from "../enums";
+import { JUEGO_PILOTO, LIGAS_LOL } from "../constants";
 
 export const estadisticaSchema = z.object({
   id: z.string(),
   jugadorId: z.string(),
   juego: z.string(),
+  /** Posición más jugada en clasificatoria solo/dúo (PosicionLol en LoL). */
   rol: z.string().nullable(),
+  /** Rango solo/dúo en el momento de la captura (`rangoDesdeRiot`). */
+  rango: z.enum(RANGOS_LOL).nullable(),
   partidas: z.number().int(),
   victorias: z.number().int(),
   kda: z.number(),
@@ -16,8 +19,12 @@ export const estadisticaSchema = z.object({
   capturadaEn: z.coerce.date(),
 });
 
-/** Rango de una cola clasificatoria (league-v4). */
-export const rangoLolSchema = z.object({
+/**
+ * Rango detallado de una cola clasificatoria tal como lo da league-v4, con LP,
+ * victorias y derrotas, para Mis estadísticas. El rango que se filtra y compara
+ * es la columna `rango` (`RangoLol`).
+ */
+export const rangoColaLolSchema = z.object({
   liga: z.enum(LIGAS_LOL),
   /** I a IV; nulo en Master, Grandmaster y Challenger. */
   division: z.string().nullable(),
@@ -34,8 +41,8 @@ export const rangoLolSchema = z.object({
 export const metricasLolSchema = z.object({
   servidor: z.string(),
   nivelInvocador: z.number().int(),
-  rangoSoloDuo: rangoLolSchema.nullable(),
-  rangoFlex: rangoLolSchema.nullable(),
+  rangoSoloDuo: rangoColaLolSchema.nullable(),
+  rangoFlex: rangoColaLolSchema.nullable(),
   partidasAnalizadas: z.number().int(),
   /** Partidas por cola: 420 Solo/Duo, 440 Flex, 400/430 normales… */
   colas: z.record(z.number().int()),
@@ -49,6 +56,7 @@ export const metricasLolSchema = z.object({
   /** (kills + asistencias) / kills del equipo, en [0, 1]. */
   participacionKills: z.number().min(0).max(1),
   duracionMediaMinutos: z.number(),
+  /** Partidas de la cola solo/dúo (420) por posición: de aquí sale `rol`. */
   distribucionRoles: z.record(z.enum(POSICIONES_LOL), z.number().int()),
   campeonesMasJugados: z.array(
     z.object({
@@ -71,7 +79,7 @@ export const listarEstadisticasQuerySchema = z.object({
 
 export const sincronizarEstadisticasSchema = z.object({
   plataforma: z.enum(PLATAFORMAS).default("RIOT"),
-  juego: z.string().min(1).max(60).default(JUEGO_LOL),
+  juego: z.string().min(1).max(60).default(JUEGO_PILOTO),
 });
 
 /** Respuesta de `POST /estadisticas/sincronizar`. */
@@ -112,5 +120,5 @@ export type SincronizarEstadisticasRespuesta = z.infer<
   typeof sincronizarEstadisticasRespuestaSchema
 >;
 export type ResumenEstadisticas = z.infer<typeof resumenEstadisticasSchema>;
-export type RangoLol = z.infer<typeof rangoLolSchema>;
+export type RangoColaLol = z.infer<typeof rangoColaLolSchema>;
 export type MetricasLol = z.infer<typeof metricasLolSchema>;

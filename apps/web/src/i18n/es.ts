@@ -224,7 +224,8 @@ export const es = {
     duracion: (minutos: number) => `Partidas de ${minutos} min de media`,
     tendencia: (signo: string, valor: string) => `${signo}${valor} frente a la captura anterior`,
     rolesTitulo: 'Posiciones',
-    rolesSubtitulo: 'En qué posición jugaste las partidas analizadas.',
+    rolesSubtitulo: 'En qué posición jugaste tus partidas de clasificatoria solo/dúo.',
+    rolesVacio: 'No hay partidas de clasificatoria solo/dúo en la muestra.',
     rolPrincipal: 'Principal',
     partidasDe: (n: number) => (n === 1 ? '1 partida' : `${n} partidas`),
     campeonesTitulo: 'Campeones más jugados',
@@ -257,13 +258,6 @@ export const es = {
     TW2: 'Taiwán (TW)',
     VN2: 'Vietnam (VN)',
   } satisfies Record<ServidorLol, string>,
-  posicion: {
-    TOP: 'Top',
-    JUNGLE: 'Jungla',
-    MIDDLE: 'Mid',
-    BOTTOM: 'ADC',
-    UTILITY: 'Soporte',
-  } satisfies Record<PosicionLol, string>,
   liga: {
     IRON: 'Hierro',
     BRONZE: 'Bronce',

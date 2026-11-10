@@ -1,4 +1,4 @@
-import type { Plataforma, Prisma } from "@prisma/client";
+import type { Plataforma, Prisma, RangoLol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 
 /**
@@ -14,6 +14,7 @@ const seleccionEstadistica = {
   jugadorId: true,
   juego: true,
   rol: true,
+  rango: true,
   partidas: true,
   victorias: true,
   kda: true,
@@ -55,8 +56,30 @@ export async function cuentaVerificada(jugadorId: string, plataforma: Plataforma
       accessToken: true,
       servidor: true,
       sincronizadaEn: true,
+      intentoSincronizacionEn: true,
     },
   });
+}
+
+/**
+ * Reserva un intento de sincronización: marca `intentoSincronizacionEn` sólo
+ * si el anterior es más antiguo que `desde` (o no hay). La comprobación y la
+ * marca son una sola actualización condicionada, así dos peticiones a la vez
+ * no pueden pasar las dos. Devuelve `true` si el intento quedó reservado.
+ */
+export async function reservarIntentoSincronizacion(
+  cuentaId: string,
+  ahora: Date,
+  desde: Date,
+): Promise<boolean> {
+  const { count } = await prisma.cuentaGaming.updateMany({
+    where: {
+      id: cuentaId,
+      OR: [{ intentoSincronizacionEn: null }, { intentoSincronizacionEn: { lte: desde } }],
+    },
+    data: { intentoSincronizacionEn: ahora },
+  });
+  return count === 1;
 }
 
 /** Última captura del jugador para un juego y una fuente. */
@@ -75,6 +98,7 @@ export async function ultimaEstadistica(
 export interface NuevaEstadistica {
   juego: string;
   rol: string | null;
+  rango: RangoLol | null;
   partidas: number;
   victorias: number;
   kda: number;
@@ -84,8 +108,9 @@ export interface NuevaEstadistica {
 }
 
 /**
- * Guarda las capturas nuevas y marca la cuenta como sincronizada, en una sola
- * transacción: o queda todo o nada.
+ * Guarda las capturas nuevas, ligadas a la cuenta de la que salen (`cuentaId`),
+ * y marca la cuenta como sincronizada, en una sola transacción: o queda todo o
+ * nada.
  */
 export async function guardarSincronizacion(datos: {
   jugadorId: string;
@@ -100,7 +125,7 @@ export async function guardarSincronizacion(datos: {
     for (const nueva of nuevas) {
       creadas.push(
         await tx.estadistica.create({
-          data: { ...nueva, jugadorId, fuente },
+          data: { ...nueva, jugadorId, fuente, cuentaId },
           select: seleccionEstadistica,
         }),
       );

@@ -125,6 +125,8 @@ export interface OpcionesClienteRiot {
 }
 
 export interface FiltroPartidas {
+  /** Cola concreta (`queue` de match-v5), p. ej. `COLA_SOLO_DUO`. */
+  cola?: number;
   /** `ranked` o `normal` (match-v5). */
   tipo?: "ranked" | "normal";
   cantidad: number;
@@ -186,6 +188,7 @@ export class ClienteRiot {
     filtro: FiltroPartidas,
   ): Promise<string[]> {
     const parametros = new URLSearchParams({ start: "0", count: String(filtro.cantidad) });
+    if (filtro.cola !== undefined) parametros.set("queue", String(filtro.cola));
     if (filtro.tipo) parametros.set("type", filtro.tipo);
     const ids = await this.pedir<string[]>(
       regionDePartidas(servidor),

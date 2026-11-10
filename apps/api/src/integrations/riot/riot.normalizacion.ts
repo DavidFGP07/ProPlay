@@ -1,10 +1,14 @@
 import {
-  JUEGO_LOL,
+  COLA_LIGA_SOLO_DUO,
+  COLA_SOLO_DUO,
+  JUEGO_PILOTO,
   LIGAS_LOL,
-  POSICIONES_LOL,
+  POSICION_POR_TEAM_POSITION,
+  rangoDesdeRiot,
   type LigaLol,
   type MetricasLol,
   type PosicionLol,
+  type RangoColaLol,
   type RangoLol,
   type ServidorLol,
 } from "@proplay/shared";
@@ -33,14 +37,19 @@ const dividir = (a: number, b: number): number => (b > 0 ? a / b : 0);
 export const calcularKda = (kills: number, muertes: number, asistencias: number): number =>
   (kills + asistencias) / Math.max(muertes, 1);
 
-const esPosicion = (valor: string | undefined): valor is PosicionLol =>
-  (POSICIONES_LOL as readonly string[]).includes(valor ?? "");
+/**
+ * `teamPosition` de Riot → posición de ProPlay, con la tabla del contrato
+ * (`POSICION_POR_TEAM_POSITION`). Un valor fuera de la tabla, o vacío en
+ * partidas sin posición asignada, no cuenta.
+ */
+const posicionDeRiot = (valor: string | undefined): PosicionLol | null =>
+  POSICION_POR_TEAM_POSITION[(valor ?? "") as keyof typeof POSICION_POR_TEAM_POSITION] ?? null;
 
 const esLiga = (valor: string): valor is LigaLol =>
   (LIGAS_LOL as readonly string[]).includes(valor);
 
-/** Rango de una cola a partir de las entradas de league-v4. */
-export function rangoDeCola(entradas: EntradaLigaRiot[], cola: string): RangoLol | null {
+/** Rango detallado de una cola (con LP, victorias y derrotas) para `metricas`. */
+export function rangoDeCola(entradas: EntradaLigaRiot[], cola: string): RangoColaLol | null {
   const entrada = entradas.find((e) => e.queueType === cola);
   if (!entrada || !esLiga(entrada.tier)) return null;
   const sinDivision = ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(entrada.tier);
@@ -51,6 +60,16 @@ export function rangoDeCola(entradas: EntradaLigaRiot[], cola: string): RangoLol
     victorias: entrada.wins,
     derrotas: entrada.losses,
   };
+}
+
+/**
+ * Rango de clasificatoria solo/dúo en el catálogo de ProPlay (`RangoLol`), que
+ * es el que filtran el buscador y el matching. `null` sin entrada en esa cola o
+ * con un valor que `rangoDesdeRiot` no reconoce.
+ */
+export function rangoSoloDuo(entradas: EntradaLigaRiot[]): RangoLol | null {
+  const entrada = entradas.find((e) => e.queueType === COLA_LIGA_SOLO_DUO);
+  return entrada ? rangoDesdeRiot(entrada.tier, entrada.rank) : null;
 }
 
 export interface DatosSincronizacionLol {
@@ -119,8 +138,11 @@ export function construirEstadisticaLol(datos: DatosSincronizacionLol): Estadist
     const cola = String(partida.info.queueId);
     colas[cola] = (colas[cola] ?? 0) + 1;
 
-    if (esPosicion(yo.teamPosition)) {
-      roles[yo.teamPosition] = (roles[yo.teamPosition] ?? 0) + 1;
+    // La posición sólo cuenta en clasificatoria solo/dúo (contrato de
+    // shared/riot.ts): Flex y normales no dicen qué rol juega en serio.
+    const posicion = posicionDeRiot(yo.teamPosition);
+    if (posicion && partida.info.queueId === COLA_SOLO_DUO) {
+      roles[posicion] = (roles[posicion] ?? 0) + 1;
     }
 
     const campeon = campeones.get(yo.championName) ?? {
@@ -146,7 +168,7 @@ export function construirEstadisticaLol(datos: DatosSincronizacionLol): Estadist
   const metricas: MetricasLol = {
     servidor,
     nivelInvocador: invocador.summonerLevel,
-    rangoSoloDuo: rangoDeCola(ligas, "RANKED_SOLO_5x5"),
+    rangoSoloDuo: rangoDeCola(ligas, COLA_LIGA_SOLO_DUO),
     rangoFlex: rangoDeCola(ligas, "RANKED_FLEX_SR"),
     partidasAnalizadas: jugadas,
     colas,
@@ -176,8 +198,9 @@ export function construirEstadisticaLol(datos: DatosSincronizacionLol): Estadist
   };
 
   return {
-    juego: JUEGO_LOL,
+    juego: JUEGO_PILOTO,
     rol: rolPrincipal,
+    rango: rangoSoloDuo(ligas),
     partidas: jugadas,
     victorias,
     kda: jugadas > 0 ? redondear(calcularKda(kills, muertes, asistencias)) : 0,

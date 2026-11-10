@@ -1,4 +1,4 @@
-import type { Plataforma } from "@proplay/shared";
+import type { Plataforma, RangoLol } from "@proplay/shared";
 
 /**
  * Contrato que cumple toda integración con una plataforma externa
@@ -23,6 +23,8 @@ export interface CuentaVinculada {
 export interface EstadisticasExternas {
   juego: string;
   rol: string | null;
+  /** Rango en el catálogo de ProPlay, si la plataforma lo tiene (Riot: solo/dúo). */
+  rango: RangoLol | null;
   partidas: number;
   victorias: number;
   kda: number;

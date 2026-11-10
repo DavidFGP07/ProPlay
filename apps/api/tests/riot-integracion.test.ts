@@ -10,7 +10,9 @@ import {
   calcularKda,
   construirEstadisticaLol,
   rangoDeCola,
+  rangoSoloDuo,
 } from "../src/integrations/riot/riot.normalizacion";
+import { RiotProvider } from "../src/integrations/riot/riot.provider";
 import type { ParticipanteRiot, PartidaRiot } from "../src/integrations/riot/riot.tipos";
 import { AppError } from "../src/utils/errors";
 
@@ -129,8 +131,9 @@ describe("construirEstadisticaLol", () => {
     // (8 + 12) / (8 propios + 10 del aliado)
     expect(m.participacionKills).toBe(1);
     expect(m.colas).toEqual({ "420": 1, "440": 1 });
-    expect(m.distribucionRoles).toEqual({ MIDDLE: 1, UTILITY: 1 });
-    expect(resultado.rol).toBe("MIDDLE");
+    // La partida de Lux es de Flex (440): no cuenta para la posición.
+    expect(m.distribucionRoles).toEqual({ MID: 1 });
+    expect(resultado.rol).toBe("MID");
     expect(m.campeonesMasJugados[0]).toEqual({ campeon: "Ahri", partidas: 1, victorias: 1, kda: 7 });
     expect(m.ultimaPartidaId).toBe("LA1_1");
   });
@@ -146,6 +149,44 @@ describe("construirEstadisticaLol", () => {
     });
     expect(m.rangoFlex?.division).toBeNull();
     expect(rangoDeCola([], "RANKED_SOLO_5x5")).toBeNull();
+  });
+
+  it("guarda el rango solo/dúo en el catálogo de ProPlay, no el de Flex", () => {
+    expect(resultado.rango).toBe("ESMERALDA_II");
+    expect(rangoSoloDuo([ligas[1]!])).toBeNull();
+    expect(
+      rangoSoloDuo([{ queueType: "RANKED_SOLO_5x5", tier: "MASTER", rank: "I", leaguePoints: 1, wins: 1, losses: 0 }]),
+    ).toBe("MAESTRO");
+  });
+
+  it("traduce las cinco posiciones de Riot a las de ProPlay e ignora las desconocidas", () => {
+    const posiciones = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY", "", "INVALID"];
+    const r = construirEstadisticaLol({
+      puuid: YO,
+      servidor: "LA1",
+      invocador,
+      ligas: [],
+      partidas: posiciones.map((teamPosition, i) => partida(`LA1_P${i}`, 10_000 + i, { teamPosition })),
+    });
+    expect(metricasLolSchema.parse(r.metricas).distribucionRoles).toEqual({
+      TOP: 1,
+      JUNGLA: 1,
+      MID: 1,
+      ADC: 1,
+      SOPORTE: 1,
+    });
+  });
+
+  it("sin partidas de solo/dúo no hay posición", () => {
+    const r = construirEstadisticaLol({
+      puuid: YO,
+      servidor: "LA1",
+      invocador,
+      ligas: [],
+      partidas: [partida("LA1_N", 1, {}, { cola: 400 }), partida("LA1_F", 2, {}, { cola: 440 })],
+    });
+    expect(r.rol).toBeNull();
+    expect(r.partidas).toBe(2);
   });
 
   it("sin partidas devuelve ceros, no NaN", () => {
@@ -229,6 +270,14 @@ describe("ClienteRiot", () => {
     ]);
   });
 
+  it("filtra por cola con el parámetro queue de match-v5", async () => {
+    const llamadas: string[] = [];
+    const cliente = clienteCon([Response.json([])], llamadas);
+    await cliente.idsPartidas("p1", "LA1", { cola: 420, cantidad: 20 });
+    expect(new URL(llamadas[0]!).searchParams.get("queue")).toBe("420");
+    expect(new URL(llamadas[0]!).searchParams.get("type")).toBeNull();
+  });
+
   it("traduce una clave caducada a un 502 explicativo", async () => {
     const cliente = clienteCon([new Response(null, { status: 403 })]);
     const error = await cliente.ligasPorPuuid("p1", "LA1").catch((e: unknown) => e);
@@ -243,3 +292,42 @@ describe("ClienteRiot", () => {
     expect((error as AppError).status).toBe(503);
   });
 });
+
+describe("RiotProvider.obtenerEstadisticas", () => {
+  it("pide sólo solo/dúo (cola 420), completa con normales si son menos de 5 y guarda posición y rango", async () => {
+    const llamadas: string[] = [];
+    const rutas: [RegExp, unknown][] = [
+      [/summoners\/by-puuid/, { puuid: YO, profileIconId: 1, summonerLevel: 100 }],
+      [/entries\/by-puuid/, [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD", rank: "III", leaguePoints: 40, wins: 5, losses: 4 }]],
+      [/ids\?.*queue=420/, ["LA1_R1"]],
+      [/ids\?.*type=normal/, ["LA1_N1"]],
+      [/matches\/LA1_R1$/, partida("LA1_R1", 2, { teamPosition: "BOTTOM", win: true })],
+      [/matches\/LA1_N1$/, partida("LA1_N1", 1, { teamPosition: "TOP" }, { cola: 400 })],
+    ];
+    const fetchSimulado = (async (url: string | URL | Request) => {
+      const texto = String(url);
+      llamadas.push(texto);
+      const ruta = rutas.find(([patron]) => patron.test(texto));
+      return ruta ? Response.json(ruta[1]) : new Response(null, { status: 404 });
+    }) as typeof fetch;
+    const proveedor = new RiotProvider(
+      new ClienteRiot({
+        apiKey: "RGAPI-prueba",
+        fetch: fetchSimulado,
+        esperar: async () => {},
+        limitador: new LimitadorCuota([{ limite: 1_000, ms: 1_000 }]),
+      }),
+    );
+
+    const [estadistica] = await proveedor.obtenerEstadisticas({
+      externalId: YO,
+      accessToken: null,
+      juego: "League of Legends",
+      region: "LA1",
+    });
+
+    expect(llamadas.some((u) => /type=ranked/.test(u))).toBe(false);
+    expect(estadistica).toMatchObject({ partidas: 2, rol: "ADC", rango: "ORO_III" });
+  });
+});
+

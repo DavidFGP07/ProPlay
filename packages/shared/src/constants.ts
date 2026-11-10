@@ -216,9 +216,6 @@ export const MACROREGION_POR_DEPARTAMENTO = {
 
 // ------------------------- Integración con Riot ----------------------------
 
-/** Único juego del piloto (decisión 0.3): League of Legends vía la API de Riot. */
-export const JUEGO_LOL = "League of Legends";
-
 /**
  * Servidores (plataformas) de League of Legends, en el formato que usa la API
  * de Riot. El piloto vive en LA1 (Latinoamérica Norte, donde juega Colombia).
@@ -244,11 +241,11 @@ export const SERVIDORES_LOL = [
 export type ServidorLol = (typeof SERVIDORES_LOL)[number];
 export const SERVIDOR_LOL_POR_DEFECTO: ServidorLol = "LA1";
 
-/** Posiciones de la Grieta tal como las reporta Riot (`teamPosition`). */
-export const POSICIONES_LOL = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"] as const;
-export type PosicionLol = (typeof POSICIONES_LOL)[number];
-
-/** Ligas clasificatorias de menor a mayor: el orden sirve para comparar rangos. */
+/**
+ * Ligas (`tier`) de league-v4 tal como las escribe Riot, de menor a mayor. Sólo
+ * describen el rango detallado de `metricas` (con LP y victorias); para filtrar
+ * y comparar se usa `RangoLol` (enums.ts), que sale de `rangoDesdeRiot`.
+ */
 export const LIGAS_LOL = [
   "IRON",
   "BRONZE",

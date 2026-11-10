@@ -41,7 +41,8 @@ function ultimaPartida(metricas: unknown): unknown {
 
 /**
  * Descarga las estadísticas del jugador autenticado desde la plataforma y
- * guarda una captura nueva por juego. Si la plataforma no tiene partidas
+ * guarda una captura nueva por juego, como mucho una vez cada
+ * `MINUTOS_ENTRE_SINCRONIZACIONES` contando también los intentos fallidos. Si la plataforma no tiene partidas
  * nuevas desde la última captura, no duplica la fila: sólo actualiza la fecha
  * de sincronización.
  */
@@ -65,16 +66,22 @@ export async function sincronizar(
     );
   }
 
+  // La espera cuenta desde el último intento, haya salido bien o mal: una
+  // sincronización fallida también gasta cuota de Riot (unas 24 peticiones).
   const ahora = new Date();
-  if (cuenta.sincronizadaEn) {
-    const faltaMs =
-      cuenta.sincronizadaEn.getTime() + MINUTOS_ENTRE_SINCRONIZACIONES * 60_000 - ahora.getTime();
-    if (faltaMs > 0) {
-      throw new TooManyRequestsError(
-        `Ya sincronizaste hace poco; puedes volver a hacerlo en ${Math.ceil(faltaMs / 60_000)} min`,
-        { reintentarEnSegundos: Math.ceil(faltaMs / 1000) },
-      );
-    }
+  const esperaMs = MINUTOS_ENTRE_SINCRONIZACIONES * 60_000;
+  const reservado = await repositorio.reservarIntentoSincronizacion(
+    cuenta.id,
+    ahora,
+    new Date(ahora.getTime() - esperaMs),
+  );
+  if (!reservado) {
+    const ultimo = cuenta.intentoSincronizacionEn ?? ahora;
+    const faltaMs = Math.max(1_000, ultimo.getTime() + esperaMs - ahora.getTime());
+    throw new TooManyRequestsError(
+      `Ya intentaste sincronizar hace poco; puedes volver a hacerlo en ${Math.ceil(faltaMs / 60_000)} min`,
+      { reintentarEnSegundos: Math.ceil(faltaMs / 1000) },
+    );
   }
 
   const externas = await obtenerProveedor(datos.plataforma).obtenerEstadisticas({
@@ -99,6 +106,7 @@ export async function sincronizar(
     nuevas.push({
       juego: externa.juego,
       rol: externa.rol,
+      rango: externa.rango,
       partidas: externa.partidas,
       victorias: externa.victorias,
       kda: externa.kda,
