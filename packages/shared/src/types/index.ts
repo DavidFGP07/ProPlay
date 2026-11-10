@@ -74,7 +74,16 @@ export type {
 export type {
   CalcularMatchingInput,
   DesgloseMatching,
+  CandidatoRanking,
+  ExplicacionDisponibilidad,
+  ExplicacionExperiencia,
+  ExplicacionGeografica,
+  ExplicacionHabilidadesBlandas,
+  ExplicacionMatching,
+  ExplicacionTecnica,
   Matching,
+  RankingOferta,
+  RankingOfertaQuery,
 } from "../schemas/matching";
 
 export type { BusquedaJugadores, JugadorEncontrado } from "../schemas/scouting";

@@ -65,13 +65,13 @@ describe("pesosMatchingSchema", () => {
   });
 
   it("admite anular una dimensión con peso 0", () => {
-    const pesos = { ...PESOS_MATCHING, geografica: 0, disponibilidad: 0.3 };
+    const pesos = { ...PESOS_MATCHING, geografica: 0, disponibilidad: 0.5 };
     expect(pesosMatchingSchema.safeParse(pesos).success).toBe(true);
   });
 
   it.each([
     ["suman menos de 1", { ...PESOS_MATCHING, tecnica: 0.3 }],
-    ["suman más de 1", { ...PESOS_MATCHING, tecnica: 0.4 }],
+    ["suman más de 1", { ...PESOS_MATCHING, tecnica: 0.6 }],
     ["llevan un peso negativo", { ...PESOS_MATCHING, tecnica: 0.55, geografica: -0.05 }],
     ["llevan un peso mayor que 1", { ...PESOS_MATCHING, tecnica: 1.2 }],
   ])("rechaza pesos que %s", (_caso, pesos) => {
@@ -114,7 +114,7 @@ describe("crearOfertaSchema", () => {
   it("rechaza pesos que no suman 1", () => {
     const resultado = crearOfertaSchema.safeParse({
       ...OFERTA_VALIDA,
-      pesos: { ...PESOS_MATCHING, tecnica: 0.5 },
+      pesos: { ...PESOS_MATCHING, tecnica: 0.6 },
     });
     expect(resultado.success).toBe(false);
   });

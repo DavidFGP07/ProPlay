@@ -159,15 +159,16 @@ describe('Crear oferta con pesos (/panel-equipo/ofertas/nueva)', () => {
     renderRuta('/panel-equipo/ofertas/nueva')
 
     const tecnica = await screen.findByRole('slider', { name: 'Técnica' }, ESPERA)
-    expect(tecnica).toHaveValue('35')
+    expect(tecnica).toHaveValue('50')
     fireEvent.change(tecnica, { target: { value: '61' } })
 
-    expect(screen.getByRole('slider', { name: 'Experiencia' })).toHaveValue('12')
-    expect(screen.getByRole('slider', { name: 'Geográfica' })).toHaveValue('9')
+    // 39 puntos entre 0/0/25/25: la experiencia sigue en 0 y el resto se reparte a medias.
+    expect(screen.getByRole('slider', { name: 'Experiencia' })).toHaveValue('0')
+    expect(screen.getByRole('slider', { name: 'Geográfica' })).toHaveValue('20')
     expect(screen.getByText('Total: 100 %')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Restablecer/ }))
-    expect(screen.getByRole('slider', { name: 'Técnica' })).toHaveValue('35')
+    expect(screen.getByRole('slider', { name: 'Técnica' })).toHaveValue('50')
   })
 
   it('publica con los pesos elegidos en fracciones y lleva al detalle', async () => {

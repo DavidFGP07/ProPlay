@@ -90,6 +90,10 @@ archivos, sin excepciones:
 - Un service **nunca** importa `prisma`. Pasa por el repository.
 - `apps/api/src/config/prisma.ts` sólo se importa desde archivos `*.repository.ts` (y desde
   `config/health.ts` para el ping).
+- **Única excepción:** `matching` tiene además la subcarpeta `motor/` con las funciones puras
+  del algoritmo (dimensiones, ponderador, vectorizador, colaborativo). No importan Prisma, ni
+  `integrations/`, ni nada que haga red; el service las orquesta. Decisión en
+  `docs/decisiones.md`, «Motor de matching».
 
 ### 3.3 Dependencias entre módulos
 

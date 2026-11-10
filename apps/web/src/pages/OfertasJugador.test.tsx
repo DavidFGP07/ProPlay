@@ -221,7 +221,7 @@ describe('Detalle de la oferta (/vacantes/:id)', () => {
 
     expect(await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).toBeInTheDocument()
     expect(screen.getByText('Diamante II')).toBeInTheDocument()
-    expect(screen.getByText('35 %')).toBeInTheDocument()
+    expect(screen.getByText('50 %')).toBeInTheDocument()
     expect(screen.queryByText(/Ranking de compatibilidad/i)).toBeNull()
   })
 
