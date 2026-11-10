@@ -204,8 +204,8 @@ model PerfilJugador {
 }
 
 model PerfilEquipo {
-  id            String   @id @default(cuid())
-  usuarioId     String   @unique
+  id            String        @id @default(cuid())
+  usuarioId     String        @unique
   nombreOrg     String
   descripcion   String?
   sitioWeb      String?
@@ -270,23 +270,27 @@ model Endorsement {
 // ----------------------------- Cuentas externas ----------------------------
 
 model CuentaGaming {
-  id             String     @id @default(cuid())
-  jugadorId      String
-  plataforma     Plataforma
-  externalId     String
-  handle         String?
+  id                      String     @id @default(cuid())
+  jugadorId               String
+  plataforma              Plataforma
+  externalId              String
+  handle                  String?
   /// Cifrados con AES-256-GCM (src/utils/crypto.ts). Nunca en claro.
-  accessToken    String?
-  refreshToken   String?
-  expiraEn       DateTime?
+  accessToken             String?
+  refreshToken            String?
+  expiraEn                DateTime?
   /// Servidor del juego (Riot: «LA1», «NA1»…). Nulo en plataformas sin servidor.
-  servidor       String?
-  verificadaEn   DateTime?
+  servidor                String?
+  verificadaEn            DateTime?
   /// Última ingesta correcta de estadísticas desde la plataforma.
-  sincronizadaEn DateTime?
-  creadoEn       DateTime   @default(now())
+  sincronizadaEn          DateTime?
+  /// Último intento de ingesta, haya salido bien o mal: marca la espera entre
+  /// sincronizaciones (MINUTOS_ENTRE_SINCRONIZACIONES) para proteger la cuota.
+  intentoSincronizacionEn DateTime?
+  creadoEn                DateTime   @default(now())
 
-  jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  jugador      PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  estadisticas Estadistica[]
 
   @@unique([jugadorId, plataforma])
   @@unique([plataforma, externalId])
@@ -311,11 +315,16 @@ model Estadistica {
   metricas    Json?
   fuente      Plataforma
   capturadaEn DateTime   @default(now())
+  /// Cuenta verificada de la que salió la captura. Al desvincularla, o al
+  /// verificar otra cuenta en su lugar, sus capturas se borran en cascada.
+  cuentaId    String?
 
   jugador PerfilJugador @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  cuenta  CuentaGaming? @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
 
   @@index([jugadorId])
   @@index([jugadorId, juego, capturadaEn])
+  @@index([cuentaId])
   @@index([juego])
 }
 

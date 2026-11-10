@@ -289,8 +289,10 @@ export async function verificarCuentaRiot(
 }
 
 /**
- * Desvincula la cuenta de la plataforma. Las estadísticas ya capturadas se
- * conservan: son históricas y siguen llevando su fuente.
+ * Desvincula la cuenta de la plataforma y borra las estadísticas que salieron
+ * de ella (en cascada en la base): sin cuenta verificada no son datos
+ * verificados, y no deben aparecer como datos de otra cuenta que se vincule
+ * después.
  */
 export async function desvincularCuenta(
   usuarioId: string,

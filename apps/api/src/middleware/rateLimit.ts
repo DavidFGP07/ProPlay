@@ -154,3 +154,30 @@ export const limiteBusqueda = rateLimit({
   ...respuestaLimite,
   ...opcionesLimiteBusqueda,
 });
+
+/**
+ * Configuración del límite de la vinculación con Riot: 10 peticiones cada 15
+ * minutos por usuario, sumando los dos pasos (pedir el desafío y verificar el
+ * icono). Cada paso consulta la API de Riot, cuya cuota (100 peticiones cada
+ * dos minutos con la clave de desarrollo) es de toda la aplicación: sin este
+ * límite, un solo usuario podría agotarla. También acota los intentos de
+ * verificación. Se exporta para poder probarla sin el `skip` de los tests.
+ */
+export const opcionesLimiteVinculacionRiot: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  keyGenerator: claveUsuario,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Demasiados intentos de vincular la cuenta de Riot, espera unos minutos",
+    },
+  },
+};
+
+/** Una sola instancia para los dos pasos: comparten el contador. */
+export const limiteVinculacionRiot = rateLimit({
+  ...respuestaLimite,
+  ...opcionesLimiteVinculacionRiot,
+});
+

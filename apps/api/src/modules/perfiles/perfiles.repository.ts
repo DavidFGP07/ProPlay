@@ -179,7 +179,10 @@ export async function buscarDuenoCuenta(
 
 /**
  * Guarda la cuenta verificada. Un jugador tiene como mucho una cuenta por
- * plataforma: si ya tenía otra de Riot, se sustituye.
+ * plataforma: si ya tenía otra **distinta** (otro puuid), se borra antes, y con
+ * ella sus capturas de `Estadistica` (borrado en cascada por `cuentaId`), para
+ * que sus datos no pasen por los de la cuenta nueva. Si es la misma cuenta, se
+ * actualiza y sus capturas se conservan.
  */
 export async function guardarCuentaVerificada(datos: {
   jugadorId: string;
@@ -190,15 +193,27 @@ export async function guardarCuentaVerificada(datos: {
   verificadaEn: Date;
 }): Promise<CuentaGamingDb> {
   const { jugadorId, plataforma, ...resto } = datos;
-  return prisma.cuentaGaming.upsert({
-    where: { jugadorId_plataforma: { jugadorId, plataforma } },
-    create: { jugadorId, plataforma, ...resto },
-    update: { ...resto, sincronizadaEn: null },
-    select: seleccionCuenta,
+  return prisma.$transaction(async (tx) => {
+    const anterior = await tx.cuentaGaming.findUnique({
+      where: { jugadorId_plataforma: { jugadorId, plataforma } },
+      select: { id: true, externalId: true },
+    });
+    if (anterior && anterior.externalId !== resto.externalId) {
+      await tx.cuentaGaming.delete({ where: { id: anterior.id } });
+    }
+    return tx.cuentaGaming.upsert({
+      where: { jugadorId_plataforma: { jugadorId, plataforma } },
+      create: { jugadorId, plataforma, ...resto },
+      update: { ...resto },
+      select: seleccionCuenta,
+    });
   });
 }
 
-/** Borra la cuenta; devuelve cuántas filas se borraron (0 o 1). */
+/**
+ * Borra la cuenta y, en cascada por `cuentaId`, las capturas de `Estadistica`
+ * que salieron de ella. Devuelve cuántas cuentas se borraron (0 o 1).
+ */
 export async function borrarCuenta(jugadorId: string, plataforma: Plataforma): Promise<number> {
   const { count } = await prisma.cuentaGaming.deleteMany({ where: { jugadorId, plataforma } });
   return count;

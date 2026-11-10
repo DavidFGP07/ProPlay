@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { API_PREFIX, cuentaGamingSchema, resumenEstadisticasSchema } from "@proplay/shared";
+import express from "express";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../src/config/prisma";
+import { opcionesLimiteVinculacionRiot } from "../src/middleware/rateLimit";
+import * as repositorioPerfiles from "../src/modules/perfiles/perfiles.repository";
 import {
   CONSENTIMIENTO,
   app,
@@ -99,14 +103,16 @@ describe("cuentas vinculadas y estadísticas", () => {
           servidor: "LA1",
           verificadaEn: new Date("2026-11-01T12:00:00Z"),
           sincronizadaEn: new Date(),
+          intentoSincronizacionEn: new Date(),
         },
       });
       await prisma.estadistica.createMany({
         data: [
           {
             jugadorId: jugador.perfilId,
+            cuentaId: cuenta.id,
             juego: "League of Legends",
-            rol: "MIDDLE",
+            rol: "MID",
             partidas: 20,
             victorias: 10,
             kda: 2.5,
@@ -117,8 +123,9 @@ describe("cuentas vinculadas y estadísticas", () => {
           },
           {
             jugadorId: jugador.perfilId,
+            cuentaId: cuenta.id,
             juego: "League of Legends",
-            rol: "MIDDLE",
+            rol: "MID",
             partidas: 20,
             victorias: 12,
             kda: 3,
@@ -186,7 +193,7 @@ describe("cuentas vinculadas y estadísticas", () => {
       expect(respuesta.status).toBe(404);
     });
 
-    it("desvincula la cuenta y conserva las estadísticas", async () => {
+    it("desvincula la cuenta y borra las estadísticas que salieron de ella", async () => {
       const borrar = await request(app)
         .delete(`${API_PREFIX}/perfiles/cuentas-gaming/RIOT`)
         .set("Authorization", `Bearer ${jugador.token}`);
@@ -195,7 +202,90 @@ describe("cuentas vinculadas y estadísticas", () => {
         .delete(`${API_PREFIX}/perfiles/cuentas-gaming/RIOT`)
         .set("Authorization", `Bearer ${jugador.token}`);
       expect(otraVez.status).toBe(404);
-      expect(await prisma.estadistica.count({ where: { jugadorId: jugador.perfilId } })).toBe(2);
+      expect(await prisma.estadistica.count({ where: { jugadorId: jugador.perfilId } })).toBe(0);
     });
+  });
+
+  describe("espera entre sincronizaciones", () => {
+    it("una sincronización fallida también activa la espera de 10 minutos", async () => {
+      const otro = await registrar("riot-fallida", "JUGADOR");
+      await prisma.cuentaGaming.create({
+        data: {
+          jugadorId: otro.perfilId,
+          plataforma: "RIOT",
+          externalId: `puuid-${otro.perfilId}`,
+          servidor: "LA1",
+          verificadaEn: new Date(),
+        },
+      });
+      // En las pruebas no hay clave de Riot: el primer intento falla sin red.
+      const primero = await request(app)
+        .post(`${API_PREFIX}/estadisticas/sincronizar`)
+        .set("Authorization", `Bearer ${otro.token}`)
+        .send({});
+      expect(primero.status).toBeGreaterThanOrEqual(500);
+
+      const segundo = await request(app)
+        .post(`${API_PREFIX}/estadisticas/sincronizar`)
+        .set("Authorization", `Bearer ${otro.token}`)
+        .send({});
+      expect(segundo.status).toBe(429);
+      expect(segundo.body.error.details.reintentarEnSegundos).toBeGreaterThan(500);
+    });
+  });
+
+  describe("cambiar de cuenta de Riot", () => {
+    it("verificar otra cuenta borra las capturas de la anterior; volver a verificar la misma las conserva", async () => {
+      const otro = await registrar("riot-cambio", "JUGADOR");
+      const base = { jugadorId: otro.perfilId, plataforma: "RIOT" as const, servidor: "LA1" };
+      const primera = await repositorioPerfiles.guardarCuentaVerificada({
+        ...base,
+        externalId: `puuid-a-${otro.perfilId}`,
+        handle: "A#LAN",
+        verificadaEn: new Date(),
+      });
+      await prisma.estadistica.create({
+        data: { jugadorId: otro.perfilId, cuentaId: primera.id, juego: "League of Legends", rol: "MID", fuente: "RIOT" },
+      });
+
+      await repositorioPerfiles.guardarCuentaVerificada({
+        ...base,
+        externalId: `puuid-a-${otro.perfilId}`,
+        handle: "A#LAN",
+        verificadaEn: new Date(),
+      });
+      expect(await prisma.estadistica.count({ where: { jugadorId: otro.perfilId } })).toBe(1);
+
+      await repositorioPerfiles.guardarCuentaVerificada({
+        ...base,
+        externalId: `puuid-b-${otro.perfilId}`,
+        handle: "B#LAN",
+        verificadaEn: new Date(),
+      });
+      expect(await prisma.estadistica.count({ where: { jugadorId: otro.perfilId } })).toBe(0);
+    });
+  });
+});
+
+describe("límite de la vinculación con Riot", () => {
+  const appLimitada = express();
+  appLimitada.use((req, _res, next) => {
+    const usuario = req.header("x-usuario");
+    if (usuario) req.usuario = { id: usuario, email: `${usuario}@proplay.test`, rol: "JUGADOR" };
+    next();
+  });
+  const limite = rateLimit(opcionesLimiteVinculacionRiot);
+  // Los dos pasos comparten la misma instancia, como en perfiles.routes.ts.
+  appLimitada.post("/riot", limite, (_req, res) => res.sendStatus(204));
+  appLimitada.post("/riot/verificar", limite, (_req, res) => res.sendStatus(204));
+
+  it("admite 10 intentos cada 15 minutos por usuario sumando los dos pasos", async () => {
+    for (let i = 0; i < 5; i++) {
+      expect((await request(appLimitada).post("/riot").set("x-usuario", "j1")).status).toBe(204);
+      expect((await request(appLimitada).post("/riot/verificar").set("x-usuario", "j1")).status).toBe(204);
+    }
+    const siguiente = await request(appLimitada).post("/riot/verificar").set("x-usuario", "j1");
+    expect(siguiente.status).toBe(429);
+    expect((await request(appLimitada).post("/riot").set("x-usuario", "j2")).status).toBe(204);
   });
 });

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auth, authOpcional } from "../../middleware/auth";
-import { limitePerfilPublico } from "../../middleware/rateLimit";
+import { limitePerfilPublico, limiteVinculacionRiot } from "../../middleware/rateLimit";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./perfiles.controller";
@@ -91,11 +91,13 @@ perfilesRouter.get(
   controlador.listarCuentas,
 );
 
-// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse
+// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse.
+// Los dos pasos comparten el límite por usuario: cada uno consulta a Riot.
 perfilesRouter.post(
   "/cuentas-gaming/riot",
   auth,
   rbac("JUGADOR"),
+  limiteVinculacionRiot,
   validate(vincularCuentaRiotSchema),
   controlador.iniciarVinculacionRiot,
 );
@@ -105,6 +107,7 @@ perfilesRouter.post(
   "/cuentas-gaming/riot/verificar",
   auth,
   rbac("JUGADOR"),
+  limiteVinculacionRiot,
   validate(verificarCuentaRiotSchema),
   controlador.verificarCuentaRiot,
 );
