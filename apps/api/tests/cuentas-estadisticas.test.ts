@@ -275,16 +275,19 @@ describe("límite de la vinculación con Riot", () => {
     next();
   });
   const limite = rateLimit(opcionesLimiteVinculacionRiot);
-  // Los dos pasos comparten la misma instancia, como en perfiles.routes.ts.
+  // Pedir el desafío y «generar otro icono» comparten la misma instancia, como
+  // en perfiles.routes.ts; verificar no pasa por este límite.
   appLimitada.post("/riot", limite, (_req, res) => res.sendStatus(204));
-  appLimitada.post("/riot/verificar", limite, (_req, res) => res.sendStatus(204));
+  appLimitada.post("/riot/desafio/regenerar", limite, (_req, res) => res.sendStatus(204));
 
-  it("admite 10 intentos cada 15 minutos por usuario sumando los dos pasos", async () => {
+  it("admite 10 intentos cada 15 minutos por usuario sumando pedir y regenerar el desafío", async () => {
     for (let i = 0; i < 5; i++) {
       expect((await request(appLimitada).post("/riot").set("x-usuario", "j1")).status).toBe(204);
-      expect((await request(appLimitada).post("/riot/verificar").set("x-usuario", "j1")).status).toBe(204);
+      expect(
+        (await request(appLimitada).post("/riot/desafio/regenerar").set("x-usuario", "j1")).status,
+      ).toBe(204);
     }
-    const siguiente = await request(appLimitada).post("/riot/verificar").set("x-usuario", "j1");
+    const siguiente = await request(appLimitada).post("/riot/desafio/regenerar").set("x-usuario", "j1");
     expect(siguiente.status).toBe(429);
     expect((await request(appLimitada).post("/riot").set("x-usuario", "j2")).status).toBe(204);
   });

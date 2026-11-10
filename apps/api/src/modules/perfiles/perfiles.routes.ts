@@ -91,8 +91,9 @@ perfilesRouter.get(
   controlador.listarCuentas,
 );
 
-// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse.
-// Los dos pasos comparten el límite por usuario: cada uno consulta a Riot.
+// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse. Si
+// ya hay un desafío activo para esa cuenta, devuelve ése. Consulta a Riot:
+// comparte el límite de la vinculación con «generar otro icono».
 perfilesRouter.post(
   "/cuentas-gaming/riot",
   auth,
@@ -102,12 +103,38 @@ perfilesRouter.post(
   controlador.iniciarVinculacionRiot,
 );
 
-// RF-02 · Vinculación con Riot, paso 2: se comprueba el icono y queda verificada
+// RF-02 · Desafío activo, para retomarlo al volver a la vista o recargar
+perfilesRouter.get(
+  "/cuentas-gaming/riot/desafio",
+  auth,
+  rbac("JUGADOR"),
+  controlador.obtenerDesafioRiot,
+);
+
+// RF-02 · «Generar otro icono»: invalida el desafío activo y crea otro
+perfilesRouter.post(
+  "/cuentas-gaming/riot/desafio/regenerar",
+  auth,
+  rbac("JUGADOR"),
+  limiteVinculacionRiot,
+  controlador.regenerarDesafioRiot,
+);
+
+// RF-02 · Cancelar el desafío activo, para vincular otra cuenta
+perfilesRouter.delete(
+  "/cuentas-gaming/riot/desafio",
+  auth,
+  rbac("JUGADOR"),
+  controlador.cancelarDesafioRiot,
+);
+
+// RF-02 · Vinculación con Riot, paso 2: se comprueba el icono. No gasta el
+// límite de la vinculación: cada desafío tiene su propio cupo de
+// comprobaciones (MAX_COMPROBACIONES_DESAFIO), que cuenta el servicio.
 perfilesRouter.post(
   "/cuentas-gaming/riot/verificar",
   auth,
   rbac("JUGADOR"),
-  limiteVinculacionRiot,
   validate(verificarCuentaRiotSchema),
   controlador.verificarCuentaRiot,
 );

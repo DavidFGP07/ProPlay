@@ -157,11 +157,13 @@ export const limiteBusqueda = rateLimit({
 
 /**
  * Configuración del límite de la vinculación con Riot: 10 peticiones cada 15
- * minutos por usuario, sumando los dos pasos (pedir el desafío y verificar el
- * icono). Cada paso consulta la API de Riot, cuya cuota (100 peticiones cada
- * dos minutos con la clave de desarrollo) es de toda la aplicación: sin este
- * límite, un solo usuario podría agotarla. También acota los intentos de
- * verificación. Se exporta para poder probarla sin el `skip` de los tests.
+ * minutos por usuario, sumando pedir el desafío y «generar otro icono». Cada
+ * una consulta la API de Riot, cuya cuota (100 peticiones cada dos minutos con
+ * la clave de desarrollo) es de toda la aplicación: sin este límite, un solo
+ * usuario podría agotarla. Las comprobaciones del icono no cuentan aquí: Riot
+ * tarda minutos en reflejar el cambio y la espera agotaría el límite; tienen
+ * su propio cupo por desafío (MAX_COMPROBACIONES_DESAFIO, en el servicio).
+ * Se exporta para poder probarla sin el `skip` de los tests.
  */
 export const opcionesLimiteVinculacionRiot: Partial<Options> = {
   windowMs: 15 * 60 * 1000,
@@ -175,7 +177,7 @@ export const opcionesLimiteVinculacionRiot: Partial<Options> = {
   },
 };
 
-/** Una sola instancia para los dos pasos: comparten el contador. */
+/** Una sola instancia para las dos rutas: comparten el contador. */
 export const limiteVinculacionRiot = rateLimit({
   ...respuestaLimite,
   ...opcionesLimiteVinculacionRiot,

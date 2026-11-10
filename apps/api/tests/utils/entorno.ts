@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { randomBytes } from "node:crypto";
 import { crearApp } from "../../src/app";
 import { prisma } from "../../src/config/prisma";
+import { desconectarRedis } from "../../src/config/redis";
 
 /**
  * Utilidades compartidas por las pruebas de integración.
@@ -31,7 +32,7 @@ export async function limpiarUsuariosDePrueba(): Promise<void> {
 }
 
 export async function cerrarConexiones(): Promise<void> {
-  await prisma.$disconnect();
+  await Promise.all([prisma.$disconnect(), desconectarRedis()]);
 }
 
 /** Extrae la cookie de refresh de la cabecera Set-Cookie. */

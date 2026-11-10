@@ -77,9 +77,10 @@ export function segundosDeVidaAcceso(): number {
 
 /**
  * Desafío de verificación de una cuenta de Riot: qué icono debe poner el
- * jugador en qué cuenta. Va firmado para que la API no tenga que guardar
- * nada entre el paso 1 y el 2 y para que el cliente no pueda cambiar el puuid
- * ni el icono pedido. Sólo vale para el usuario que lo pidió (`sub`).
+ * jugador en qué cuenta. Va firmado para que el cliente no pueda cambiar el
+ * puuid ni el icono pedido, y sólo vale para el usuario que lo pidió (`sub`).
+ * Además la API lo guarda en Redis como el desafío activo del usuario
+ * (perfiles.repository.ts): un token firmado pero sustituido ya no sirve.
  */
 export interface PayloadDesafioRiot {
   sub: string;
@@ -102,16 +103,22 @@ export function firmarDesafioRiot(
   });
 }
 
-/** `null` si el token no es válido, caducó o es de otro usuario. */
+/**
+ * `null` si el token no es válido, caducó o es de otro usuario. Con
+ * `ignorarCaducidad` acepta uno caducado: la vigencia la decide entonces el
+ * desafío guardado, que caduca a la vez en Redis.
+ */
 export function verificarDesafioRiot(
   token: string,
   usuarioId: string,
+  opciones: { ignorarCaducidad?: boolean } = {},
 ): PayloadDesafioRiot | null {
   try {
     const payload = jwt.verify(token, env.JWT_SECRET, {
       issuer: EMISOR,
       audience: AUDIENCIA_DESAFIO_RIOT,
       subject: usuarioId,
+      ignoreExpiration: opciones.ignorarCaducidad ?? false,
     });
     if (typeof payload === "string") return null;
     const datos = payload as unknown as PayloadDesafioRiot;

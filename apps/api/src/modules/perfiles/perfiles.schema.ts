@@ -18,6 +18,8 @@ export {
   verificarCuentaRiotSchema,
   cuentaGamingSchema,
   desafioVerificacionRiotSchema,
+  desafioActivoRiotSchema,
+  resultadoVerificacionRiotSchema,
   plataformaParamSchema,
   idParamSchema,
   habilidadSchema,
@@ -33,5 +35,7 @@ export type {
   VerificarCuentaRiotInput,
   CuentaGaming,
   DesafioVerificacionRiot,
+  DesafioActivoRiot,
+  ResultadoVerificacionRiot,
   Habilidad,
 } from "@proplay/shared";

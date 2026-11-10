@@ -102,13 +102,43 @@ export const iniciarVinculacionRiot = asyncHandler<PeticionCon<VincularCuentaRio
 );
 
 /**
+ * GET /api/v1/perfiles/cuentas-gaming/riot/desafio
+ * Desafío activo del jugador, si lo hay: el mismo icono con su caducidad.
+ */
+export const obtenerDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.obtenerDesafioRiot(req.usuario.id));
+});
+
+/**
+ * POST /api/v1/perfiles/cuentas-gaming/riot/desafio/regenerar
+ * «Generar otro icono»: sustituye el desafío activo.
+ */
+export const regenerarDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.regenerarDesafioRiot(req.usuario.id));
+});
+
+/**
+ * DELETE /api/v1/perfiles/cuentas-gaming/riot/desafio
+ * Cancela el desafío activo, para vincular otra cuenta.
+ */
+export const cancelarDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  await servicio.cancelarDesafioRiot(req.usuario.id);
+  res.status(204).end();
+});
+
+/**
  * POST /api/v1/perfiles/cuentas-gaming/riot/verificar
- * Paso 2: comprueba el icono y guarda la cuenta verificada.
+ * Paso 2: comprueba el icono. 201 con la cuenta si ya coincide; 200 PENDIENTE
+ * si Riot todavía no refleja el cambio.
  */
 export const verificarCuentaRiot = asyncHandler<PeticionCon<VerificarCuentaRiotInput>>(
   async (req, res) => {
     if (!req.usuario) throw new UnauthorizedError();
-    res.status(201).json(await servicio.verificarCuentaRiot(req.usuario.id, req.body));
+    const resultado = await servicio.verificarCuentaRiot(req.usuario.id, req.body);
+    res.status(resultado.estado === "VERIFICADA" ? 201 : 200).json(resultado);
   },
 );
 
