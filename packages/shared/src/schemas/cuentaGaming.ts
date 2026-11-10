@@ -22,17 +22,34 @@ export const vincularCuentaRiotSchema = z.object({
   servidor: z.enum(SERVIDORES_LOL).default(SERVIDOR_LOL_POR_DEFECTO),
 });
 
-/** Respuesta del paso 1: qué icono debe poner el jugador y hasta cuándo. */
+/**
+ * Desafío de verificación activo: qué icono debe poner el jugador y hasta
+ * cuándo. La API lo guarda por usuario (Redis) hasta que caduca o se verifica,
+ * así que sobrevive a salir de la vista, recargar o abrir otra pestaña.
+ */
 export const desafioVerificacionRiotSchema = z.object({
   riotId: z.string(),
   servidor: z.enum(SERVIDORES_LOL),
   nivelInvocador: z.number().int(),
+  /** Icono que llevaba el invocador al pedir el desafío. */
   iconoActual: z.number().int(),
   iconoRequerido: z.number().int(),
   iconoRequeridoUrl: z.string(),
+  creadoEn: z.coerce.date(),
   expiraEn: z.coerce.date(),
-  /** Token firmado por la API que se devuelve en el paso 2. No es secreto del jugador. */
+  /** Token firmado por la API que se devuelve al verificar. No es secreto del jugador. */
   tokenDesafio: z.string(),
+  /** Última vez que la API miró el icono en Riot; `null` si todavía no lo hizo. */
+  ultimaComprobacionEn: z.coerce.date().nullable(),
+  /** Icono que vio Riot en esa última comprobación. */
+  iconoVisto: z.number().int().nullable(),
+  /** Comprobaciones que le quedan a este desafío (`MAX_COMPROBACIONES_DESAFIO`). */
+  comprobacionesRestantes: z.number().int().min(0),
+});
+
+/** `GET /perfiles/cuentas-gaming/riot/desafio`: el desafío activo, si lo hay. */
+export const desafioActivoRiotSchema = z.object({
+  desafio: desafioVerificacionRiotSchema.nullable(),
 });
 
 /** Paso 2: el jugador ya cambió el icono y pide comprobarlo. */
@@ -52,11 +69,22 @@ export const cuentaGamingSchema = z.object({
   creadoEn: z.coerce.date(),
 });
 
+/**
+ * Resultado de comprobar el icono. Que Riot todavía no refleje el cambio no es
+ * un error: tarda unos minutos, así que se responde 200 con el desafío al día.
+ */
+export const resultadoVerificacionRiotSchema = z.discriminatedUnion("estado", [
+  z.object({ estado: z.literal("VERIFICADA"), cuenta: cuentaGamingSchema }),
+  z.object({ estado: z.literal("PENDIENTE"), desafio: desafioVerificacionRiotSchema }),
+]);
+
 export const plataformaParamSchema = z.object({
   plataforma: z.enum(PLATAFORMAS),
 });
 
 export type VincularCuentaRiotInput = z.infer<typeof vincularCuentaRiotSchema>;
 export type DesafioVerificacionRiot = z.infer<typeof desafioVerificacionRiotSchema>;
+export type DesafioActivoRiot = z.infer<typeof desafioActivoRiotSchema>;
+export type ResultadoVerificacionRiot = z.infer<typeof resultadoVerificacionRiotSchema>;
 export type VerificarCuentaRiotInput = z.infer<typeof verificarCuentaRiotSchema>;
 export type CuentaGaming = z.infer<typeof cuentaGamingSchema>;

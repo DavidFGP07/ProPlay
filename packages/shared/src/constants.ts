@@ -264,8 +264,23 @@ export type LigaLol = (typeof LIGAS_LOL)[number];
 export const PARTIDAS_POR_SINCRONIZACION = 20;
 /** Minutos mínimos entre dos sincronizaciones del mismo jugador (cuota de Riot). */
 export const MINUTOS_ENTRE_SINCRONIZACIONES = 10;
-/** Vigencia del desafío de verificación de la cuenta de Riot. */
+/**
+ * Vigencia del desafío de verificación de la cuenta de Riot. Riot tarda uno o
+ * dos minutos en reflejar un cambio de icono: 15 minutos dejan margen de sobra.
+ */
 export const MINUTOS_DESAFIO_VERIFICACION = 15;
+/** Cada cuánto comprueba sola la vista de Cuentas vinculadas un desafío activo. */
+export const SEGUNDOS_COMPROBACION_AUTOMATICA = 45;
+/**
+ * Comprobaciones de un mismo desafío pegadas a la anterior: la API responde
+ * con la última sin volver a consultar a Riot (dos pestañas abiertas, dobles clics).
+ */
+export const SEGUNDOS_MINIMOS_ENTRE_COMPROBACIONES = 15;
+/**
+ * Comprobaciones que admite un desafío, aparte del límite de la vinculación.
+ * 15 min / 45 s son 20 automáticas; el resto cubre las manuales y una segunda pestaña.
+ */
+export const MAX_COMPROBACIONES_DESAFIO = 40;
 /**
  * Iconos de invocador que toda cuenta tiene desbloqueados (0 a 28): la
  * verificación pide poner uno de ellos, así cualquiera puede completarla.

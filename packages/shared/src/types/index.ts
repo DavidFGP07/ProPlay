@@ -36,7 +36,9 @@ export type {
 
 export type {
   CuentaGaming,
+  DesafioActivoRiot,
   DesafioVerificacionRiot,
+  ResultadoVerificacionRiot,
   VerificarCuentaRiotInput,
   VincularCuentaRiotInput,
 } from "../schemas/cuentaGaming";
