@@ -7,7 +7,6 @@ import {
   metricasLolSchema,
   FECHA_POR_ESTADO_POSTULACION,
   JUEGO_PILOTO,
-  PERFIL_VECTOR_DIMENSIONES,
   PERFIL_VECTOR_VERSION,
   PESOS_MATCHING,
   type Departamento,
@@ -23,8 +22,8 @@ import {
  * Datos de prueba de ProPlay.
  *
  * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores (10 con cuenta
- * de Riot verificada y estadísticas de LoL con posición y rango) y vectores
- * sintéticos, 5 ofertas de League of Legends en todos los estados
+ * de Riot verificada y estadísticas de LoL con posición y rango; sus vectores
+ * los calcula el motor de matching), 5 ofertas de League of Legends en todos los estados
  * con postulaciones fechadas (para el embudo), un scout y un administrador.
  *
  * Es idempotente (usa upsert), así que se puede ejecutar varias veces:
@@ -602,31 +601,15 @@ async function main() {
       }
     }
 
-    // Vector de características sintético (64 dimensiones).
-    const dimensiones = Array.from(
-      { length: PERFIL_VECTOR_DIMENSIONES },
-      () => Number(aleatorio().toFixed(4)),
-    );
-
-    const vector = await prisma.perfilVector.upsert({
-      where: { jugadorId: jugador.id },
-      update: { dimensiones, version: PERFIL_VECTOR_VERSION },
-      create: {
-        jugadorId: jugador.id,
-        dimensiones,
-        version: PERFIL_VECTOR_VERSION,
-      },
+    // Sin vector: lo calcula el vectorizador del motor de matching a partir de
+    // estas capturas (PERFIL_VECTOR_VERSION). Se borran los de versiones
+    // anteriores, que eran aleatorios.
+    await prisma.perfilVector.deleteMany({
+      where: { jugadorId: jugador.id, version: { lt: PERFIL_VECTOR_VERSION } },
     });
-
-    // La columna nativa de pgvector no la maneja Prisma: se escribe en SQL.
-    await prisma.$executeRaw`
-      UPDATE "PerfilVector"
-      SET "embedding" = ${`[${dimensiones.join(",")}]`}::vector
-      WHERE "id" = ${vector.id}
-    `;
   }
   console.log(
-    `  · ${NOMBRES_JUGADORES.length} jugadores (${DATOS_RIOT.filter(Boolean).length} con cuenta de Riot verificada), ${estadisticasCreadas} capturas de estadísticas de LoL y vectores de ${PERFIL_VECTOR_DIMENSIONES} dimensiones`,
+    `  · ${NOMBRES_JUGADORES.length} jugadores (${DATOS_RIOT.filter(Boolean).length} con cuenta de Riot verificada), ${estadisticasCreadas} capturas de estadísticas de LoL`,
   );
 
   // ------------------------------------------------------------------ ofertas

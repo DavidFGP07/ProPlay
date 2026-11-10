@@ -37,8 +37,14 @@ export const NIVEL_HABILIDAD_MAX = 5;
 
 /** Dimensiones del vector de características usado por el matching. */
 export const PERFIL_VECTOR_DIMENSIONES = 64;
-/** Versión del algoritmo que produjo el vector. */
-export const PERFIL_VECTOR_VERSION = 1;
+/**
+ * Versión del vectorizador que produjo el vector (`PerfilVector.version`).
+ * La 1 eran vectores aleatorios del seed; la 2, el vectorizador del motor de
+ * matching (docs/arquitectura.md, «Vectorizador»). Un vector de una versión
+ * anterior se recalcula antes de usarlo, y `npm run matching:revectorizar -w api`
+ * los recalcula todos.
+ */
+export const PERFIL_VECTOR_VERSION = 2;
 
 /**
  * Pesos POR DEFECTO de las cinco dimensiones del algoritmo de compatibilidad

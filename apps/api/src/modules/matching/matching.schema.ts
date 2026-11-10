@@ -6,14 +6,12 @@
  * con los mismos. No declares esquemas nuevos en este archivo.
  */
 export {
-  calcularMatchingSchema,
   idParamSchema,
   matchingSchema,
   desgloseMatchingSchema,
 } from "@proplay/shared";
 
 export type {
-  CalcularMatchingInput,
   DesgloseMatching,
   Matching,
 } from "@proplay/shared";
