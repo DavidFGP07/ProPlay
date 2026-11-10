@@ -48,6 +48,7 @@ npm run db:deploy           # aplica las migraciones existentes
 npm run db:seed             # cuentas de prueba (contraseña ProPlay123)
 npm run dev                 # API en :3000, cliente en :5173
 npm run verify              # guarda del índice HNSW, lint, typecheck y pruebas
+npm run rnf01 -w api        # mide RNF-01 (p95 del ranking, 1.000 perfiles) en docs/rnf-01.md
 ```
 
 - `db:deploy` aplica migraciones; `db:migrate` (`prisma migrate dev`) es sólo para **crear**
