@@ -31,5 +31,8 @@ export function obtenerProveedorRiot(): RiotProvider {
 }
 
 export { esServidorLol } from "./riot/riot.provider";
-export type { CuentaRiotEncontrada } from "./riot/riot.provider";
+export type { CuentaRiotEncontrada, NovedadesRiot } from "./riot/riot.provider";
+export { cuotaRiot, estadoClaveRiot } from "./riot/compartido";
+export { LLAMADA_VINCULACION } from "./riot/riot.client";
+export type { EstadoClaveRiot } from "./riot/estadoClave";
 export type { GameStatsProvider } from "./GameStatsProvider";

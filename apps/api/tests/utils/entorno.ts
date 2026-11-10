@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { crearApp } from "../../src/app";
 import { prisma } from "../../src/config/prisma";
 import { desconectarRedis } from "../../src/config/redis";
+import { cerrarColaIngesta } from "../../src/ingesta/cola";
 
 /**
  * Utilidades compartidas por las pruebas de integración.
@@ -32,6 +33,7 @@ export async function limpiarUsuariosDePrueba(): Promise<void> {
 }
 
 export async function cerrarConexiones(): Promise<void> {
+  await cerrarColaIngesta();
   await Promise.all([prisma.$disconnect(), desconectarRedis()]);
 }
 

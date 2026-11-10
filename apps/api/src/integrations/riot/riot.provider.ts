@@ -15,8 +15,16 @@ import type {
   ParametrosVinculacion,
   TokensRefrescados,
 } from "../GameStatsProvider";
-import { ClienteRiot, urlIconoInvocador } from "./riot.client";
-import { construirEstadisticaLol } from "./riot.normalizacion";
+import { cuotaRiot, estadoClaveRiot } from "./compartido";
+import {
+  ClienteRiot,
+  LLAMADA_COMPROBACION,
+  LLAMADA_INGESTA,
+  LLAMADA_VINCULACION,
+  urlIconoInvocador,
+  type LlamadaRiot,
+} from "./riot.client";
+import { construirEstadisticaLol, rangosLol, type RangosLol } from "./riot.normalizacion";
 import type { PartidaRiot } from "./riot.tipos";
 
 /**
@@ -51,6 +59,14 @@ export interface CuentaRiotEncontrada {
   nivelInvocador: number;
 }
 
+/** Resultado de la comprobación barata de la ingesta periódica. */
+export interface NovedadesRiot {
+  /** Hay partidas (clasificatoria solo/dúo o normales) empezadas después de `desde`. */
+  partidasNuevas: boolean;
+  /** Rango actual, que puede cambiar sin jugar (pérdida de LP por inactividad). */
+  rangos: RangosLol;
+}
+
 export function esServidorLol(valor: string | null | undefined): valor is ServidorLol {
   return (SERVIDORES_LOL as readonly string[]).includes(valor ?? "");
 }
@@ -59,7 +75,11 @@ export class RiotProvider implements GameStatsProvider {
   readonly plataforma = "RIOT" as const;
 
   constructor(
-    private readonly cliente: ClienteRiot = new ClienteRiot({ apiKey: env.RIOT_API_KEY }),
+    private readonly cliente: ClienteRiot = new ClienteRiot({
+      apiKey: env.RIOT_API_KEY,
+      cuota: cuotaRiot,
+      clave: estadoClaveRiot,
+    }),
   ) {}
 
   /**
@@ -71,9 +91,9 @@ export class RiotProvider implements GameStatsProvider {
     tagLine: string,
     servidor: ServidorLol,
   ): Promise<CuentaRiotEncontrada | null> {
-    const cuenta = await this.cliente.cuentaPorRiotId(gameName, tagLine, servidor);
+    const cuenta = await this.cliente.cuentaPorRiotId(gameName, tagLine, servidor, LLAMADA_VINCULACION);
     if (!cuenta) return null;
-    const invocador = await this.cliente.invocadorPorPuuid(cuenta.puuid, servidor);
+    const invocador = await this.cliente.invocadorPorPuuid(cuenta.puuid, servidor, LLAMADA_VINCULACION);
     if (!invocador) return null;
     return {
       puuid: cuenta.puuid,
@@ -84,15 +104,22 @@ export class RiotProvider implements GameStatsProvider {
     };
   }
 
-  /** Icono de invocador actual; `null` si el invocador ya no existe. */
-  async iconoActual(puuid: string, servidor: ServidorLol): Promise<number | null> {
-    const invocador = await this.cliente.invocadorPorPuuid(puuid, servidor);
+  /**
+   * Icono de invocador actual; `null` si el invocador ya no existe. Por
+   * defecto como comprobación del icono; «generar otro» lo pide como vinculación.
+   */
+  async iconoActual(
+    puuid: string,
+    servidor: ServidorLol,
+    llamada: LlamadaRiot = LLAMADA_COMPROBACION,
+  ): Promise<number | null> {
+    const invocador = await this.cliente.invocadorPorPuuid(puuid, servidor, llamada);
     return invocador?.profileIconId ?? null;
   }
 
   /** Riot ID vigente del puuid (cambia si el jugador se renombra). */
   async riotIdActual(puuid: string, servidor: ServidorLol): Promise<string | null> {
-    const cuenta = await this.cliente.cuentaPorPuuid(puuid, servidor);
+    const cuenta = await this.cliente.cuentaPorPuuid(puuid, servidor, LLAMADA_INGESTA);
     return cuenta?.gameName && cuenta.tagLine ? `${cuenta.gameName}#${cuenta.tagLine}` : null;
   }
 
@@ -118,7 +145,7 @@ export class RiotProvider implements GameStatsProvider {
       throw new BadRequestError("La cuenta de Riot no tiene un servidor válido");
     }
 
-    const invocador = await this.cliente.invocadorPorPuuid(puuid, region);
+    const invocador = await this.cliente.invocadorPorPuuid(puuid, region, LLAMADA_INGESTA);
     if (!invocador) {
       throw new BadRequestError(
         `La cuenta de Riot ya no tiene invocador de League of Legends en ${region}`,
@@ -126,12 +153,30 @@ export class RiotProvider implements GameStatsProvider {
     }
 
     const [ligas, ids] = await Promise.all([
-      this.cliente.ligasPorPuuid(puuid, region),
+      this.cliente.ligasPorPuuid(puuid, region, LLAMADA_INGESTA),
       this.idsRecientes(puuid, region),
     ]);
     const partidas = await this.descargarPartidas(ids, region);
 
     return [construirEstadisticaLol({ puuid, servidor: region, invocador, ligas, partidas })];
+  }
+
+  /**
+   * Comprobación barata de la ingesta periódica (3 peticiones en lugar de
+   * unas 24): si hay partidas empezadas después de `desde` en las colas que
+   * analiza la sincronización (solo/dúo y normales) y el rango actual. Si no
+   * hay partidas nuevas, no hace falta descargar las 20.
+   */
+  async novedades(puuid: string, servidor: ServidorLol, desde: Date): Promise<NovedadesRiot> {
+    const [clasificatorias, normales, ligas] = await Promise.all([
+      this.cliente.idsPartidas(puuid, servidor, { cola: COLA_SOLO_DUO, desde, cantidad: 1 }, LLAMADA_INGESTA),
+      this.cliente.idsPartidas(puuid, servidor, { tipo: "normal", desde, cantidad: 1 }, LLAMADA_INGESTA),
+      this.cliente.ligasPorPuuid(puuid, servidor, LLAMADA_INGESTA),
+    ]);
+    return {
+      partidasNuevas: clasificatorias.length > 0 || normales.length > 0,
+      rangos: rangosLol(ligas),
+    };
   }
 
   // RSO (OAuth) no está disponible con la clave actual: ver la cabecera.
@@ -147,16 +192,20 @@ export class RiotProvider implements GameStatsProvider {
    */
   private async idsRecientes(puuid: string, servidor: ServidorLol): Promise<string[]> {
     const cantidad = PARTIDAS_POR_SINCRONIZACION;
-    const clasificatorias = await this.cliente.idsPartidas(puuid, servidor, {
-      cola: COLA_SOLO_DUO,
-      cantidad,
-    });
+    const clasificatorias = await this.cliente.idsPartidas(
+      puuid,
+      servidor,
+      { cola: COLA_SOLO_DUO, cantidad },
+      LLAMADA_INGESTA,
+    );
     if (clasificatorias.length >= MINIMO_PARTIDAS_CLASIFICATORIAS) return clasificatorias;
 
-    const normales = await this.cliente.idsPartidas(puuid, servidor, {
-      tipo: "normal",
-      cantidad: cantidad - clasificatorias.length,
-    });
+    const normales = await this.cliente.idsPartidas(
+      puuid,
+      servidor,
+      { tipo: "normal", cantidad: cantidad - clasificatorias.length },
+      LLAMADA_INGESTA,
+    );
     return [...clasificatorias, ...normales];
   }
 
@@ -164,7 +213,7 @@ export class RiotProvider implements GameStatsProvider {
     const partidas: PartidaRiot[] = [];
     for (let i = 0; i < ids.length; i += DESCARGAS_EN_PARALELO) {
       const lote = await Promise.all(
-        ids.slice(i, i + DESCARGAS_EN_PARALELO).map((id) => this.cliente.partida(id, servidor)),
+        ids.slice(i, i + DESCARGAS_EN_PARALELO).map((id) => this.cliente.partida(id, servidor, LLAMADA_INGESTA)),
       );
       for (const partida of lote) if (partida) partidas.push(partida);
     }

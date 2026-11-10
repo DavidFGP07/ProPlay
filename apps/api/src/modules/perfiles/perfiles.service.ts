@@ -20,11 +20,12 @@ import type {
   ServidorLol,
 } from "@proplay/shared";
 import { randomInt } from "node:crypto";
-import { esServidorLol, obtenerProveedorRiot } from "../../integrations";
+import { LLAMADA_VINCULACION, esServidorLol, obtenerProveedorRiot } from "../../integrations";
 import {
   AppError,
   BadRequestError,
   ConflictError,
+  CuotaRiotAgotadaError,
   NotFoundError,
 } from "../../utils/errors";
 import { firmarDesafioRiot, verificarDesafioRiot } from "../../utils/jwt";
@@ -336,7 +337,11 @@ export async function regenerarDesafioRiot(usuarioId: string): Promise<DesafioVe
   if (!vigente) throw desafioCaducado();
   const { payload } = vigente;
 
-  const iconoActual = await obtenerProveedorRiot().iconoActual(payload.puuid, payload.servidor);
+  const iconoActual = await obtenerProveedorRiot().iconoActual(
+    payload.puuid,
+    payload.servidor,
+    LLAMADA_VINCULACION,
+  );
   if (iconoActual === null) {
     throw new NotFoundError("La cuenta de Riot ya no tiene invocador en ese servidor");
   }
@@ -387,36 +392,47 @@ export async function verificarCuentaRiot(
     maximo: MAX_COMPROBACIONES_DESAFIO,
     minimoMs: SEGUNDOS_MINIMOS_ENTRE_COMPROBACIONES * 1000,
   });
-  if (anotada === "NINGUNO") throw desafioCaducado();
-  if (anotada === "OTRO") {
+  if (anotada.estado === "NINGUNO") throw desafioCaducado();
+  if (anotada.estado === "OTRO") {
     throw new AppError(
       409,
       "DESAFIO_REEMPLAZADO",
       "Ese icono ya no vale: generaste otro. Usa el que se muestra ahora",
     );
   }
-  if (anotada === "AGOTADO") {
+  if (anotada.estado === "AGOTADO") {
     throw new AppError(
       429,
       "COMPROBACIONES_AGOTADAS",
       "Este icono ya se comprobó demasiadas veces. Genera otro icono para seguir intentándolo",
     );
   }
-  if (anotada === "PRONTO") {
+  const pendiente = async (
+    motivo: "ICONO_DISTINTO" | "MUCHA_DEMANDA",
+  ): Promise<ResultadoVerificacionRiot> => {
     const guardado = await repositorio.leerDesafioRiot(usuarioId);
     if (!guardado || guardado.token !== datos.tokenDesafio) throw desafioCaducado();
-    return { estado: "PENDIENTE", desafio: aRespuestaDesafio(guardado) };
-  }
+    return { estado: "PENDIENTE", motivo, desafio: aRespuestaDesafio(guardado) };
+  };
+  if (anotada.estado !== "OK") return pendiente("ICONO_DISTINTO");
+  const { anterior } = anotada;
 
-  const iconoActual = await obtenerProveedorRiot().iconoActual(desafio.puuid, desafio.servidor);
+  let iconoActual: number | null;
+  try {
+    iconoActual = await obtenerProveedorRiot().iconoActual(desafio.puuid, desafio.servidor);
+  } catch (error) {
+    // Sin cupo en la cuota de Riot no es culpa del jugador: la comprobación no
+    // cuenta y la vista lo reintenta sola («Mucha demanda, reintentando»).
+    if (!(error instanceof CuotaRiotAgotadaError)) throw error;
+    await repositorio.devolverComprobacionRiot(usuarioId, datos.tokenDesafio, anterior);
+    return pendiente("MUCHA_DEMANDA");
+  }
   if (iconoActual === null) {
     throw new NotFoundError("La cuenta de Riot ya no tiene invocador en ese servidor");
   }
   if (iconoActual !== desafio.icono) {
     await repositorio.anotarIconoVistoRiot(usuarioId, datos.tokenDesafio, iconoActual);
-    const guardado = await repositorio.leerDesafioRiot(usuarioId);
-    if (!guardado || guardado.token !== datos.tokenDesafio) throw desafioCaducado();
-    return { estado: "PENDIENTE", desafio: aRespuestaDesafio(guardado) };
+    return pendiente("ICONO_DISTINTO");
   }
 
   await comprobarQueNoEsDeOtro(perfil.id, desafio.puuid);

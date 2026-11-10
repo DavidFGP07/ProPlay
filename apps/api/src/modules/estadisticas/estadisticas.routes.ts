@@ -33,11 +33,20 @@ estadisticasRouter.get(
   controlador.resumenPorJugador,
 );
 
-// RF-03 · Ingesta de estadísticas desde la API de Riot para el jugador autenticado
+// RF-03 · Ingesta de estadísticas desde la API de Riot para el jugador
+// autenticado: se encola (202) y se consulta con GET /sincronizacion
 estadisticasRouter.post(
   "/sincronizar",
   auth,
   rbac("JUGADOR"),
   validate(sincronizarEstadisticasSchema),
   controlador.sincronizar,
+);
+
+// RF-03 · Estado de la sincronización del jugador (en cola, en curso o terminada)
+estadisticasRouter.get(
+  "/sincronizacion",
+  auth,
+  rbac("JUGADOR"),
+  controlador.estadoSincronizacion,
 );

@@ -55,6 +55,28 @@ export function interpretarTrustProxy(
   return entradas.every(esDireccionOSubred) ? entradas : null;
 }
 
+/** Ventana de cuota de Riot: tantas peticiones cada tantos milisegundos. */
+export interface VentanaCuota {
+  limite: number;
+  ms: number;
+}
+
+/** `"20:1,100:120"` → ventanas; `null` si el formato no es válido. */
+export function interpretarLimitesRiot(valor: string): VentanaCuota[] | null {
+  const ventanas = valor
+    .split(",")
+    .map((parte) => parte.trim())
+    .filter(Boolean)
+    .map((parte) => {
+      const [limite, segundos] = parte.split(":").map(Number);
+      return { limite: limite ?? NaN, ms: (segundos ?? NaN) * 1000 };
+    });
+  const validas = ventanas.every(
+    (v) => Number.isInteger(v.limite) && v.limite > 0 && Number.isFinite(v.ms) && v.ms > 0,
+  );
+  return ventanas.length > 0 && validas ? ventanas : null;
+}
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -97,6 +119,30 @@ export const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
 
   RIOT_API_KEY: z.string().optional(),
+  /**
+   * Ventanas de cuota de la clave de Riot, para TODA la aplicación:
+   * `límite:segundos` separadas por comas. La de desarrollo, 20 por segundo y
+   * 100 cada 2 minutos; la de producción tiene otras.
+   */
+  RIOT_LIMITES: z
+    .string()
+    .default("20:1,100:120")
+    .refine(
+      (valor) => interpretarLimitesRiot(valor) !== null,
+      "RIOT_LIMITES debe ser una lista de límite:segundos, p. ej. 20:1,100:120",
+    ),
+  /**
+   * Porcentaje de cada ventana reservado a la vinculación y la comprobación
+   * del icono: las sincronizaciones sólo usan el resto.
+   */
+  RIOT_RESERVA_ALTA: z.coerce.number().int().min(0).max(90).default(30),
+  /** Arranca la cola de ingesta en el proceso de la API (desactivada en las pruebas). */
+  INGESTA_ACTIVA: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((valor) => (valor ?? (process.env.NODE_ENV === "test" ? "false" : "true")) === "true"),
+  /** Horas entre dos sincronizaciones periódicas del mismo jugador. */
+  INGESTA_INTERVALO_HORAS: z.coerce.number().positive().max(168).default(6),
   STEAM_API_KEY: z.string().optional(),
   TWITCH_CLIENT_ID: z.string().optional(),
   TWITCH_CLIENT_SECRET: z.string().optional(),
@@ -135,6 +181,8 @@ const parseado = resultado.data;
 
 export const env = {
   ...parseado,
+  /** Ventanas de cuota de Riot ya interpretadas (validadas arriba). */
+  riotVentanas: interpretarLimitesRiot(parseado.RIOT_LIMITES) ?? [],
   /** Orígenes permitidos por CORS (acepta una lista separada por comas). */
   corsOrigins: parseado.CORS_ORIGIN.split(",")
     .map((origen) => origen.trim())

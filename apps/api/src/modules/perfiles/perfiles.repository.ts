@@ -330,28 +330,60 @@ local hechas = tonumber(redis.call('HGET', KEYS[1], 'comprobaciones') or '0')
 if hechas >= tonumber(ARGV[3]) then return 'AGOTADO' end
 redis.call('HINCRBY', KEYS[1], 'comprobaciones', 1)
 redis.call('HSET', KEYS[1], 'ultimaComprobacionEn', ARGV[2])
-return 'OK'
+return 'OK:' .. tostring(ultima)
 `;
 
-export type ResultadoAnotarComprobacion = "OK" | "NINGUNO" | "OTRO" | "PRONTO" | "AGOTADO";
+export type ResultadoAnotarComprobacion =
+  /** Anotada; `anterior` (ms, 0 si no había) sirve para devolverla. */
+  | { estado: "OK"; anterior: number }
+  | { estado: "NINGUNO" | "OTRO" | "PRONTO" | "AGOTADO" };
 
 export async function anotarComprobacionRiot(
   usuarioId: string,
   token: string,
   opciones: { ahora: Date; maximo: number; minimoMs: number },
 ): Promise<ResultadoAnotarComprobacion> {
-  const resultado = await conRedis((redis) =>
-    redis.eval(
-      SCRIPT_COMPROBACION,
-      1,
-      claveDesafio(usuarioId),
-      token,
-      opciones.ahora.getTime(),
-      opciones.maximo,
-      opciones.minimoMs,
+  const resultado = String(
+    await conRedis((redis) =>
+      redis.eval(
+        SCRIPT_COMPROBACION,
+        1,
+        claveDesafio(usuarioId),
+        token,
+        opciones.ahora.getTime(),
+        opciones.maximo,
+        opciones.minimoMs,
+      ),
     ),
   );
-  return resultado as ResultadoAnotarComprobacion;
+  if (resultado.startsWith("OK:")) return { estado: "OK", anterior: Number(resultado.slice(3)) || 0 };
+  return { estado: resultado as "NINGUNO" | "OTRO" | "PRONTO" | "AGOTADO" };
+}
+
+/**
+ * Deshace una comprobación anotada que no llegó a consultar a Riot (no había
+ * cupo): resta una y repone la hora de la anterior. Sólo si el token sigue
+ * siendo el activo.
+ */
+const SCRIPT_DEVOLVER_COMPROBACION = `
+if redis.call('HGET', KEYS[1], 'token') ~= ARGV[1] then return 0 end
+redis.call('HINCRBY', KEYS[1], 'comprobaciones', -1)
+if tonumber(ARGV[2]) > 0 then
+  redis.call('HSET', KEYS[1], 'ultimaComprobacionEn', ARGV[2])
+else
+  redis.call('HDEL', KEYS[1], 'ultimaComprobacionEn')
+end
+return 1
+`;
+
+export async function devolverComprobacionRiot(
+  usuarioId: string,
+  token: string,
+  anterior: number,
+): Promise<void> {
+  await conRedis((redis) =>
+    redis.eval(SCRIPT_DEVOLVER_COMPROBACION, 1, claveDesafio(usuarioId), token, anterior),
+  );
 }
 
 /** Guarda el icono que vio Riot, si el desafío sigue siendo el mismo (no lo resucita). */

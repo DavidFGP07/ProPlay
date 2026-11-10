@@ -17,6 +17,8 @@ const doble = vi.hoisted(() => ({
   usuario: null as UsuarioPublico | null,
   /** Desafio activo que devuelve GET /perfiles/cuentas-gaming/riot/desafio. */
   desafio: null as unknown,
+  /** Respuestas sucesivas de GET /estadisticas/sincronizacion (la ultima se repite). */
+  sincronizacion: [] as unknown[],
   get: vi.fn(),
   post: vi.fn(),
   delete: vi.fn(),
@@ -140,10 +142,23 @@ function renderRuta(ruta: string) {
   )
 }
 
+const SIN_SINCRONIZACION = {
+  estado: 'INACTIVA',
+  muchaDemanda: false,
+  sincronizadaEn: null,
+  ultimoResultado: null,
+}
+
+function estadoSincronizacion() {
+  return (doble.sincronizacion.length > 1 ? doble.sincronizacion.shift() : doble.sincronizacion[0]) ??
+    SIN_SINCRONIZACION
+}
+
 function responderGet(cuentas: unknown[], resumen?: unknown, historial: unknown[] = []) {
   doble.get.mockImplementation(async (url: string) => {
     if (url === '/perfiles/cuentas-gaming') return { data: cuentas }
     if (url === '/perfiles/cuentas-gaming/riot/desafio') return { data: { desafio: doble.desafio } }
+    if (url === '/estadisticas/sincronizacion') return { data: estadoSincronizacion() }
     if (url === '/perfiles/me') return { data: PERFIL_ME }
     if (url.endsWith('/resumen')) return { data: resumen ?? { jugadorId: 'perfil-1', juegos: [] } }
     if (url.startsWith('/estadisticas/jugador/')) return { data: historial }
@@ -177,6 +192,7 @@ describe('Cuentas vinculadas', () => {
   beforeEach(() => {
     doble.usuario = JUGADOR
     doble.desafio = null
+    doble.sincronizacion = []
     doble.get.mockReset()
     doble.post.mockReset()
     doble.delete.mockReset()
@@ -193,6 +209,7 @@ describe('Cuentas vinculadas', () => {
         return {
           data: {
             estado: 'PENDIENTE',
+            motivo: 'ICONO_DISTINTO',
             desafio: desafioRiot({
               ultimaComprobacionEn: new Date().toISOString(),
               iconoVisto: 7,
@@ -255,6 +272,7 @@ describe('Cuentas vinculadas', () => {
     doble.get.mockImplementation(async (url: string) => {
       if (url === '/perfiles/cuentas-gaming') return { data: cuentas }
       if (url === '/perfiles/cuentas-gaming/riot/desafio') return { data: { desafio: doble.desafio } }
+      if (url === '/estadisticas/sincronizacion') return { data: SIN_SINCRONIZACION }
       if (url === '/perfiles/me') return { data: PERFIL_ME }
       throw new Error(`GET inesperado ${url}`)
     })
@@ -303,10 +321,18 @@ describe('Cuentas vinculadas', () => {
   })
 
   it('con la cuenta verificada permite sincronizar y desvincular', async () => {
+    // La sincronizacion se encola y la vista consulta hasta que termina.
+    doble.sincronizacion = [
+      SIN_SINCRONIZACION,
+      { ...SIN_SINCRONIZACION, estado: 'EN_COLA', muchaDemanda: true },
+      {
+        ...SIN_SINCRONIZACION,
+        sincronizadaEn: '2026-11-08T17:00:00.000Z',
+        ultimoResultado: { tipo: 'NUEVAS', en: '2026-11-08T17:00:00.000Z' },
+      },
+    ]
     responderGet([CUENTA_RIOT])
-    doble.post.mockResolvedValue({
-      data: { estadisticas: [], hayDatosNuevos: false, sincronizadaEn: '2026-11-08T17:00:00.000Z' },
-    })
+    doble.post.mockResolvedValue({ data: { ...SIN_SINCRONIZACION, estado: 'EN_COLA' } })
     doble.delete.mockResolvedValue({ data: null })
     renderRuta('/cuentas-vinculadas')
 
@@ -314,12 +340,60 @@ describe('Cuentas vinculadas', () => {
     expect(screen.getByText('Latinoamérica Norte (LAN)')).toBeInTheDocument()
     expect(screen.getByText('Todavía no se ha sincronizado')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sincronizar estadísticas' }))
-    expect(await screen.findByText(/no tiene partidas nuevas/)).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Sincronizar estadísticas' }))
+    await waitFor(() => expect(doble.post).toHaveBeenCalledWith('/estadisticas/sincronizar', {}))
+    expect(await screen.findByText(/En cola/)).toBeInTheDocument()
+    // Sin cupo en la cuota de Riot: aviso, no error, y se hace sola.
+    expect(await screen.findByText(/Mucha demanda en este momento/, {}, espera)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(
+      await screen.findByText('Estadísticas actualizadas desde Riot.', {}, espera),
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Desvincular' }))
     fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }))
     await waitFor(() => expect(doble.delete).toHaveBeenCalledWith('/perfiles/cuentas-gaming/RIOT'))
+  }, 15_000)
+
+  it('si Riot no está disponible, sincronizar avisa «inténtalo más tarde» sin error rojo', async () => {
+    responderGet([CUENTA_RIOT])
+    doble.post.mockRejectedValue(
+      errorApi(503, 'RIOT_NO_DISPONIBLE', 'La conexión con Riot no está disponible en este momento; inténtalo más tarde'),
+    )
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sincronizar estadísticas' }, espera))
+    expect(await screen.findByText(/inténtalo más tarde/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('sin cupo para comprobar el icono muestra «Mucha demanda, reintentando»', async () => {
+    doble.desafio = desafioRiot()
+    responderGet([])
+    doble.post.mockResolvedValue({
+      data: { estado: 'PENDIENTE', motivo: 'MUCHA_DEMANDA', desafio: desafioRiot() },
+    })
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ya lo cambié, verificar' }, espera))
+    expect(await screen.findByText(/Mucha demanda, reintentando/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('sin cupo para buscar la cuenta, avisa sin error rojo', async () => {
+    responderGet([])
+    doble.post.mockRejectedValue(
+      errorApi(503, 'MUCHA_DEMANDA', 'Hay mucha demanda en este momento; inténtalo en un momento'),
+    )
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.change(await screen.findByLabelText('Nombre de invocador (Riot ID)', {}, espera), {
+      target: { value: 'Vale' },
+    })
+    fireEvent.change(screen.getByLabelText(/Etiqueta/), { target: { value: 'LAN' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar mi cuenta' }))
+    expect(await screen.findByText(/mucha demanda/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })
 

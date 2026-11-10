@@ -86,7 +86,8 @@ partidas nuevas desde la última captura, no se duplica la fila.
 | `POST /perfiles/cuentas-gaming/riot/verificar` | JUGADOR | Paso 2: `{ tokenDesafio }` → comprueba el icono en Riot: 201 `VERIFICADA` con la cuenta, o 200 `PENDIENTE` si Riot aún no refleja el cambio. 40 comprobaciones por desafío, aparte del límite anterior |
 | `GET /perfiles/cuentas-gaming` | JUGADOR | Cuentas vinculadas con su servidor, fecha de verificación y última sincronización |
 | `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | Desvincula la cuenta y borra las estadísticas que salieron de ella |
-| `POST /estadisticas/sincronizar` | JUGADOR | Descarga las estadísticas desde Riot (como mucho una vez cada 10 min, contando los intentos fallidos) |
+| `POST /estadisticas/sincronizar` | JUGADOR | Encola la descarga de las estadísticas desde Riot y responde 202 con el estado (como mucho una vez cada 10 min, contando los intentos fallidos). Además hay ingesta periódica cada 6 h |
+| `GET /estadisticas/sincronizacion` | JUGADOR | Estado de la sincronización: en cola (también por mucha demanda), en curso o terminada, con el resultado de la última |
 | `GET /estadisticas/jugador/:id` | con sesión | Histórico de capturas (`?juego=&desde=&hasta=`); `:id` es el del perfil público |
 | `GET /estadisticas/jugador/:id/resumen` | con sesión | Última captura por juego y su variación frente a la anterior |
 

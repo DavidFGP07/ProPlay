@@ -11,6 +11,7 @@ import {
 } from "@proplay/shared";
 import { clienteRedis } from "../src/config/redis";
 import { obtenerProveedorRiot } from "../src/integrations";
+import { CuotaRiotAgotadaError } from "../src/utils/errors";
 import {
   CONSENTIMIENTO,
   app,
@@ -259,5 +260,36 @@ describe("desafío de verificación de Riot guardado en el servidor", () => {
     expect((await desafioActivo(duena))?.comprobacionesRestantes).toBe(MAX_COMPROBACIONES_DESAFIO);
     const cuentas = await request(app).get(`${API_PREFIX}/perfiles/cuentas-gaming`).set(con(intruso));
     expect(cuentas.body).toEqual([]);
+  });
+
+  describe("sin cupo en la cuota de Riot", () => {
+    it("la comprobación responde PENDIENTE «mucha demanda» sin gastar comprobaciones", async () => {
+      const jugador = await registrar("desafio-sin-cupo");
+      const desafio = desafioVerificacionRiotSchema.parse((await iniciar(jugador)).body);
+      vi.spyOn(riot, "iconoActual").mockRejectedValue(new CuotaRiotAgotadaError(40_000));
+
+      const respuesta = await verificar(jugador, desafio.tokenDesafio);
+      expect(respuesta.status).toBe(200);
+      const resultado = resultadoVerificacionRiotSchema.parse(respuesta.body);
+      expect(resultado).toMatchObject({ estado: "PENDIENTE", motivo: "MUCHA_DEMANDA" });
+      if (resultado.estado !== "PENDIENTE") return;
+      expect(resultado.desafio.comprobacionesRestantes).toBe(MAX_COMPROBACIONES_DESAFIO);
+      // Tampoco cuenta como comprobación hecha: la siguiente no se trata como «pegada».
+      expect(resultado.desafio.ultimaComprobacionEn).toBeNull();
+
+      vi.spyOn(riot, "iconoActual").mockResolvedValue(desafio.iconoRequerido);
+      const despues = await verificar(jugador, desafio.tokenDesafio);
+      expect(despues.status).toBe(201);
+    });
+
+    it("iniciar la vinculación responde 503 «mucha demanda» con la espera, no un error genérico", async () => {
+      const jugador = await registrar("desafio-inicio-sin-cupo");
+      vi.spyOn(riot, "buscarCuenta").mockRejectedValue(new CuotaRiotAgotadaError(12_000));
+      const respuesta = await iniciar(jugador);
+      expect(respuesta.status).toBe(503);
+      expect(respuesta.body.error.code).toBe("MUCHA_DEMANDA");
+      expect(respuesta.body.error.details.reintentarEnSegundos).toBe(12);
+      expect(await desafioActivo(jugador)).toBeNull();
+    });
   });
 });

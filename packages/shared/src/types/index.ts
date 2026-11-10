@@ -50,7 +50,8 @@ export type {
   RangoColaLol,
   ResumenEstadisticas,
   SincronizarEstadisticasInput,
-  SincronizarEstadisticasRespuesta,
+  EstadoSincronizacion,
+  ResultadoSincronizacion,
 } from "../schemas/estadistica";
 
 export type {

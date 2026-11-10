@@ -82,12 +82,24 @@ export const sincronizarEstadisticasSchema = z.object({
   juego: z.string().min(1).max(60).default(JUEGO_PILOTO),
 });
 
-/** Respuesta de `POST /estadisticas/sincronizar`. */
-export const sincronizarEstadisticasRespuestaSchema = z.object({
-  estadisticas: z.array(estadisticaSchema),
-  /** false si Riot no tenía partidas nuevas desde la última sincronización. */
-  hayDatosNuevos: z.boolean(),
-  sincronizadaEn: z.coerce.date(),
+/** Resultado de la última sincronización terminada de un jugador. */
+export const RESULTADOS_SINCRONIZACION = ["NUEVAS", "SIN_CAMBIOS", "FALLIDA"] as const;
+
+/**
+ * Estado de la sincronización del jugador: `POST /estadisticas/sincronizar`
+ * (202, la encola) y `GET /estadisticas/sincronizacion`. La ingesta va por una
+ * cola: el cliente consulta hasta que vuelve a `INACTIVA`.
+ */
+export const estadoSincronizacionSchema = z.object({
+  /** `EN_COLA` esperando turno o cupo de Riot, `EN_CURSO` descargando, `INACTIVA` sin nada pendiente. */
+  estado: z.enum(["EN_COLA", "EN_CURSO", "INACTIVA"]),
+  /** En cola por falta de cupo en la cuota de Riot: se reprograma sola. */
+  muchaDemanda: z.boolean(),
+  sincronizadaEn: z.coerce.date().nullable(),
+  /** `NUEVAS`: se guardó una captura; `SIN_CAMBIOS`: Riot no tenía nada nuevo. */
+  ultimoResultado: z
+    .object({ tipo: z.enum(RESULTADOS_SINCRONIZACION), en: z.coerce.date() })
+    .nullable(),
 });
 
 /** Variación entre la última captura y la anterior (null si no hay anterior). */
@@ -116,9 +128,8 @@ export type ListarEstadisticasQuery = z.infer<
   typeof listarEstadisticasQuerySchema
 >;
 export type SincronizarEstadisticasInput = z.infer<typeof sincronizarEstadisticasSchema>;
-export type SincronizarEstadisticasRespuesta = z.infer<
-  typeof sincronizarEstadisticasRespuestaSchema
->;
+export type EstadoSincronizacion = z.infer<typeof estadoSincronizacionSchema>;
+export type ResultadoSincronizacion = (typeof RESULTADOS_SINCRONIZACION)[number];
 export type ResumenEstadisticas = z.infer<typeof resumenEstadisticasSchema>;
 export type RangoColaLol = z.infer<typeof rangoColaLolSchema>;
 export type MetricasLol = z.infer<typeof metricasLolSchema>;

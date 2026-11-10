@@ -14,6 +14,9 @@ describe(`GET ${API_PREFIX}/health`, () => {
     expect([200, 503]).toContain(respuesta.status);
     expect(respuesta.body.servicios).toHaveProperty("postgres");
     expect(respuesta.body.servicios).toHaveProperty("redis");
+    // Público: sólo si Riot está disponible, sin el motivo ni la cola.
+    expect(["ok", "no disponible"]).toContain(respuesta.body.servicios.riot);
+    expect(JSON.stringify(respuesta.body)).not.toMatch(/clave|caducada|cola|trabajos/i);
     expect(typeof respuesta.body.uptime).toBe("number");
   });
 });

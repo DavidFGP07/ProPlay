@@ -75,7 +75,16 @@ export const cuentaGamingSchema = z.object({
  */
 export const resultadoVerificacionRiotSchema = z.discriminatedUnion("estado", [
   z.object({ estado: z.literal("VERIFICADA"), cuenta: cuentaGamingSchema }),
-  z.object({ estado: z.literal("PENDIENTE"), desafio: desafioVerificacionRiotSchema }),
+  z.object({
+    estado: z.literal("PENDIENTE"),
+    /**
+     * `ICONO_DISTINTO`: Riot aún muestra otro icono. `MUCHA_DEMANDA`: no había
+     * cupo en la cuota de Riot; no se gastó ninguna comprobación y la vista
+     * reintenta sola.
+     */
+    motivo: z.enum(["ICONO_DISTINTO", "MUCHA_DEMANDA"]),
+    desafio: desafioVerificacionRiotSchema,
+  }),
 ]);
 
 export const plataformaParamSchema = z.object({

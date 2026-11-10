@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { metricasLolSchema } from "@proplay/shared";
+import { CuotaRiotMemoria, limiteEfectivo } from "../src/integrations/riot/cuotaRiot";
 import {
   ClienteRiot,
-  LimitadorCuota,
+  LLAMADA_COMPROBACION,
+  LLAMADA_INGESTA,
+  LLAMADA_VINCULACION,
   regionDeCuentas,
   regionDePartidas,
+  type ControlClaveRiot,
 } from "../src/integrations/riot/riot.client";
 import {
   calcularKda,
@@ -14,7 +18,7 @@ import {
 } from "../src/integrations/riot/riot.normalizacion";
 import { RiotProvider } from "../src/integrations/riot/riot.provider";
 import type { ParticipanteRiot, PartidaRiot } from "../src/integrations/riot/riot.tipos";
-import { AppError } from "../src/utils/errors";
+import { AppError, CuotaRiotAgotadaError } from "../src/utils/errors";
 
 /**
  * RF-03, RF-04 · Integración con Riot sin red: la normalización con partidas
@@ -210,25 +214,35 @@ describe("enrutamiento de Riot", () => {
   });
 });
 
-describe("LimitadorCuota", () => {
+describe("CuotaRiotMemoria", () => {
   it("pide esperar al llenar la ventana y se libera al pasar", async () => {
     let reloj = 0;
-    const limitador = new LimitadorCuota([{ limite: 2, ms: 1_000 }], () => reloj, async (ms) => {
-      reloj += ms;
-    });
-    await limitador.reservar();
-    await limitador.reservar();
-    expect(limitador.esperaNecesaria()).toBe(1_000);
-    await limitador.reservar();
-    expect(reloj).toBe(1_000);
+    const cuota = new CuotaRiotMemoria([{ limite: 2, ms: 1_000 }], 0, () => reloj);
+    expect(await cuota.reservar("ALTA")).toBe(0);
+    expect(await cuota.reservar("ALTA")).toBe(0);
+    expect(await cuota.reservar("ALTA")).toBe(1_000);
+    reloj = 1_000;
+    expect(await cuota.reservar("ALTA")).toBe(0);
+  });
+
+  it("la reserva deja hueco a la prioridad alta cuando la baja ya no cabe", async () => {
+    expect(limiteEfectivo(100, "BAJA", 30)).toBe(70);
+    expect(limiteEfectivo(20, "BAJA", 30)).toBe(14);
+    const cuota = new CuotaRiotMemoria([{ limite: 10, ms: 60_000 }], 30, () => 0);
+    for (let i = 0; i < 7; i++) expect(await cuota.reservar("BAJA")).toBe(0);
+    expect(await cuota.reservar("BAJA")).toBeGreaterThan(0);
+    expect(await cuota.reservar("ALTA")).toBe(0);
   });
 });
 
 describe("ClienteRiot", () => {
-  const sinEspera = async () => {};
-  const limitadorLibre = () => new LimitadorCuota([{ limite: 1_000, ms: 1_000 }]);
+    const cuotaLibre = () => new CuotaRiotMemoria([{ limite: 1_000, ms: 1_000 }]);
 
-  function clienteCon(respuestas: Response[], llamadas: string[] = []) {
+  function clienteCon(
+    respuestas: Response[],
+    llamadas: string[] = [],
+    opciones: { cuota?: CuotaRiotMemoria; clave?: ControlClaveRiot; esperas?: number[] } = {},
+  ) {
     const fetchSimulado = (async (url: string | URL | Request, init?: RequestInit) => {
       llamadas.push(String(url));
       expect(new Headers(init?.headers).get("X-Riot-Token")).toBe("RGAPI-prueba");
@@ -239,15 +253,18 @@ describe("ClienteRiot", () => {
     return new ClienteRiot({
       apiKey: "RGAPI-prueba",
       fetch: fetchSimulado,
-      esperar: sinEspera,
-      limitador: limitadorLibre(),
+      esperar: async (ms) => {
+        opciones.esperas?.push(ms);
+      },
+      cuota: opciones.cuota ?? cuotaLibre(),
+      clave: opciones.clave,
     });
   }
 
   it("resuelve el Riot ID contra la región continental", async () => {
     const llamadas: string[] = [];
     const cliente = clienteCon([Response.json({ puuid: "p1", gameName: "Ñandú", tagLine: "LAN" })], llamadas);
-    const cuenta = await cliente.cuentaPorRiotId("Ñandú", "LAN", "LA1");
+    const cuenta = await cliente.cuentaPorRiotId("Ñandú", "LAN", "LA1", LLAMADA_VINCULACION);
     expect(cuenta?.puuid).toBe("p1");
     expect(llamadas[0]).toBe(
       "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%C3%91and%C3%BA/LAN",
@@ -256,40 +273,118 @@ describe("ClienteRiot", () => {
 
   it("devuelve null en 404", async () => {
     const cliente = clienteCon([new Response(null, { status: 404 })]);
-    expect(await cliente.invocadorPorPuuid("p1", "LA1")).toBeNull();
+    expect(await cliente.invocadorPorPuuid("p1", "LA1", LLAMADA_COMPROBACION)).toBeNull();
   });
 
   it("reintenta un 429 respetando Retry-After", async () => {
-    const cliente = clienteCon([
-      new Response(null, { status: 429, headers: { "Retry-After": "1" } }),
-      Response.json(["LA1_1", "LA1_2"]),
-    ]);
-    expect(await cliente.idsPartidas("p1", "LA1", { tipo: "ranked", cantidad: 2 })).toEqual([
-      "LA1_1",
-      "LA1_2",
-    ]);
+    const esperas: number[] = [];
+    const cliente = clienteCon(
+      [
+        new Response(null, { status: 429, headers: { "Retry-After": "1" } }),
+        Response.json(["LA1_1", "LA1_2"]),
+      ],
+      [],
+      { esperas },
+    );
+    expect(
+      await cliente.idsPartidas("p1", "LA1", { tipo: "ranked", cantidad: 2 }, LLAMADA_INGESTA),
+    ).toEqual(["LA1_1", "LA1_2"]);
+    expect(esperas).toEqual([1_000]);
   });
 
-  it("filtra por cola con el parámetro queue de match-v5", async () => {
+  it("un 429 de límite de aplicación bloquea la cuota de todos durante el Retry-After", async () => {
+    let reloj = 0;
+    const cuota = new CuotaRiotMemoria([{ limite: 1_000, ms: 1_000 }], 0, () => reloj);
+    const cliente = clienteCon(
+      [
+        new Response(null, {
+          status: 429,
+          headers: { "Retry-After": "30", "X-Rate-Limit-Type": "application" },
+        }),
+      ],
+      [],
+      { cuota },
+    );
+    const error = await cliente
+      .ligasPorPuuid("p1", "LA1", LLAMADA_VINCULACION)
+      .catch((e: unknown) => e);
+    // 30 s es más de lo que espera la vinculación: no hay cupo a tiempo.
+    expect(error).toBeInstanceOf(CuotaRiotAgotadaError);
+    expect((error as CuotaRiotAgotadaError).esperaMs).toBe(30_000);
+    // Cualquier otra llamada, incluso de prioridad alta, espera al bloqueo.
+    expect(await cuota.reservar("ALTA")).toBe(30_000);
+    reloj = 30_000;
+    expect(await cuota.reservar("ALTA")).toBe(0);
+  });
+
+  it("un 429 de límite de método no bloquea al resto de la aplicación", async () => {
+    const cuota = new CuotaRiotMemoria([{ limite: 1_000, ms: 1_000 }]);
+    const cliente = clienteCon(
+      [new Response(null, { status: 429, headers: { "Retry-After": "60", "X-Rate-Limit-Type": "method" } })],
+      [],
+      { cuota },
+    );
+    await expect(cliente.partida("LA1_1", "LA1", LLAMADA_INGESTA)).rejects.toBeInstanceOf(
+      CuotaRiotAgotadaError,
+    );
+    expect(await cuota.reservar("ALTA")).toBe(0);
+  });
+
+  it("sin cupo a tiempo no llama a Riot y lanza CuotaRiotAgotadaError", async () => {
+    const llamadas: string[] = [];
+    const cuota = new CuotaRiotMemoria([{ limite: 1, ms: 120_000 }], 0, () => 0);
+    await cuota.reservar("ALTA");
+    const cliente = clienteCon([Response.json([])], llamadas, { cuota });
+    const error = await cliente
+      .idsPartidas("p1", "LA1", { cantidad: 1 }, LLAMADA_INGESTA)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CuotaRiotAgotadaError);
+    expect((error as AppError).code).toBe("MUCHA_DEMANDA");
+    expect(llamadas).toEqual([]);
+  });
+
+  it("filtra por cola con queue y por fecha con startTime de match-v5", async () => {
     const llamadas: string[] = [];
     const cliente = clienteCon([Response.json([])], llamadas);
-    await cliente.idsPartidas("p1", "LA1", { cola: 420, cantidad: 20 });
-    expect(new URL(llamadas[0]!).searchParams.get("queue")).toBe("420");
-    expect(new URL(llamadas[0]!).searchParams.get("type")).toBeNull();
+    await cliente.idsPartidas(
+      "p1",
+      "LA1",
+      { cola: 420, cantidad: 20, desde: new Date("2026-11-01T00:00:00Z") },
+      LLAMADA_INGESTA,
+    );
+    const parametros = new URL(llamadas[0]!).searchParams;
+    expect(parametros.get("queue")).toBe("420");
+    expect(parametros.get("type")).toBeNull();
+    expect(parametros.get("startTime")).toBe(String(Date.UTC(2026, 10, 1) / 1000));
   });
 
-  it("traduce una clave caducada a un 502 explicativo", async () => {
-    const cliente = clienteCon([new Response(null, { status: 403 })]);
-    const error = await cliente.ligasPorPuuid("p1", "LA1").catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(AppError);
-    expect((error as AppError).status).toBe(502);
-    expect((error as AppError).message).toMatch(/caducó/);
+  it("un 403 marca la clave como inválida y responde «no disponible»; luego ya no llama", async () => {
+    const llamadas: string[] = [];
+    let invalida = false;
+    const marcas: number[] = [];
+    const clave: ControlClaveRiot = {
+      estado: async () => (invalida ? "clave-caducada" : "ok"),
+      marcarInvalida: async (_clave, estadoHttp) => {
+        invalida = true;
+        marcas.push(estadoHttp);
+      },
+    };
+    const cliente = clienteCon([new Response(null, { status: 403 })], llamadas, { clave });
+    const error = await cliente.ligasPorPuuid("p1", "LA1", LLAMADA_INGESTA).catch((e: unknown) => e);
+    expect((error as AppError).status).toBe(503);
+    expect((error as AppError).code).toBe("RIOT_NO_DISPONIBLE");
+    expect(marcas).toEqual([403]);
+
+    const otra = await cliente.ligasPorPuuid("p1", "LA1", LLAMADA_VINCULACION).catch((e: unknown) => e);
+    expect((otra as AppError).code).toBe("RIOT_NO_DISPONIBLE");
+    expect(llamadas).toHaveLength(1);
   });
 
   it("sin clave responde 503 sin llamar a Riot", async () => {
     const cliente = new ClienteRiot({ apiKey: undefined });
-    const error = await cliente.ligasPorPuuid("p1", "LA1").catch((e: unknown) => e);
+    const error = await cliente.ligasPorPuuid("p1", "LA1", LLAMADA_INGESTA).catch((e: unknown) => e);
     expect((error as AppError).status).toBe(503);
+    expect((error as AppError).code).toBe("RIOT_NO_DISPONIBLE");
   });
 });
 
@@ -315,7 +410,7 @@ describe("RiotProvider.obtenerEstadisticas", () => {
         apiKey: "RGAPI-prueba",
         fetch: fetchSimulado,
         esperar: async () => {},
-        limitador: new LimitadorCuota([{ limite: 1_000, ms: 1_000 }]),
+        cuota: new CuotaRiotMemoria([{ limite: 1_000, ms: 1_000 }]),
       }),
     );
 

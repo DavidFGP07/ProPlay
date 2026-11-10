@@ -135,6 +135,18 @@ export const es = {
     detalle: 'La direccion que buscas no existe o ya no esta disponible.',
     volver: 'Volver al inicio',
   },
+  sincronizacion: {
+    enMarcha: 'Sincronizando…',
+    enCola: 'En cola: tu sincronización empezará en un momento.',
+    muchaDemanda:
+      'Mucha demanda en este momento: tu sincronización está en cola y se hará sola en cuanto haya cupo.',
+    enCurso: 'Descargando tus partidas desde Riot…',
+    resultado: {
+      NUEVAS: 'Estadísticas actualizadas desde Riot.',
+      SIN_CAMBIOS: 'Riot no tiene partidas nuevas ni cambios de rango desde la última sincronización.',
+      FALLIDA: 'No pudimos completar la sincronización con Riot. Inténtalo más tarde.',
+    },
+  },
   cuentasVinculadas: {
     menu: 'Cuentas vinculadas',
     titulo: 'Cuentas vinculadas',
@@ -151,8 +163,6 @@ export const es = {
     ultimaSincronizacion: 'Última sincronización',
     nuncaSincronizada: 'Todavía no se ha sincronizado',
     sincronizar: 'Sincronizar estadísticas',
-    sincronizadaNueva: 'Estadísticas actualizadas desde Riot.',
-    sincronizadaSinCambios: 'Riot no tiene partidas nuevas desde la última sincronización.',
     verEstadisticas: 'Ver mis estadísticas',
     desvincular: 'Desvincular',
     confirmarDesvincular: 'Sí, desvincular',
@@ -184,6 +194,7 @@ export const es = {
     generarOtroIcono: 'Generar otro icono',
     empezarDeNuevo: 'Usar otra cuenta',
     comprobando: 'Comprobando el icono en Riot…',
+    muchaDemanda: 'Mucha demanda, reintentando. No hace falta que hagas nada.',
     comprobacionAutomatica: (segundos: number) =>
       `Haremos la primera comprobación en ${segundos} segundos.`,
     aunNoVemosElCambio:

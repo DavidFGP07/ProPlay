@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { JUEGO_PILOTO } from "@proplay/shared";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./estadisticas.service";
@@ -31,11 +32,22 @@ export const resumenPorJugador = asyncHandler<Request<{ id: string }>>(async (re
 
 /**
  * POST /api/v1/estadisticas/sincronizar
- * Ingesta bajo demanda desde la plataforma del juego.
+ * Encola la ingesta del jugador (202) y devuelve su estado.
  */
 export const sincronizar = asyncHandler<
   Request<Record<string, string>, unknown, SincronizarEstadisticasInput>
 >(async (req, res) => {
   if (!req.usuario) throw new UnauthorizedError();
-  res.status(200).json(await servicio.sincronizar(req.usuario.id, req.body));
+  res.status(202).json(await servicio.solicitarSincronizacion(req.usuario.id, req.body));
+});
+
+/**
+ * GET /api/v1/estadisticas/sincronizacion
+ * Estado de la sincronización del jugador: en cola, en curso o terminada.
+ */
+export const estadoSincronizacion = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(
+    await servicio.consultarSincronizacion(req.usuario.id, { plataforma: "RIOT", juego: JUEGO_PILOTO }),
+  );
 });
