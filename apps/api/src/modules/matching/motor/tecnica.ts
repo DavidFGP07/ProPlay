@@ -6,6 +6,7 @@ import {
   SUBPESOS_TECNICA,
   clamp01,
   escalaDe,
+  factorPosicion,
   indiceRango,
   normalizar,
   winRateAjustado,
@@ -16,7 +17,12 @@ import type { CapturaVerificada, JugadorMotor, OfertaMotor } from "./tipos";
  * RF-09 · Dimensión técnica: posición, rango y rendimiento de la última
  * captura verificada frente a la posición y el rango mínimo de la oferta.
  *
- *   d_tec = 0,25·posición + 0,35·rango + 0,40·rendimiento
+ *   d_tec = factorPosición × (0,45·rango + 0,55·rendimiento)
+ *   factorPosición = min(1, proporción de partidas en la posición pedida / 0,6)
+ *
+ * La posición multiplica: quien nunca juega la posición pedida queda en 0 por
+ * mucho rango que tenga, y quien la juega en el 60 % de sus partidas o más
+ * cuenta como especialista completo.
  *
  * Sin cuenta verificada o sin captura vale 0 y lo marca como «faltan datos»:
  * nada declarado por el jugador cuenta como dato de juego.
@@ -49,7 +55,7 @@ export function evaluarTecnica(
   }
 
   const fraccion = fraccionEnPosicion(captura, oferta.rol);
-  const posicion = captura.posicion === oferta.rol ? 1 : fraccion;
+  const posicion = factorPosicion(fraccion);
   const rango = puntajeRango(captura, oferta);
   const metricas = metricasNormalizadas(captura, oferta.rol);
   const rendimiento =
@@ -57,9 +63,7 @@ export function evaluarTecnica(
 
   const componentes = { posicion, rango, rendimiento };
   const valor = clamp01(
-    SUBPESOS_TECNICA.posicion * posicion +
-      SUBPESOS_TECNICA.rango * rango +
-      SUBPESOS_TECNICA.rendimiento * rendimiento,
+    posicion * (SUBPESOS_TECNICA.rango * rango + SUBPESOS_TECNICA.rendimiento * rendimiento),
   );
   return {
     valor,

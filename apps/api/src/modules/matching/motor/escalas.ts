@@ -23,12 +23,28 @@ export interface Escala {
   techo: number;
 }
 
-/** Peso de cada parte de la técnica: d_tec = posición·0,25 + rango·0,35 + rendimiento·0,40. */
+/**
+ * Peso del rango y del rendimiento dentro de la técnica, que el factor de
+ * posición multiplica: d_tec = factorPosición × (0,45·rango + 0,55·rendimiento).
+ */
 export const SUBPESOS_TECNICA = {
-  posicion: 0.25,
-  rango: 0.35,
-  rendimiento: 0.4,
+  rango: 0.45,
+  rendimiento: 0.55,
 } as const;
+
+/**
+ * Proporción de partidas de solo/dúo en la posición pedida a partir de la cual
+ * el jugador cuenta como especialista completo (factor de posición 1). El
+ * autofill de la cola obliga a jugar otras posiciones, así que ni un
+ * especialista llega al 100 %. Se calibra con las capturas del piloto
+ * (docs/arquitectura.md, «Escalas fijas de la técnica»).
+ */
+export const UMBRAL_ESPECIALISTA = 0.6;
+
+/** factorPosición = min(1, proporción en la posición pedida / UMBRAL_ESPECIALISTA). */
+export function factorPosicion(proporcion: number): number {
+  return clamp01(proporcion / UMBRAL_ESPECIALISTA);
+}
 
 /** Escala de cada métrica si la posición no tiene una propia. */
 export const ESCALAS_POR_DEFECTO: Record<MetricaTecnicaLol, Escala> = {

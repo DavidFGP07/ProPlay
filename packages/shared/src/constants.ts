@@ -86,7 +86,7 @@ export const DIMENSIONES_SIN_DATOS_PILOTO = [
  * `Matching`: al cambiar una fórmula, una escala o un subpeso se sube, y los
  * rankings calculados con la anterior se recalculan al leerlos.
  */
-export const VERSION_FORMULAS_MATCHING = 1;
+export const VERSION_FORMULAS_MATCHING = 2;
 
 /**
  * Por qué una dimensión vale lo que vale cuando no sale del cálculo normal.

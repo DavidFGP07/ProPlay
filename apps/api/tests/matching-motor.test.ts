@@ -123,22 +123,32 @@ describe("dimensión técnica", () => {
     expect(explicacion.motivo).toBe("SIN_CAPTURA");
   });
 
-  it("combina posición, rango y rendimiento con los subpesos 0,25/0,35/0,40", () => {
+  it("la posición multiplica: técnica = factorPosición × (0,45·rango + 0,55·rendimiento)", () => {
     const { valor, explicacion } = evaluarTecnica(jugador(), oferta());
     const c = explicacion.componentes!;
+    // 16 de 20 partidas en MID: 80 %, por encima del umbral de especialista.
     expect(c.posicion).toBe(1);
     expect(c.rango).toBe(1);
-    expect(valor).toBeCloseTo(0.25 * c.posicion + 0.35 * c.rango + 0.4 * c.rendimiento, 12);
+    expect(valor).toBeCloseTo(c.posicion * (0.45 * c.rango + 0.55 * c.rendimiento), 12);
     expect(explicacion.faltanDatos).toBe(false);
   });
 
-  it("la posición es la fracción de partidas jugadas en la pedida", () => {
-    const { explicacion } = evaluarTecnica(jugador(), oferta({ rol: "TOP" }));
-    expect(explicacion.fraccionEnPosicion).toBeCloseTo(0.2, 12);
-    expect(explicacion.componentes!.posicion).toBeCloseTo(0.2, 12);
+  it.each([
+    ["nunca la juega (0 %)", 0, 0],
+    ["la juega en el 30 % de sus partidas", 6, 0.5],
+    ["la juega en el 60 %: especialista completo", 12, 1],
+    ["la juega en el 90 %", 18, 1],
+  ])("factor de posición: %s", (_caso, enAdc, factor) => {
+    const j = conCaptura({ posicion: enAdc >= 10 ? "ADC" : "MID", distribucionRoles: { ADC: enAdc, MID: 20 - enAdc } });
+    const { valor, explicacion } = evaluarTecnica(j, oferta({ rol: "ADC" }));
+    const c = explicacion.componentes!;
+    expect(explicacion.fraccionEnPosicion).toBeCloseTo(enAdc / 20, 12);
+    expect(c.posicion).toBeCloseTo(factor, 12);
+    expect(valor).toBeCloseTo(factor * (0.45 * c.rango + 0.55 * c.rendimiento), 12);
+    if (factor === 0) expect(valor).toBe(0);
   });
 
-  it("sin distribución, la posición es 1 si es la principal y 0 si no", () => {
+  it("sin distribución, la posición cuenta entera si es la principal y 0 si no", () => {
     const sinDistribucion = conCaptura({ distribucionRoles: null });
     expect(evaluarTecnica(sinDistribucion, oferta()).explicacion.componentes!.posicion).toBe(1);
     expect(evaluarTecnica(sinDistribucion, oferta({ rol: "ADC" })).explicacion.componentes!.posicion).toBe(0);
@@ -366,6 +376,31 @@ describe("ponderador (ecuación 1)", () => {
     const sinCuenta = puntuar(jugador({ jugadorId: "b", verificado: false }), oferta());
     expect(sinCuenta.desglose.tecnica).toBe(0);
     expect(sinCuenta.puntaje).toBeLessThan(verificado.puntaje);
+  });
+});
+
+describe("oferta ADC del seed («ADC para la liga en línea»)", () => {
+  // Misma oferta y mismos jugadores que prisma/seed.ts: cada uno juega el 80 %
+  // de sus 20 partidas en su posición y el 20 % en la siguiente (TOP → JUNGLA).
+  const ofertaAdc = oferta({
+    rol: "ADC",
+    rangoMinimo: "ESMERALDA_I",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 20,
+    pesos: { tecnica: 0.6, experiencia: 0, habilidadesBlandas: 0, geografica: 0, disponibilidad: 0.4 },
+  });
+  const delSeed = (posicion: "TOP" | "ADC", siguiente: "JUNGLA" | "SOPORTE", rango: "GRAN_MAESTRO" | "ORO_II" | "PLATINO_IV") =>
+    conCaptura({ posicion, rango, distribucionRoles: { [posicion]: 16, [siguiente]: 4 } });
+
+  it("los ADC quedan por encima del top laner Gran Maestro", () => {
+    const top = puntuar({ ...delSeed("TOP", "JUNGLA", "GRAN_MAESTRO"), jugadorId: "top-gm" }, ofertaAdc);
+    const adcOro = puntuar({ ...delSeed("ADC", "SOPORTE", "ORO_II"), jugadorId: "adc-oro" }, ofertaAdc);
+    const adcPlatino = puntuar({ ...delSeed("ADC", "SOPORTE", "PLATINO_IV"), jugadorId: "adc-platino" }, ofertaAdc);
+    expect(top.desglose.tecnica).toBe(0);
+    const orden = ordenarRanking([top, adcOro, adcPlatino]).map((p) => p.jugadorId);
+    expect(orden.indexOf("top-gm")).toBe(2);
   });
 });
 

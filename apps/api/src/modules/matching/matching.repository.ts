@@ -333,6 +333,7 @@ export async function recuperarCandidatos(
         ) c
         JOIN "PerfilJugador" pj ON pj.id = c."jugadorId"
         JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
+       ORDER BY c.similitud DESC, c."jugadorId" COLLATE "C"
     `;
   });
 }

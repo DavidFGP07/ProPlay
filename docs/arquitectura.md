@@ -229,7 +229,7 @@ flowchart LR
 
 | Dimensión | Fórmula | Sin datos |
 | --- | --- | --- |
-| Técnica | 0,25·posición + 0,35·rango + 0,40·rendimiento, de la última captura verificada. Posición: fracción de partidas de solo/dúo en la posición pedida (1 si es la principal). Rango: 1 si cumple el mínimo; baja linealmente y llega a 0 una liga (cuatro divisiones) por debajo; sin mínimo, posición en el catálogo de 0 a 1. Rendimiento: media de las métricas de la posición normalizadas con las escalas fijas (abajo) | 0 con `SIN_CUENTA_VERIFICADA` o `SIN_CAPTURA`; sin rango, la parte de rango vale 0 |
+| Técnica | factorPosición × (0,45·rango + 0,55·rendimiento), de la última captura verificada. factorPosición = min(1, proporción de partidas de solo/dúo en la posición pedida / 0,6): quien nunca la juega queda en 0 y quien la juega en el 60 % o más cuenta como especialista completo. Rango: 1 si cumple el mínimo; baja linealmente y llega a 0 una liga (cuatro divisiones) por debajo; sin mínimo, posición en el catálogo de 0 a 1. Rendimiento: media de las métricas de la posición normalizadas con las escalas fijas (abajo) | 0 con `SIN_CUENTA_VERIFICADA` o `SIN_CAPTURA`; sin rango, la parte de rango vale 0 |
 | Experiencia | Sin modelo de trayectoria en el piloto | 0 con `SIN_DATOS_PILOTO` |
 | Habilidades blandas | Media, sobre las habilidades `BLANDA` del catálogo, de min(1, endorsements de equipos / 3) | 0 con `SIN_ENDORSEMENTS` |
 | Geográfica | Oferta remota: 1. Presencial: mismo departamento 1, misma macrorregión 0,6, mismo país 0,3, otro país 0,1. Híbrida: 1 / 0,8 / 0,5 / 0,2. Con disposición a relocalizarse, al menos 0,75 (presencial) u 0,85 (híbrida). Fuera de Colombia, el mismo país es la coincidencia completa | 0,5 con `SIN_UBICACION` |
@@ -269,10 +269,24 @@ rendimiento de cada posición, con el mismo peso:
 | Visión/min | 0,5–2,5; jungla 0,7–2,5; soporte 1–3,5; cuenta en top, jungla y soporte | La puntuación de visión crece con los guardianes puestos y destruidos. El soporte es el responsable principal de la visión, y la jungla la necesita para moverse por el mapa. |
 | Participación en kills | 0,35–0,70; jungla y soporte 0,45–0,80; cuenta en jungla, mid y soporte | Fracción de los kills del equipo en que participó. Las posiciones que se mueven por el mapa (jungla, soporte) participan más por diseño. |
 
-Subpesos de la técnica: la posición (0,25) se puede jugar «de segunda», el rango
-(0,35) es la señal más difícil de falsificar de la API, y el rendimiento (0,40)
-es lo que más se acerca a «cómo juega». Cualquier cambio de escala, de métrica de
-una posición o de subpeso sube `VERSION_FORMULAS_MATCHING`.
+**La posición multiplica** (versión 2 de las fórmulas). Un equipo que busca un ADC
+busca a alguien que juega de ADC: con la posición como sumando (0,25 en la versión 1),
+un Gran Maestro de top superaba a los ADC del seed en la oferta de ADC, porque el
+rango compensaba jugar otra posición. Con el factor, quien nunca juega la posición
+pedida vale 0 en la técnica por mucho rango que tenga, y quien la juega a ratos
+cuenta en proporción.
+
+**Umbral de especialista: 0,6** (`UMBRAL_ESPECIALISTA`). Con un 60 % o más de sus
+partidas de solo/dúo en la posición pedida, el factor es 1. El umbral no está en
+el 100 % porque el autofill de la cola obliga a jugar otras posiciones de vez en
+cuando: ni un especialista llega al 100 %. Se calibra con las capturas del piloto
+(si los jugadores que se declaran especialistas quedan habitualmente por debajo
+o muy por encima, se ajusta y se sube la versión).
+
+Dentro del factor, el rango (0,45) es la señal más difícil de falsificar de la API
+y el rendimiento (0,55) es lo que más se acerca a «cómo juega». Cualquier cambio de
+escala, de métrica de una posición, de subpeso o del umbral sube
+`VERSION_FORMULAS_MATCHING`.
 
 ## Flujo de autenticación
 
