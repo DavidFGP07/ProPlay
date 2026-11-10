@@ -1,109 +1,256 @@
 import {
-  PESOS_MATCHING,
-  UMBRAL_MATCH_RELEVANTE,
-  type Departamento,
-  type Pais,
+  PERFIL_VECTOR_VERSION,
+  VERSION_FORMULAS_MATCHING,
+  candidatoRankingSchema,
+  explicacionMatchingSchema,
+  desgloseMatchingSchema,
+  type EstadoOferta,
+  type RankingOferta,
+  type RankingOfertaQuery,
+  type Rol,
 } from "@proplay/shared";
+import { logger } from "../../config/logger";
+import { AppError, ForbiddenError, NotFoundError } from "../../utils/errors";
+import { calcularRango, paginar } from "../../utils/pagination";
 import * as repositorio from "./matching.repository";
-import type { DesgloseMatching } from "./matching.schema";
+import { arranqueEnFrio, combinar, modoDe, type ComponenteColaborativo } from "./motor/colaborativo";
+import { ordenarRanking, puntuar } from "./motor/ponderador";
+import type { OfertaMotor } from "./motor/tipos";
+import { vectorizarJugador, vectorizarOferta } from "./motor/vectorizador";
 
 /**
- * Lógica de negocio del módulo `matching`: Algoritmo de compatibilidad entre jugadores y ofertas.
+ * Lógica de negocio del módulo `matching` (RF-09): el orquestador del motor
+ * (Sección VIII-C). Recalcula los vectores obsoletos, recupera candidatos con
+ * el índice HNSW, los puntúa con las fórmulas puras de `motor/` y guarda el
+ * ranking en `Matching`.
  *
- * Andamiaje: cada función delega en el repositorio, que todavía lanza
- * NotImplementedError (501).
+ * El motor **sólo lee datos guardados** y nunca llama a Riot ni a ningún otro
+ * servicio: funciona igual con la clave de desarrollo caducada.
  */
 
-/** TODO: Calcular y persistir el ranking de jugadores compatibles con una oferta. */
-export async function calcular(datos?: unknown) {
-  return repositorio.calcular(datos);
+/** Vecinos que se piden al índice HNSW antes de ponderar (y `hnsw.ef_search`). */
+export const CANDIDATOS_RECUPERADOR = 200;
+
+/** Componente colaborativo en uso: arranque en frío (peso 0) mientras no haya historial. */
+const colaborativo: ComponenteColaborativo = arranqueEnFrio;
+
+export interface Actor {
+  id: string;
+  rol: Rol;
 }
 
-/** TODO: Devolver el ranking ya calculado de una oferta, ordenado por puntaje. */
-export async function rankingPorOferta(datos?: unknown) {
-  return repositorio.rankingPorOferta(datos);
+// --------------------------------------------------------------- vectores
+
+/** Recalcula y guarda los vectores de los jugadores indicados. Devuelve cuántos. */
+async function vectorizar(ids: readonly string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const jugadores = await repositorio.datosParaMotor(ids);
+  await repositorio.guardarVectores(
+    jugadores.map((j) => ({ jugadorId: j.jugadorId, dimensiones: vectorizarJugador(j) })),
+    PERFIL_VECTOR_VERSION,
+    new Date(),
+  );
+  return jugadores.length;
+}
+
+/** RF-09 · Recalcula los vectores que faltan o están obsoletos (se llama antes de cada ranking). */
+export async function revectorizarObsoletos(): Promise<number> {
+  return vectorizar(await repositorio.jugadoresConVectorObsoleto(PERFIL_VECTOR_VERSION));
+}
+
+/** Recalcula el vector de un jugador; lo llama la ingesta tras guardar una captura nueva. */
+export async function revectorizarJugador(jugadorId: string): Promise<void> {
+  await vectorizar([jugadorId]);
+}
+
+/** Recalcula todos los vectores (script `matching:revectorizar`, al cambiar de versión). */
+export async function revectorizarTodos(): Promise<number> {
+  return vectorizar(await repositorio.jugadoresActivos());
+}
+
+// ----------------------------------------------------------------- ranking
+
+function esFinal(estado: EstadoOferta): boolean {
+  return estado === "CUBIERTA" || estado === "CERRADA";
+}
+
+/**
+ * Oferta cuyo ranking puede ver el actor. Un borrador sólo lo ve su equipo
+ * (404 para los demás); la oferta publicada de otro equipo responde 403 al
+ * rol EQUIPO, y la ven el scout y el administrador. Mismas reglas que `ofertas`.
+ */
+async function ofertaDelRanking(id: string, actor: Actor): Promise<repositorio.OfertaDb> {
+  const oferta = await repositorio.buscarOferta(id);
+  const esPropia = oferta?.equipo.usuarioId === actor.id;
+  if (!oferta || (oferta.estado === "BORRADOR" && !esPropia)) {
+    throw new NotFoundError("Oferta no encontrada");
+  }
+  if (actor.rol === "EQUIPO" && !esPropia) {
+    throw new ForbiddenError("Sólo el equipo que publicó la oferta puede ver su ranking");
+  }
+  return oferta;
+}
+
+function ofertaMotor(oferta: repositorio.OfertaDb): OfertaMotor {
+  return {
+    ofertaId: oferta.id,
+    rol: oferta.rol,
+    rangoMinimo: oferta.rangoMinimo,
+    modalidad: oferta.modalidad,
+    pais: oferta.pais,
+    departamento: oferta.departamento,
+    horasSemana: oferta.horasSemana,
+    pesos: {
+      tecnica: oferta.pesoTecnica,
+      experiencia: oferta.pesoExperiencia,
+      habilidadesBlandas: oferta.pesoHabilidadesBlandas,
+      geografica: oferta.pesoGeografica,
+      disponibilidad: oferta.pesoDisponibilidad,
+    },
+  };
+}
+
+/**
+ * RF-09 · Calcula y guarda el ranking de la oferta: recuperador (HNSW) ∪
+ * postulantes → cinco dimensiones → ecuación (1) → `Matching`.
+ */
+async function calcularRanking(oferta: repositorio.OfertaDb): Promise<void> {
+  const inicio = Date.now();
+  const motor = ofertaMotor(oferta);
+  const recuperados = await repositorio.recuperarCandidatos(
+    vectorizarOferta(motor),
+    CANDIDATOS_RECUPERADOR,
+    PERFIL_VECTOR_VERSION,
+  );
+  const similitud = new Map(recuperados.map((r) => [r.jugadorId, r.similitud]));
+  // Quien se postuló entra aunque el índice no lo traiga.
+  const postulantes = await repositorio.postulacionesDeOferta(oferta.id);
+  const ids = [...new Set([...similitud.keys(), ...postulantes.map((p) => p.jugadorId)])];
+
+  const jugadores = await repositorio.datosParaMotor(ids);
+  const pesoColaborativo = colaborativo.peso(oferta.equipoId);
+  const puntajesColaborativos = colaborativo.puntajes(oferta.equipoId, ids);
+  const puntuaciones = jugadores.map((j) => {
+    const p = puntuar(j, motor);
+    return {
+      ...p,
+      puntaje: combinar(p.puntaje, puntajesColaborativos.get(j.jugadorId) ?? 0, pesoColaborativo),
+    };
+  });
+
+  await repositorio.guardarRanking(
+    oferta.id,
+    ordenarRanking(puntuaciones).map((p) => ({
+      jugadorId: p.jugadorId,
+      puntaje: p.puntaje,
+      desglose: { ...p.desglose },
+      explicacion: JSON.parse(JSON.stringify(p.explicacion)) as repositorio.FilaMatchingNueva["explicacion"],
+      similitud: similitud.get(p.jugadorId) ?? null,
+    })),
+    VERSION_FORMULAS_MATCHING,
+    new Date(),
+  );
+  logger.debug(
+    { ofertaId: oferta.id, candidatos: puntuaciones.length, ms: Date.now() - inicio },
+    "ranking de matching calculado",
+  );
+}
+
+/** El ranking guardado ya no refleja los datos y hay que recalcularlo. */
+function estaObsoleto(estado: repositorio.EstadoRanking, oferta: repositorio.OfertaDb): boolean {
+  if (estado.filas === 0 || !estado.calculadoEn) return true;
+  if ((estado.versionMinima ?? 0) < VERSION_FORMULAS_MATCHING) return true;
+  if (oferta.actualizadoEn > estado.calculadoEn) return true;
+  return estado.ultimoCambio !== null && estado.ultimoCambio > estado.calculadoEn;
+}
+
+async function respuesta(
+  oferta: repositorio.OfertaDb,
+  query: RankingOfertaQuery,
+): Promise<RankingOferta> {
+  const rango = calcularRango(query);
+  const [filas, total] = await repositorio.paginaRanking(oferta.id, rango);
+  const data = filas.map((f, i) =>
+    candidatoRankingSchema.parse({
+      puesto: rango.skip + i + 1,
+      jugador: {
+        id: f.jugadorId,
+        nombre: f.nombre,
+        avatarUrl: f.avatarUrl,
+        pais: f.pais,
+        departamento: f.departamento,
+        disponibilidadHoras: f.disponibilidadHoras,
+        dispuestoRelocalizar: f.dispuestoRelocalizar,
+        verificacion:
+          f.plataforma && f.verificadaEn ? { plataforma: f.plataforma, verificadaEn: f.verificadaEn } : null,
+        posicion: f.posicion,
+        rango: f.rango,
+        datosDel: f.datosDel,
+      },
+      puntaje: f.puntaje,
+      desglose: desgloseMatchingSchema.parse(f.desglose),
+      explicacion: explicacionMatchingSchema.parse(f.explicacion),
+      similitud: f.similitud,
+      postulacion:
+        f.postulacionId && f.postulacionEstado
+          ? { id: f.postulacionId, estado: f.postulacionEstado }
+          : null,
+    }),
+  );
+  const motor = ofertaMotor(oferta);
+  const pesoColaborativo = colaborativo.peso(oferta.equipoId);
+  return {
+    ...paginar(data, total, rango),
+    oferta: { id: oferta.id, titulo: oferta.titulo, estado: oferta.estado, rol: oferta.rol, pesos: motor.pesos },
+    calculadoEn: filas[0]?.calculadoEn ?? (await repositorio.estadoRanking(oferta.id)).calculadoEn ?? new Date(),
+    versionFormulas: VERSION_FORMULAS_MATCHING,
+    modo: modoDe(pesoColaborativo),
+    pesoColaborativo,
+  };
+}
+
+/**
+ * RF-09 · Ranking de candidatos de una oferta, paginado. Se recalcula al
+ * leerlo si quedó obsoleto (vectores, postulaciones, endorsements, la oferta o
+ * la versión de las fórmulas cambiaron). Una oferta cubierta o cerrada sirve
+ * su última instantánea, y sólo se calcula si nunca se calculó.
+ */
+export async function ranking(
+  ofertaId: string,
+  actor: Actor,
+  query: RankingOfertaQuery,
+): Promise<RankingOferta> {
+  const oferta = await ofertaDelRanking(ofertaId, actor);
+  if (esFinal(oferta.estado)) {
+    if ((await repositorio.estadoRanking(oferta.id)).filas === 0) {
+      await revectorizarObsoletos();
+      await calcularRanking(oferta);
+    }
+    return respuesta(oferta, query);
+  }
+  await revectorizarObsoletos();
+  if (estaObsoleto(await repositorio.estadoRanking(oferta.id), oferta)) {
+    await calcularRanking(oferta);
+  }
+  return respuesta(oferta, query);
+}
+
+/** RF-09 · Fuerza el recálculo del ranking y devuelve su primera página (o la pedida). */
+export async function recalcular(
+  ofertaId: string,
+  actor: Actor,
+  query: RankingOfertaQuery,
+): Promise<RankingOferta> {
+  const oferta = await ofertaDelRanking(ofertaId, actor);
+  if (esFinal(oferta.estado)) {
+    throw new AppError(409, "OFERTA_FINALIZADA", "La oferta está cubierta o cerrada: su ranking ya no cambia");
+  }
+  await revectorizarObsoletos();
+  await calcularRanking(oferta);
+  return respuesta(oferta, query);
 }
 
 /** TODO: Devolver las ofertas más compatibles con el jugador autenticado. */
 export async function ofertasCompatibles(datos?: unknown) {
   return repositorio.ofertasCompatibles(datos);
-}
-
-// ---------------------------------------------------------------------------
-// Algoritmo de compatibilidad
-// ---------------------------------------------------------------------------
-
-/** Datos del jugador que consume el algoritmo. */
-export interface JugadorParaMatching {
-  jugadorId: string;
-  juego?: string;
-  rol?: string | null;
-  pais?: Pais | null;
-  departamento?: Departamento | null;
-  aniosExperiencia?: number;
-  disponibilidadHoras?: number | null;
-  dispuestoRelocalizar?: boolean;
-  /** Vector de características calculado por el módulo de perfiles. */
-  dimensiones?: number[];
-}
-
-/** Datos de la oferta contra la que se compara. */
-export interface OfertaParaMatching {
-  ofertaId: string;
-  juego: string;
-  rol: string;
-  region?: string | null;
-  experienciaMinAnios?: number;
-  horasSemana?: number | null;
-}
-
-export interface ResultadoCompatibilidad {
-  puntaje: number;
-  desglose: DesgloseMatching;
-  relevante: boolean;
-}
-
-/**
- * Compatibilidad entre un jugador y una oferta.
- *
- * El puntaje final es la media ponderada de cinco dimensiones, con los pesos
- * definidos en PESOS_MATCHING (@proplay/shared/constants):
- *
- *   1. tecnica            — similitud entre las estadísticas del jugador y el
- *                           rango/rol que pide la oferta.
- *   2. experiencia        — años de trayectoria frente a experienciaMinAnios.
- *   3. habilidadesBlandas — habilidades BLANDA endosadas y su nivel.
- *   4. geografica         — coincidencia de región y disposición a relocalizar.
- *   5. disponibilidad     — horas semanales declaradas frente a las de la oferta.
- *
- * TODO: implementar el cálculo real de cada dimensión. Por ahora devuelve un
- * valor fijo para que el contrato y los pesos ya estén cerrados.
- */
-export function calcularCompatibilidad(
-  _jugador: JugadorParaMatching,
-  _oferta: OfertaParaMatching,
-): ResultadoCompatibilidad {
-  const desglose: DesgloseMatching = {
-    tecnica: 0.5,
-    experiencia: 0.5,
-    habilidadesBlandas: 0.5,
-    geografica: 0.5,
-    disponibilidad: 0.5,
-  };
-
-  const puntaje = Number(
-    (
-      desglose.tecnica * PESOS_MATCHING.tecnica +
-      desglose.experiencia * PESOS_MATCHING.experiencia +
-      desglose.habilidadesBlandas * PESOS_MATCHING.habilidadesBlandas +
-      desglose.geografica * PESOS_MATCHING.geografica +
-      desglose.disponibilidad * PESOS_MATCHING.disponibilidad
-    ).toFixed(4),
-  );
-
-  return {
-    puntaje,
-    desglose,
-    relevante: puntaje >= UMBRAL_MATCH_RELEVANTE,
-  };
 }

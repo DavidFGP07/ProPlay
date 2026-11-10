@@ -4,6 +4,7 @@ import { logger } from "../config/logger";
 import { estadoClaveRiot } from "../integrations";
 import type { EstadoClaveRiotRedis } from "../integrations/riot/estadoClave";
 import * as estadisticas from "../modules/estadisticas/estadisticas.service";
+import * as matching from "../modules/matching/matching.service";
 import { CuotaRiotAgotadaError, IntegracionRiotNoDisponibleError } from "../utils/errors";
 import {
   ColaIngesta,
@@ -45,8 +46,27 @@ export interface DependenciasIngesta {
   apiKey: string | undefined;
 }
 
+/**
+ * RF-03 · RF-09 · Sincroniza y, si llegó una captura nueva, recalcula el
+ * vector del jugador para el motor de matching. Un fallo del vector no
+ * invalida la sincronización: el motor lo recalcula al pedir el siguiente
+ * ranking (lo detecta como obsoleto).
+ */
+async function sincronizarYVectorizar(
+  jugadorId: string,
+  origen: OrigenSincronizacion,
+): Promise<estadisticas.ResultadoSincronizarCuenta> {
+  const resultado = await estadisticas.sincronizarCuenta(jugadorId, origen);
+  if (resultado === "NUEVAS") {
+    await matching.revectorizarJugador(jugadorId).catch((error: unknown) => {
+      logger.warn({ err: error, jugadorId }, "no se pudo recalcular el vector tras la ingesta");
+    });
+  }
+  return resultado;
+}
+
 const dependenciasReales = (): DependenciasIngesta => ({
-  sincronizar: estadisticas.sincronizarCuenta,
+  sincronizar: sincronizarYVectorizar,
   pendientes: estadisticas.jugadoresPendientesDeSincronizar,
   clave: estadoClaveRiot,
   apiKey: env.RIOT_API_KEY,

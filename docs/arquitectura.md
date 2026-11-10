@@ -99,7 +99,7 @@ flowchart TB
 | `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | `GET /me` y `PATCH /jugador` implementados; el resto, andamiaje (501) |
 | `estadisticas` | Métricas por jugador, juego y periodo; sincronización con las plataformas externas | Andamiaje (501) |
 | `scouting` | Búsqueda y descubrimiento de jugadores con filtros de juego, rol, región y rendimiento; búsquedas guardadas | Andamiaje (501) |
-| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Andamiaje (501), con `calcularCompatibilidad` firmada |
+| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking (`GET /ofertas/:id/ranking`) y recálculo implementados; `GET /jugador/me` en 501 |
 | `ofertas` | Ofertas de los equipos y postulaciones de los jugadores con sus estados | Andamiaje (501) |
 | `mensajeria` | Conversaciones y mensajes 1:1 y de equipo | Andamiaje (501) |
 | `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |
@@ -141,8 +141,8 @@ Notas:
 
 - `PerfilVector.dimensiones` es `Float[]` para que Prisma pueda leerlo y
   escribirlo; la columna `embedding vector(64)` la añade la migración
-  `20260910145700_pgvector_perfil_vector` y es la que usarán las búsquedas de
-  similitud.
+  `20260910145700_pgvector_perfil_vector` y es la que usa el recuperador del
+  motor de matching, con el índice HNSW `PerfilVector_embedding_hnsw_idx`.
 - Los tokens de `CuentaGaming` se guardan cifrados con AES-256-GCM.
 - Hay índices en las claves foráneas y en los campos por los que se filtra:
   `Oferta.juego`, `Oferta.region`, `Oferta.estado`, `Estadistica.jugadorId`,
@@ -150,9 +150,11 @@ Notas:
 
 ## Algoritmo de compatibilidad
 
-`calcularCompatibilidad(jugador, oferta)` (en `matching.service.ts`) devuelve
-la media ponderada de cinco dimensiones, según la ecuación (1) de la Sección
-VIII del documento: S(j, o) = Σ wₖ·dₖ(j, o), con Σ wₖ = 1.
+El motor de matching (`apps/api/src/modules/matching/`) puntúa a cada candidato
+con la media ponderada de cinco dimensiones, según la ecuación (1) de la Sección
+VIII del documento: S(j, o) = Σ wₖ·dₖ(j, o), con Σ wₖ = 1. Las fórmulas son
+funciones puras en `motor/` (sin Prisma ni red); el service las orquesta y el
+repository es el único que lee y escribe la base.
 
 Los pesos wₖ los **configura el equipo que publica la oferta** y se guardan en
 ella (`Oferta.pesoTecnica`…). `PESOS_MATCHING` (`@proplay/shared/constants`) son
@@ -179,8 +181,98 @@ dato del jugador, la dimensión se puntúa con 0 (técnica sin cuenta verificada
 experiencia, habilidades blandas) o con el neutro 0,5 (ubicación u horas), y la
 explicación lo marca como «faltan datos».
 
-Hoy `calcularCompatibilidad` todavía devuelve un valor fijo: el contrato está
-cerrado y las fórmulas de cada dimensión llegan con el PR del motor.
+### Recorrido de una petición
+
+```mermaid
+flowchart LR
+    REQ["GET /matching/ofertas/:id/ranking"] --> P["permisos<br/>(equipo dueño, scout, admin)"]
+    P --> V["vectores obsoletos<br/>→ vectorizador v2"]
+    V --> O{"¿ranking guardado<br/>al día?"}
+    O -- sí --> PAG["página de Matching"]
+    O -- no --> R["recuperador HNSW<br/>200 vecinos ∪ postulantes"]
+    R --> D["cinco dimensiones<br/>(motor/)"]
+    D --> W["ponderador<br/>ecuación (1)"]
+    W --> C["colaborativo<br/>(peso 0)"]
+    C --> M[("Matching<br/>instantánea")]
+    M --> PAG
+```
+
+- **Sólo datos guardados.** El motor lee `PerfilJugador`, la última captura
+  verificada de `Estadistica`, `Endorsement` y `Oferta`; nunca llama a Riot ni
+  a nada por red, así que funciona con la clave de desarrollo caducada. Lo
+  vigilan una regla de ESLint (`no-restricted-imports` en `modules/matching`) y
+  `tests/matching-sin-red.test.ts`.
+- **Vectorizador (versión 2, `PERFIL_VECTOR_VERSION`).** 64 dimensiones: posición
+  (distribución de partidas), rango y liga, las siete métricas normalizadas,
+  volumen de partidas, verificación, macrorregión, fuera de Colombia,
+  relocalización, horas y un sesgo constante (nunca hay vectores nulos); de la 34
+  a la 63, reservadas a 0. El vector de la oferta vive en el mismo espacio, con
+  cada bloque multiplicado por el peso de su dimensión. El detalle está en
+  `motor/vectorizador.ts`. El vector **recupera, no puntúa**.
+- **Cuándo se recalcula un vector.** Tras cada ingesta con captura nueva (el
+  worker llama al motor) y, antes de cada ranking, el de todo jugador cuyo vector
+  sea de otra versión o anterior a su última edición, captura o verificación.
+  `npm run matching:revectorizar -w api` los recalcula todos.
+- **Recuperador.** `ORDER BY embedding <=> $1 LIMIT 200` sobre el índice
+  `PerfilVector_embedding_hnsw_idx`, con `SET LOCAL hnsw.ef_search = 200` en la
+  misma transacción (con el valor por defecto, 40, el índice pierde vecinos). Se
+  añaden siempre los postulantes de la oferta aunque el índice no los traiga.
+- **Cuándo se recalcula el ranking.** Al leerlo, si cambió la oferta, algún
+  vector, las postulaciones o los endorsements, o la versión de las fórmulas
+  (`VERSION_FORMULAS_MATCHING`); y a demanda con `POST …/recalcular`. Cada cálculo
+  reemplaza la instantánea de la oferta en `Matching`. Una oferta cubierta o
+  cerrada conserva la última.
+- **Orden.** Puntaje de mayor a menor; a igualdad, técnica y, por último, el id
+  del jugador. Es estable entre páginas.
+
+### Las cinco dimensiones
+
+| Dimensión | Fórmula | Sin datos |
+| --- | --- | --- |
+| Técnica | 0,25·posición + 0,35·rango + 0,40·rendimiento, de la última captura verificada. Posición: fracción de partidas de solo/dúo en la posición pedida (1 si es la principal). Rango: 1 si cumple el mínimo; baja linealmente y llega a 0 una liga (cuatro divisiones) por debajo; sin mínimo, posición en el catálogo de 0 a 1. Rendimiento: media de las métricas de la posición normalizadas con las escalas fijas (abajo) | 0 con `SIN_CUENTA_VERIFICADA` o `SIN_CAPTURA`; sin rango, la parte de rango vale 0 |
+| Experiencia | Sin modelo de trayectoria en el piloto | 0 con `SIN_DATOS_PILOTO` |
+| Habilidades blandas | Media, sobre las habilidades `BLANDA` del catálogo, de min(1, endorsements de equipos / 3) | 0 con `SIN_ENDORSEMENTS` |
+| Geográfica | Oferta remota: 1. Presencial: mismo departamento 1, misma macrorregión 0,6, mismo país 0,3, otro país 0,1. Híbrida: 1 / 0,8 / 0,5 / 0,2. Con disposición a relocalizarse, al menos 0,75 (presencial) u 0,85 (híbrida). Fuera de Colombia, el mismo país es la coincidencia completa | 0,5 con `SIN_UBICACION` |
+| Disponibilidad | min(1, horas del jugador / horas de la oferta); oferta sin horas: 1 | 0,5 con `SIN_HORAS` |
+
+### Escalas fijas de la técnica
+
+Cada métrica se normaliza con `clamp((x − suelo) / (techo − suelo), 0, 1)` contra
+una escala fija por posición (`motor/escalas.ts`), no contra percentiles del grupo
+del piloto. Con un grupo de decenas de jugadores, los percentiles serían
+inestables, harían que el puntaje de un jugador cambiara cuando otro sincroniza (y
+obligarían a recalcular todos los rankings con cada ingesta), y no serían una
+métrica estandarizada (H2): si el grupo es flojo, inflarían a todos.
+
+Las escalas **no salen de una tabla oficial de Riot**, que no publica
+distribuciones por rango ni por posición. Salen del razonamiento sobre la mecánica
+del juego que se da en cada fila, y se **calibran con las capturas reales del
+piloto**: si una escala satura (casi todos en 0 o en 1), se corrige, se sube
+`VERSION_FORMULAS_MATCHING` y se anota en `docs/decisiones.md`. Cuentan en el
+rendimiento de cada posición, con el mismo peso:
+
+| Posición | Métricas |
+| --- | --- |
+| Top | win rate, KDA, CS/min, daño/min, visión/min |
+| Jungla | win rate, KDA, CS/min, participación en kills, visión/min |
+| Mid | win rate, KDA, CS/min, daño/min, participación en kills |
+| ADC | win rate, KDA, CS/min, daño/min, oro/min |
+| Soporte | win rate, KDA, visión/min, participación en kills |
+
+| Métrica | Escala (suelo–techo) | Fuente o razonamiento |
+| --- | --- | --- |
+| Win rate | 0,40–0,60 (todas) | El emparejamiento de clasificatoria busca partidas al 50 % para un jugador en su nivel real: sostener un 60 % en 20 partidas indica que juega claramente por encima de su liga, y un 40 %, por debajo. Con pocas partidas se encoge hacia el 50 % como si hubiera 10 partidas previas al 50 % (5 partidas al 80 % cuentan como 60 %). |
+| KDA, (K + A) / M | 1–5; soporte 1,5–6 | Un KDA de 1 es morir tanto como se contribuye a kills; 5 es un jugador que casi no muere y participa en casi todo. El soporte acumula asistencias por su papel, así que su escala se desplaza. |
+| CS/min | 4–9; jungla 4–7; no cuenta en soporte | Una oleada sale cada 30 s y el máximo teórico en línea ronda los 10–12 CS/min; 9 sostenido es nivel muy alto y 4 es perder la mitad de la oleada. Los campamentos de la jungla dan menos CS por minuto. El soporte no farmea por diseño (su objeto de soporte se lo penaliza). |
+| Oro/min | 300–500; sólo ADC | El tirador es la posición que convierte oro en daño; el oro por minuto refleja a la vez farmeo y participación. En las demás posiciones repetiría al CS/min. |
+| Daño a campeones/min | 300–900; top 250–750; cuenta en top, mid y ADC | Mide la presión sobre el rival; en las posiciones de daño es lo que se le pide. El top tiene más campeones resistentes (tanques), con menos daño, y la escala se baja. |
+| Visión/min | 0,5–2,5; jungla 0,7–2,5; soporte 1–3,5; cuenta en top, jungla y soporte | La puntuación de visión crece con los guardianes puestos y destruidos. El soporte es el responsable principal de la visión, y la jungla la necesita para moverse por el mapa. |
+| Participación en kills | 0,35–0,70; jungla y soporte 0,45–0,80; cuenta en jungla, mid y soporte | Fracción de los kills del equipo en que participó. Las posiciones que se mueven por el mapa (jungla, soporte) participan más por diseño. |
+
+Subpesos de la técnica: la posición (0,25) se puede jugar «de segunda», el rango
+(0,35) es la señal más difícil de falsificar de la API, y el rendimiento (0,40)
+es lo que más se acerca a «cómo juega». Cualquier cambio de escala, de métrica de
+una posición o de subpeso sube `VERSION_FORMULAS_MATCHING`.
 
 ## Flujo de autenticación
 

@@ -139,3 +139,18 @@ reintentando» y las sincronizaciones esperarán en la cola.
 
 Las sincronizaciones de los recién vinculados pueden esperar: la periódica los recoge en las
 siguientes horas, o pueden pedirla desde «Cuentas vinculadas» cuando acabe la sesión.
+
+## Vectores del motor de matching
+
+El motor de matching (RF-09) guarda un vector de 64 dimensiones por jugador en `PerfilVector`.
+Se recalcula solo: tras cada ingesta con estadísticas nuevas y, antes de cada ranking, el de
+todo jugador cuyo vector esté obsoleto. El motor no llama a Riot: con la clave caducada, los
+rankings siguen funcionando con los datos guardados.
+
+Hay que recalcularlos todos a mano sólo **al subir `PERFIL_VECTOR_VERSION`** (cambio del
+vectorizador), para que la primera consulta de ranking no pague el recálculo de todos:
+
+- **Local**: `npm run matching:revectorizar -w api`
+- **Servidor**: `node apps/api/dist/cli/revectorizar.js`
+
+Escribe cuántos vectores recalculó y en cuánto tiempo. Se puede repetir sin riesgo.
