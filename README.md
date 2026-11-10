@@ -51,8 +51,10 @@ salen de la API oficial de Riot.
    cuenta de otro. (Riot Sign On, el OAuth de Riot, exige una clave de
    producción con aprobación; ver `docs/decisiones.md`, «Integración con Riot».)
 2. **Descarga y normaliza sus estadísticas** (RF-03, RF-04). En cada
-   sincronización analiza sus últimas 20 partidas clasificatorias (si tiene
-   menos de 5, completa con normales) y guarda una captura en `Estadistica`.
+   sincronización analiza sus últimas 20 partidas de clasificatoria solo/dúo
+   (cola 420; si tiene menos de 5, completa con normales) y guarda una captura
+   en `Estadistica`, con la posición más jugada en solo/dúo y el rango de
+   solo/dúo en el formato del buscador (`packages/shared/src/riot.ts`).
 3. **Guarda el histórico**, de modo que se puede ver la tendencia del
    rendimiento entre capturas (indicador de «Mis estadísticas»).
 
@@ -62,9 +64,10 @@ salen de la API oficial de Riot.
 | --- | --- | --- |
 | puuid y Riot ID | `account-v1` | `CuentaGaming.externalId`, `CuentaGaming.handle` |
 | Nivel e icono del invocador | `summoner-v4` | `metricas.nivelInvocador`; el icono sólo se usa para verificar |
-| Rango en Solo/Duo y Flex (liga, división, LP, victorias y derrotas) | `league-v4` | `metricas.rangoSoloDuo`, `metricas.rangoFlex` |
+| Rango en Solo/Duo en el catálogo `RangoLol` (lo que filtra el buscador) | `league-v4` | `Estadistica.rango` |
+| Rango detallado en Solo/Duo y Flex (liga, división, LP, victorias y derrotas) | `league-v4` | `metricas.rangoSoloDuo`, `metricas.rangoFlex` |
 | Partidas, victorias, KDA, win rate | `match-v5` | columnas de `Estadistica` |
-| Rol principal y reparto por posición | `match-v5` | `Estadistica.rol`, `metricas.distribucionRoles` |
+| Posición más jugada y reparto por posición, sólo en solo/dúo (`TOP`, `JUNGLA`, `MID`, `ADC`, `SOPORTE`) | `match-v5` | `Estadistica.rol`, `metricas.distribucionRoles` |
 | CS, oro, daño a campeones y visión por minuto; participación en kills; duración media | `match-v5` | `metricas.*` |
 | Tres campeones más jugados con su KDA y victorias | `match-v5` | `metricas.campeonesMasJugados` |
 
@@ -76,11 +79,11 @@ partidas nuevas desde la última captura, no se duplica la fila.
 
 | Método y ruta | Rol | Qué hace |
 | --- | --- | --- |
-| `POST /perfiles/cuentas-gaming/riot` | JUGADOR | Paso 1: `{ gameName, tagLine, servidor }` → icono que debe ponerse y `tokenDesafio` (válido 15 min) |
+| `POST /perfiles/cuentas-gaming/riot` | JUGADOR | Paso 1: `{ gameName, tagLine, servidor }` → icono que debe ponerse y `tokenDesafio` (válido 15 min). Con el paso 2, 10 intentos cada 15 min por usuario |
 | `POST /perfiles/cuentas-gaming/riot/verificar` | JUGADOR | Paso 2: `{ tokenDesafio }` → comprueba el icono en Riot y guarda la cuenta verificada |
 | `GET /perfiles/cuentas-gaming` | JUGADOR | Cuentas vinculadas con su servidor, fecha de verificación y última sincronización |
-| `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | Desvincula la cuenta (las estadísticas ya capturadas se conservan) |
-| `POST /estadisticas/sincronizar` | JUGADOR | Descarga las estadísticas desde Riot (como mucho una vez cada 10 min) |
+| `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | Desvincula la cuenta y borra las estadísticas que salieron de ella |
+| `POST /estadisticas/sincronizar` | JUGADOR | Descarga las estadísticas desde Riot (como mucho una vez cada 10 min, contando los intentos fallidos) |
 | `GET /estadisticas/jugador/:id` | con sesión | Histórico de capturas (`?juego=&desde=&hasta=`); `:id` es el del perfil público |
 | `GET /estadisticas/jugador/:id/resumen` | con sesión | Última captura por juego y su variación frente a la anterior |
 
