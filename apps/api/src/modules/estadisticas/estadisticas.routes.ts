@@ -11,19 +11,21 @@ import {
 
 /**
  * Rutas del módulo `estadisticas`: /api/v1/estadisticas
- * Métricas de rendimiento por jugador, juego y periodo.
+ * Métricas de rendimiento por jugador, juego y periodo. `:id` es el id de
+ * `PerfilJugador`, el mismo del perfil público.
  */
 export const estadisticasRouter = Router();
 
-// TODO: Listar las estadísticas de un jugador filtradas por juego y rango de fechas.
+// RF-04, RF-13 · Histórico de estadísticas verificadas del jugador
 estadisticasRouter.get(
   "/jugador/:id",
   auth,
+  validate(idParamSchema, "params"),
   validate(listarEstadisticasQuerySchema, "query"),
   controlador.listarPorJugador,
 );
 
-// TODO: Agregar KDA, win rate y partidas del jugador por juego.
+// RF-04, RF-13 · Resumen por juego con la tendencia del rendimiento
 estadisticasRouter.get(
   "/jugador/:id/resumen",
   auth,
@@ -31,7 +33,7 @@ estadisticasRouter.get(
   controlador.resumenPorJugador,
 );
 
-// TODO: Pedir al GameStatsProvider de la plataforma las estadísticas y persistirlas.
+// RF-03 · Ingesta de estadísticas desde la API de Riot para el jugador autenticado
 estadisticasRouter.post(
   "/sincronizar",
   auth,

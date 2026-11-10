@@ -1,4 +1,4 @@
-import type { Plataforma } from "@proplay/shared";
+import type { Plataforma, RangoLol } from "@proplay/shared";
 
 /**
  * Contrato que cumple toda integración con una plataforma externa
@@ -23,12 +23,14 @@ export interface CuentaVinculada {
 export interface EstadisticasExternas {
   juego: string;
   rol: string | null;
+  /** Rango en el catálogo de ProPlay, si la plataforma lo tiene (Riot: solo/dúo). */
+  rango: RangoLol | null;
   partidas: number;
   victorias: number;
   kda: number;
   winRate: number;
-  /** Métricas propias del título (CS/min, ADR, GPM, ...). */
-  metricas: Record<string, number | string | null>;
+  /** Métricas propias del título (CS/min, ADR, GPM, ...). Para LoL, `MetricasLol`. */
+  metricas: Record<string, unknown>;
   capturadaEn: Date;
 }
 
@@ -48,6 +50,8 @@ export interface ParametrosEstadisticas {
   externalId: string;
   accessToken: string | null;
   juego: string;
+  /** Servidor o región de la cuenta cuando la plataforma lo necesita (Riot: «LA1»). */
+  region: string | null;
 }
 
 export interface GameStatsProvider {

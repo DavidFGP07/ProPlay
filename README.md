@@ -7,9 +7,11 @@ de compatibilidad entre ambos.
 
 Proyecto de grado — Universidad del Norte.
 
-> Estado actual: **esqueleto**. La autenticación funciona de punta a punta
-> (registro, login, refresh, rutas protegidas por rol). Los demás módulos son
-> andamiaje: sus rutas existen y responden `501 Not Implemented`.
+> Estado actual: la autenticación funciona de punta a punta (registro, login,
+> refresh, rutas protegidas por rol), igual que los perfiles y la
+> **integración con la API de Riot Games** (vinculación verificada de la cuenta
+> de League of Legends y estadísticas). Los demás módulos son andamiaje: sus
+> rutas existen y responden `501 Not Implemented`.
 
 ---
 
@@ -30,6 +32,139 @@ proplay/
 La API se sirve bajo `/api/v1`. Documentación ampliada en
 [docs/arquitectura.md](docs/arquitectura.md) y
 [docs/decisiones.md](docs/decisiones.md).
+
+---
+
+## Integración con la API de Riot Games
+
+Es la única fuente de datos externa del proyecto (decisión 0.3: solo League of
+Legends). Con ella el perfil del jugador deja de ser autodeclarado: las cifras
+salen de la API oficial de Riot.
+
+### Qué hace
+
+1. **Vincula la cuenta de Riot del jugador y demuestra que es suya.** El
+   jugador escribe su Riot ID (`Nombre#TAG`) y su servidor; la API lo busca en
+   Riot y le pide que se ponga un icono de invocador concreto (uno de los
+   básicos, que tiene todo el mundo). Cuando lo hace, la API lo comprueba en
+   Riot y marca la cuenta como **verificada**. Así nadie puede vincular la
+   cuenta de otro. (Riot Sign On, el OAuth de Riot, exige una clave de
+   producción con aprobación; ver `docs/decisiones.md`, «Integración con Riot».)
+2. **Descarga y normaliza sus estadísticas** (RF-03, RF-04). En cada
+   sincronización analiza sus últimas 20 partidas de clasificatoria solo/dúo
+   (cola 420; si tiene menos de 5, completa con normales) y guarda una captura
+   en `Estadistica`, con la posición más jugada en solo/dúo y el rango de
+   solo/dúo en el formato del buscador (`packages/shared/src/riot.ts`).
+3. **Guarda el histórico**, de modo que se puede ver la tendencia del
+   rendimiento entre capturas (indicador de «Mis estadísticas»).
+
+### Qué datos trae
+
+| Dato | Endpoint de Riot | Dónde queda |
+| --- | --- | --- |
+| puuid y Riot ID | `account-v1` | `CuentaGaming.externalId`, `CuentaGaming.handle` |
+| Nivel e icono del invocador | `summoner-v4` | `metricas.nivelInvocador`; el icono sólo se usa para verificar |
+| Rango en Solo/Duo en el catálogo `RangoLol` (lo que filtra el buscador) | `league-v4` | `Estadistica.rango` |
+| Rango detallado en Solo/Duo y Flex (liga, división, LP, victorias y derrotas) | `league-v4` | `metricas.rangoSoloDuo`, `metricas.rangoFlex` |
+| Partidas, victorias, KDA, win rate | `match-v5` | columnas de `Estadistica` |
+| Posición más jugada y reparto por posición, sólo en solo/dúo (`TOP`, `JUNGLA`, `MID`, `ADC`, `SOPORTE`) | `match-v5` | `Estadistica.rol`, `metricas.distribucionRoles` |
+| CS, oro, daño a campeones y visión por minuto; participación en kills; duración media | `match-v5` | `metricas.*` |
+| Tres campeones más jugados con su KDA y victorias | `match-v5` | `metricas.campeonesMasJugados` |
+
+La forma exacta de `metricas` es `metricasLolSchema` en `@proplay/shared`. Se
+descartan los *remakes* (partidas de menos de 5 minutos). Si Riot no tiene
+partidas nuevas desde la última captura, no se duplica la fila.
+
+### Endpoints
+
+| Método y ruta | Rol | Qué hace |
+| --- | --- | --- |
+| `POST /perfiles/cuentas-gaming/riot` | JUGADOR | Paso 1: `{ gameName, tagLine, servidor }` → icono que debe ponerse y `tokenDesafio` (válido 15 min, guardado en Redis). Con un desafío activo para la misma cuenta devuelve ése; para otra, 409. Con «generar otro icono», 10 intentos cada 15 min por usuario |
+| `GET /perfiles/cuentas-gaming/riot/desafio` | JUGADOR | Desafío activo (`{ desafio }`, o `null`): el mismo icono con su caducidad, para retomarlo |
+| `POST /perfiles/cuentas-gaming/riot/desafio/regenerar` | JUGADOR | «Generar otro icono»: sustituye el desafío activo e invalida el anterior |
+| `DELETE /perfiles/cuentas-gaming/riot/desafio` | JUGADOR | Cancela el desafío activo, para vincular otra cuenta |
+| `POST /perfiles/cuentas-gaming/riot/verificar` | JUGADOR | Paso 2: `{ tokenDesafio }` → comprueba el icono en Riot: 201 `VERIFICADA` con la cuenta, o 200 `PENDIENTE` si Riot aún no refleja el cambio. 40 comprobaciones por desafío, aparte del límite anterior |
+| `GET /perfiles/cuentas-gaming` | JUGADOR | Cuentas vinculadas con su servidor, fecha de verificación y última sincronización |
+| `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | Desvincula la cuenta y borra las estadísticas que salieron de ella |
+| `POST /estadisticas/sincronizar` | JUGADOR | Descarga las estadísticas desde Riot (como mucho una vez cada 10 min, contando los intentos fallidos) |
+| `GET /estadisticas/jugador/:id` | con sesión | Histórico de capturas (`?juego=&desde=&hasta=`); `:id` es el del perfil público |
+| `GET /estadisticas/jugador/:id/resumen` | con sesión | Última captura por juego y su variación frente a la anterior |
+
+Servidores admitidos: `LA1` (Latinoamérica Norte, por defecto y el del
+piloto), `LA2`, `NA1`, `BR1`, `EUW1`, `EUN1`, `TR1`, `RU`, `ME1`, `KR`, `JP1`,
+`OC1`, `SG2`, `TW2` y `VN2`.
+
+### Configuración
+
+En `apps/api/.env`:
+
+```bash
+RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+- La clave de **desarrollo** se saca en <https://developer.riotgames.com> y
+  **caduca cada 24 horas**: hay que regenerarla y pegarla otra vez cada día
+  (ver «Renovar la clave» más abajo).
+  Con una clave caducada, los endpoints de Riot responden `502` con el mensaje
+  «Riot rechazó la clave de la API: es inválida o caducó».
+- Sin clave, responden `503 SERVICIO_NO_CONFIGURADO`; el resto de la API
+  funciona igual.
+- La clave nunca va al repositorio ni a variables `VITE_*`.
+
+#### Renovar la clave cuando caduque
+
+1. Entra en <https://developer.riotgames.com> con tu cuenta de Riot y, en el
+   panel, pulsa **Regenerate API Key**.
+2. Copia la clave nueva (`RGAPI-…`).
+3. Abre **`apps/api/.env`** (no el `.env.example` ni el de `apps/web`) y
+   reemplaza el valor de la línea `RIOT_API_KEY=`:
+
+   ```bash
+   RIOT_API_KEY=RGAPI-la-clave-nueva
+   ```
+
+4. Reinicia la API (`Ctrl+C` y otra vez `npm run dev`): la clave se lee al
+   arrancar.
+
+No hay que tocar el código, la base de datos ni el cliente web, y las cuentas ya
+verificadas y sus estadísticas siguen ahí.
+
+### En la aplicación web
+
+Con la sesión de un jugador, el menú lateral tiene dos vistas nuevas:
+
+- **Cuentas vinculadas** (`/cuentas-vinculadas`): buscar la cuenta por Riot ID,
+  ver el icono que hay que ponerse, verificarla, sincronizar y desvincular.
+- **Mis estadísticas** (`/mis-estadisticas`): rango, métricas, posiciones,
+  campeones más jugados y la gráfica de la tendencia entre sincronizaciones.
+
+Límites de la clave de desarrollo: 20 peticiones por segundo y 100 cada dos
+minutos para toda la aplicación. Una sincronización gasta unas 24 peticiones,
+así que caben unas cuatro cada dos minutos. El cliente
+(`apps/api/src/integrations/riot/riot.client.ts`) reparte la cuota, respeta el
+`Retry-After` de Riot y, si la espera fuera larga, responde `429` en lugar de
+dejar la petición colgada.
+
+### Qué más se puede añadir con esta misma API
+
+Sin cambiar de clave:
+
+- **Worker de ingesta periódica** (tarea 2.5): sincronizar a todos los
+  jugadores verificados de madrugada, con la cuota en Redis.
+- **Maestría de campeones** (`champion-mastery-v4`): puntos y nivel por
+  campeón, útil para la dimensión técnica del matching.
+- **Línea de tiempo de la partida** (`match-v5 /timeline`): oro y experiencia
+  al minuto 10/15, diferencia de CS con el rival de línea, primeras sangres.
+- **Desafíos** (`lol-challenges-v1`): logros de Riot como evidencia de
+  habilidades.
+- **Estado del servidor** (`lol-status-v4`): avisar si Riot tiene incidencias
+  cuando falla una sincronización.
+- **Comparación por rango**: con el rango que ya se guarda, normalizar las
+  métricas frente a jugadores de la misma liga para el matching (S3).
+
+Con una clave de **producción** (tarea 0.1 del plan): Riot Sign On (OAuth) en
+lugar del desafío del icono, sin caducidad diaria y con más cuota. VALORANT
+exige además una aprobación propia de Riot.
 
 ---
 
@@ -201,7 +336,8 @@ docker build -f apps/api/Dockerfile -t proplay-api .
 Variables de entorno que hay que definir en el servicio: `DATABASE_URL`,
 `REDIS_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `ENCRYPTION_KEY`,
 `CORS_ORIGIN` (el dominio de Vercel), `NODE_ENV=production`, `TRUST_PROXY`
-y, cuando se conecten las integraciones, `CLOUDINARY_*` y `RIOT_API_KEY`.
+`RIOT_API_KEY` (ver «Integración con la API de Riot Games») y, cuando se
+conecte, `CLOUDINARY_*`.
 
 `TRUST_PROXY` es el número de proxies que hay delante de la API: `1` en
 Railway o Render, uno más por cada capa añadida (una CDN, por ejemplo) y `0`

@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
+  BarChart3,
   Briefcase,
   ChartNoAxesColumn,
   ClipboardList,
   Home,
+  Link2,
   LogOut,
   Menu,
   MessageSquare,
@@ -36,6 +38,18 @@ interface ItemNav {
 const NAVEGACION: ItemNav[] = [
   { to: '/', label: 'Feed', icono: Home },
   { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: AREAS.jugador },
+  {
+    to: '/cuentas-vinculadas',
+    label: es.cuentasVinculadas.menu,
+    icono: Link2,
+    roles: AREAS.jugador,
+  },
+  {
+    to: '/mis-estadisticas',
+    label: es.misEstadisticas.menu,
+    icono: BarChart3,
+    roles: AREAS.jugador,
+  },
   { to: '/explorar', label: 'Explorar talento', icono: Search, roles: AREAS.equipo },
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
   { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: AREAS.equipo },

@@ -35,8 +35,22 @@ export type {
 } from "../schemas/perfil";
 
 export type {
+  CuentaGaming,
+  DesafioActivoRiot,
+  DesafioVerificacionRiot,
+  ResultadoVerificacionRiot,
+  VerificarCuentaRiotInput,
+  VincularCuentaRiotInput,
+} from "../schemas/cuentaGaming";
+
+export type {
   Estadistica,
   ListarEstadisticasQuery,
+  MetricasLol,
+  RangoColaLol,
+  ResumenEstadisticas,
+  SincronizarEstadisticasInput,
+  SincronizarEstadisticasRespuesta,
 } from "../schemas/estadistica";
 
 export type {

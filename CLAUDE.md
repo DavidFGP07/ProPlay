@@ -209,8 +209,8 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 |---|---|---|---|
 | Feed | `/` | RF-08 | Futuro (descartada) |
 | Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 | Núcleo |
-| Cuentas vinculadas (estado, última sincronización) | — | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
-| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | — | RF-04, RF-13 | Núcleo |
+| Cuentas vinculadas (estado, última sincronización) | `/cuentas-vinculadas` | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
+| Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | `/mis-estadisticas` | RF-04, RF-13 | Núcleo |
 | Habilidades y endorsements | — | RF-06 | Soporte: catálogo fijo; endorsements sólo de equipos |
 | Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
@@ -324,7 +324,7 @@ que la usen como base.
 ## 9. Estado actual
 
 **Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
-`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` (incluida la sede de la organización) y `GET /perfiles/:id` (perfil público, sin sesión). Del buscador de talento (`scouting`), `GET /scouting/jugadores` está implementado (filtros de posición, rango mínimo y departamento sobre el catálogo `RangoLol` y la última captura verificada de Riot; contrato con la ingesta en `packages/shared/src/riot.ts`); la ficha ampliada y las búsquedas guardadas siguen en `501`. El módulo `ofertas` está implementado: ofertas con estados (`CUBIERTA` incluido), pesos por oferta, modalidad y ubicación, y postulaciones con la fecha de cada cambio de estado (`ENTREVISTA` incluido). Los demás endpoints de `perfiles` y los otros módulos (`estadisticas`,
+`PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` (incluida la sede de la organización), `GET /perfiles/:id` (perfil público, sin sesión) y las cuentas vinculadas (`GET`, `DELETE /perfiles/cuentas-gaming/:plataforma` y la vinculación con Riot por desafío de icono en `/perfiles/cuentas-gaming/riot`, `/riot/desafio` (consultar, regenerar y cancelar el desafío activo, guardado en Redis) y `/riot/verificar`). `estadisticas` está implementado (sincronizar desde Riot, histórico y resumen); la integración con Riot vive en `src/integrations/riot/` (cliente con control de cuota, normalización pura y proveedor) y su porqué en `docs/decisiones.md`, «Integración con Riot». Del buscador de talento (`scouting`), `GET /scouting/jugadores` está implementado (filtros de posición, rango mínimo y departamento sobre el catálogo `RangoLol` y la última captura verificada de Riot; contrato con la ingesta en `packages/shared/src/riot.ts`); la ficha ampliada y las búsquedas guardadas siguen en `501`. El módulo `ofertas` está implementado: ofertas con estados (`CUBIERTA` incluido), pesos por oferta, modalidad y ubicación, y postulaciones con la fecha de cada cambio de estado (`ENTREVISTA` incluido). Los demás endpoints de `perfiles` (habilidades, endorsements y la vinculación OAuth, que necesita RSO) y los otros módulos (
 `matching`, `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
 sustituye el stub del repository por Prisma real: **no cambies la estructura de archivos**.
@@ -342,7 +342,8 @@ indicando el sprint que lo conecta. Hablan ya con la API real la autenticación,
 sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
 (`/vacantes/:id`, que para el equipo dueño incluye la gestión de la oferta y las postulaciones
 recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), el buscador de talento
-(`/explorar`), en
+(`/explorar`), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y
+desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
 `/panel-equipo` las tarjetas «Datos de la organización», con la sede, y «Tus ofertas» (sólo
 el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,

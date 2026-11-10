@@ -74,3 +74,57 @@ export function segundosDeVidaAcceso(): number {
   const minutos = Number.parseInt(ACCESS_TOKEN_TTL, 10);
   return Number.isFinite(minutos) ? minutos * 60 : 900;
 }
+
+/**
+ * Desafío de verificación de una cuenta de Riot: qué icono debe poner el
+ * jugador en qué cuenta. Va firmado para que el cliente no pueda cambiar el
+ * puuid ni el icono pedido, y sólo vale para el usuario que lo pidió (`sub`).
+ * Además la API lo guarda en Redis como el desafío activo del usuario
+ * (perfiles.repository.ts): un token firmado pero sustituido ya no sirve.
+ */
+export interface PayloadDesafioRiot {
+  sub: string;
+  puuid: string;
+  riotId: string;
+  servidor: string;
+  icono: number;
+}
+
+const AUDIENCIA_DESAFIO_RIOT = "proplay-verificacion-riot";
+
+export function firmarDesafioRiot(
+  payload: PayloadDesafioRiot,
+  minutosVigencia: number,
+): string {
+  return jwt.sign(payload, env.JWT_SECRET, {
+    issuer: EMISOR,
+    audience: AUDIENCIA_DESAFIO_RIOT,
+    expiresIn: minutosVigencia * 60,
+  });
+}
+
+/**
+ * `null` si el token no es válido, caducó o es de otro usuario. Con
+ * `ignorarCaducidad` acepta uno caducado: la vigencia la decide entonces el
+ * desafío guardado, que caduca a la vez en Redis.
+ */
+export function verificarDesafioRiot(
+  token: string,
+  usuarioId: string,
+  opciones: { ignorarCaducidad?: boolean } = {},
+): PayloadDesafioRiot | null {
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET, {
+      issuer: EMISOR,
+      audience: AUDIENCIA_DESAFIO_RIOT,
+      subject: usuarioId,
+      ignoreExpiration: opciones.ignorarCaducidad ?? false,
+    });
+    if (typeof payload === "string") return null;
+    const datos = payload as unknown as PayloadDesafioRiot;
+    if (typeof datos.puuid !== "string" || typeof datos.icono !== "number") return null;
+    return datos;
+  } catch {
+    return null;
+  }
+}

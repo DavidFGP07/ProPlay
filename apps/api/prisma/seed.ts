@@ -2,6 +2,9 @@ import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   COLA_SOLO_DUO,
+  PARTIDAS_POR_SINCRONIZACION,
+  POSICIONES_LOL,
+  metricasLolSchema,
   FECHA_POR_ESTADO_POSTULACION,
   JUEGO_PILOTO,
   PERFIL_VECTOR_DIMENSIONES,
@@ -150,6 +153,38 @@ const EQUIPOS: {
     departamento: "ATLANTICO",
   },
 ];
+
+/** Tier de Riot de cada prefijo del catálogo (sólo para el rango detallado). */
+const TIER_DE_RANGO: Record<string, string> = {
+  HIERRO: "IRON",
+  BRONCE: "BRONZE",
+  PLATA: "SILVER",
+  ORO: "GOLD",
+  PLATINO: "PLATINUM",
+  ESMERALDA: "EMERALD",
+  DIAMANTE: "DIAMOND",
+  MAESTRO: "MASTER",
+  GRAN_MAESTRO: "GRANDMASTER",
+  RETADOR: "CHALLENGER",
+};
+
+/** Rango detallado (como league-v4) a partir de un valor del catálogo. */
+function rangoColaDeSeed(rango: RangoLol, partidasTemporada: number, victoriasTemporada: number) {
+  const partes = rango.match(/^(.*?)(?:_(IV|III|II|I))?$/)!;
+  return {
+    liga: TIER_DE_RANGO[partes[1]!]!,
+    division: partes[2] ?? null,
+    puntosLiga: 45,
+    victorias: victoriasTemporada,
+    derrotas: partidasTemporada - victoriasTemporada,
+  };
+}
+
+/** El resto de partidas, en la posición siguiente del catálogo. */
+function otraPosicion(posicion: PosicionLol, partidas: number) {
+  const siguiente = POSICIONES_LOL[(POSICIONES_LOL.indexOf(posicion) + 1) % POSICIONES_LOL.length]!;
+  return { [siguiente]: partidas };
+}
 
 /** Fecha `dias` días antes del momento del seed. */
 function haceDias(dias: number): Date {
@@ -500,38 +535,65 @@ async function main() {
     } else {
       const handle = `${nombre.split(" ")[0]}#SEED`;
       const verificadaEn = haceDias(60 - indice);
-      await prisma.cuentaGaming.upsert({
+      const cuenta = await prisma.cuentaGaming.upsert({
         where: { jugadorId_plataforma: { jugadorId: jugador.id, plataforma: "RIOT" } },
-        update: { externalId: `seed-puuid-${indice + 1}`, handle, verificadaEn },
+        update: { externalId: `seed-puuid-${indice + 1}`, handle, servidor: "LA1", verificadaEn },
         create: {
           jugadorId: jugador.id,
           plataforma: "RIOT",
           externalId: `seed-puuid-${indice + 1}`,
           handle,
+          servidor: "LA1",
           verificadaEn,
         },
       });
 
       for (const [captura, rango] of [riot.rangoAnterior, riot.rango].entries()) {
-        const partidas = 80 + Math.round(aleatorio() * 220);
-        const winRate = Number((0.42 + aleatorio() * 0.24).toFixed(3));
+        // 20 partidas como en una sincronización real, todas de solo/dúo.
+        const partidas = PARTIDAS_POR_SINCRONIZACION;
+        const victorias = Math.round(partidas * (0.42 + aleatorio() * 0.24));
+        const kills = Number((2 + aleatorio() * 6).toFixed(2));
+        const muertes = Number((2 + aleatorio() * 4).toFixed(2));
+        const asistencias = Number((4 + aleatorio() * 8).toFixed(2));
+        const principal = Math.round(partidas * 0.8);
+        const metricas = metricasLolSchema.parse({
+          servidor: "LA1",
+          nivelInvocador: 120 + indice * 17,
+          rangoSoloDuo: rangoColaDeSeed(rango, partidas * 10, victorias * 10),
+          rangoFlex: null,
+          partidasAnalizadas: partidas,
+          colas: { [String(COLA_SOLO_DUO)]: partidas },
+          promedioKills: kills,
+          promedioMuertes: muertes,
+          promedioAsistencias: asistencias,
+          csPorMinuto: Number((5.5 + aleatorio() * 3).toFixed(2)),
+          oroPorMinuto: Number((330 + aleatorio() * 120).toFixed(2)),
+          danoPorMinuto: Number((400 + aleatorio() * 500).toFixed(2)),
+          visionPorMinuto: Number((0.6 + aleatorio() * 1.6).toFixed(2)),
+          participacionKills: Number((0.45 + aleatorio() * 0.25).toFixed(4)),
+          duracionMediaMinutos: Number((26 + aleatorio() * 8).toFixed(2)),
+          distribucionRoles: { [riot.posicion]: principal, ...otraPosicion(riot.posicion, partidas - principal) },
+          campeonesMasJugados: [
+            { campeon: "Ahri", partidas: 8, victorias: 5, kda: 3.2 },
+            { campeon: "Lux", partidas: 6, victorias: 3, kda: 2.6 },
+            { campeon: "Thresh", partidas: 4, victorias: 2, kda: 2.9 },
+          ],
+          ultimaPartidaId: `SEED_${indice + 1}_${captura}`,
+          ultimaPartidaEn: haceDias(captura === 0 ? 30 + indice : indice).toISOString(),
+        });
         await prisma.estadistica.create({
           data: {
             jugadorId: jugador.id,
+            cuentaId: cuenta.id,
             juego: JUEGO_PILOTO,
             rol: riot.posicion,
             rango,
             partidas,
-            victorias: Math.round(partidas * winRate),
-            kda: Number((1.6 + aleatorio() * 2.4).toFixed(2)),
-            winRate,
+            victorias,
+            kda: Number(((kills + asistencias) / Math.max(muertes, 1)).toFixed(2)),
+            winRate: Number((victorias / partidas).toFixed(4)),
             fuente: "RIOT",
-            metricas: {
-              cola: COLA_SOLO_DUO,
-              csPorMinuto: Number((5.5 + aleatorio() * 3).toFixed(2)),
-              danoPorMinuto: Math.round(400 + aleatorio() * 500),
-              visionScore: Math.round(20 + aleatorio() * 40),
-            } satisfies Prisma.InputJsonObject,
+            metricas: JSON.parse(JSON.stringify(metricas)) as Prisma.InputJsonObject,
             // La anterior, un mes antes; la actual, hace (indice) días.
             capturadaEn: haceDias(captura === 0 ? 30 + indice : indice),
           },

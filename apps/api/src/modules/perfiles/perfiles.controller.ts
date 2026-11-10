@@ -2,7 +2,13 @@ import type { Request } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./perfiles.service";
-import type { PerfilEquipoInput, PerfilJugadorInput } from "./perfiles.schema";
+import type { Plataforma } from "@proplay/shared";
+import type {
+  PerfilEquipoInput,
+  PerfilJugadorInput,
+  VerificarCuentaRiotInput,
+  VincularCuentaRiotInput,
+} from "./perfiles.schema";
 
 /**
  * Controladores del módulo `perfiles`: sólo traducen entre HTTP y el
@@ -69,11 +75,84 @@ export const endosar = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/v1/perfiles/cuentas-gaming
- * TODO: Vincular una cuenta externa vía OAuth y guardar sus tokens cifrados.
+ * TODO: Vincular una cuenta externa vía OAuth (RSO) y guardar sus tokens cifrados.
  */
 export const vincularCuenta = asyncHandler(async (req, res) => {
   res.json(await servicio.vincularCuenta(req.body ?? req.validado));
 });
+
+/**
+ * GET /api/v1/perfiles/cuentas-gaming
+ * Cuentas vinculadas del jugador autenticado.
+ */
+export const listarCuentas = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.listarCuentas(req.usuario.id));
+});
+
+/**
+ * POST /api/v1/perfiles/cuentas-gaming/riot
+ * Paso 1: Riot ID → desafío de verificación por icono.
+ */
+export const iniciarVinculacionRiot = asyncHandler<PeticionCon<VincularCuentaRiotInput>>(
+  async (req, res) => {
+    if (!req.usuario) throw new UnauthorizedError();
+    res.status(200).json(await servicio.iniciarVinculacionRiot(req.usuario.id, req.body));
+  },
+);
+
+/**
+ * GET /api/v1/perfiles/cuentas-gaming/riot/desafio
+ * Desafío activo del jugador, si lo hay: el mismo icono con su caducidad.
+ */
+export const obtenerDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.obtenerDesafioRiot(req.usuario.id));
+});
+
+/**
+ * POST /api/v1/perfiles/cuentas-gaming/riot/desafio/regenerar
+ * «Generar otro icono»: sustituye el desafío activo.
+ */
+export const regenerarDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  res.status(200).json(await servicio.regenerarDesafioRiot(req.usuario.id));
+});
+
+/**
+ * DELETE /api/v1/perfiles/cuentas-gaming/riot/desafio
+ * Cancela el desafío activo, para vincular otra cuenta.
+ */
+export const cancelarDesafioRiot = asyncHandler(async (req, res) => {
+  if (!req.usuario) throw new UnauthorizedError();
+  await servicio.cancelarDesafioRiot(req.usuario.id);
+  res.status(204).end();
+});
+
+/**
+ * POST /api/v1/perfiles/cuentas-gaming/riot/verificar
+ * Paso 2: comprueba el icono. 201 con la cuenta si ya coincide; 200 PENDIENTE
+ * si Riot todavía no refleja el cambio.
+ */
+export const verificarCuentaRiot = asyncHandler<PeticionCon<VerificarCuentaRiotInput>>(
+  async (req, res) => {
+    if (!req.usuario) throw new UnauthorizedError();
+    const resultado = await servicio.verificarCuentaRiot(req.usuario.id, req.body);
+    res.status(resultado.estado === "VERIFICADA" ? 201 : 200).json(resultado);
+  },
+);
+
+/**
+ * DELETE /api/v1/perfiles/cuentas-gaming/:plataforma
+ * Desvincula la cuenta de esa plataforma.
+ */
+export const desvincularCuenta = asyncHandler<Request<{ plataforma: Plataforma }>>(
+  async (req, res) => {
+    if (!req.usuario) throw new UnauthorizedError();
+    await servicio.desvincularCuenta(req.usuario.id, req.params.plataforma);
+    res.status(204).end();
+  },
+);
 
 /**
  * GET /api/v1/perfiles/:id

@@ -213,3 +213,77 @@ export const MACROREGION_POR_DEPARTAMENTO = {
   VAUPES: "AMAZONIA",
   VICHADA: "ORINOQUIA",
 } as const satisfies Record<Departamento, Macrorregion>;
+
+// ------------------------- Integración con Riot ----------------------------
+
+/**
+ * Servidores (plataformas) de League of Legends, en el formato que usa la API
+ * de Riot. El piloto vive en LA1 (Latinoamérica Norte, donde juega Colombia).
+ * No es enum de Prisma: se guarda como texto en `CuentaGaming.servidor`.
+ */
+export const SERVIDORES_LOL = [
+  "LA1",
+  "LA2",
+  "NA1",
+  "BR1",
+  "EUW1",
+  "EUN1",
+  "TR1",
+  "RU",
+  "ME1",
+  "KR",
+  "JP1",
+  "OC1",
+  "SG2",
+  "TW2",
+  "VN2",
+] as const;
+export type ServidorLol = (typeof SERVIDORES_LOL)[number];
+export const SERVIDOR_LOL_POR_DEFECTO: ServidorLol = "LA1";
+
+/**
+ * Ligas (`tier`) de league-v4 tal como las escribe Riot, de menor a mayor. Sólo
+ * describen el rango detallado de `metricas` (con LP y victorias); para filtrar
+ * y comparar se usa `RangoLol` (enums.ts), que sale de `rangoDesdeRiot`.
+ */
+export const LIGAS_LOL = [
+  "IRON",
+  "BRONZE",
+  "SILVER",
+  "GOLD",
+  "PLATINUM",
+  "EMERALD",
+  "DIAMOND",
+  "MASTER",
+  "GRANDMASTER",
+  "CHALLENGER",
+] as const;
+export type LigaLol = (typeof LIGAS_LOL)[number];
+
+/** Partidas recientes que se analizan en cada sincronización. */
+export const PARTIDAS_POR_SINCRONIZACION = 20;
+/** Minutos mínimos entre dos sincronizaciones del mismo jugador (cuota de Riot). */
+export const MINUTOS_ENTRE_SINCRONIZACIONES = 10;
+/**
+ * Vigencia del desafío de verificación de la cuenta de Riot. Riot tarda uno o
+ * dos minutos en reflejar un cambio de icono: 15 minutos dejan margen de sobra.
+ */
+export const MINUTOS_DESAFIO_VERIFICACION = 15;
+/** Cada cuánto comprueba sola la vista de Cuentas vinculadas un desafío activo. */
+export const SEGUNDOS_COMPROBACION_AUTOMATICA = 45;
+/**
+ * Comprobaciones de un mismo desafío pegadas a la anterior: la API responde
+ * con la última sin volver a consultar a Riot (dos pestañas abiertas, dobles clics).
+ */
+export const SEGUNDOS_MINIMOS_ENTRE_COMPROBACIONES = 15;
+/**
+ * Comprobaciones que admite un desafío, aparte del límite de la vinculación.
+ * 15 min / 45 s son 20 automáticas; el resto cubre las manuales y una segunda pestaña.
+ */
+export const MAX_COMPROBACIONES_DESAFIO = 40;
+/**
+ * Iconos de invocador que toda cuenta tiene desbloqueados (0 a 28): la
+ * verificación pide poner uno de ellos, así cualquiera puede completarla.
+ */
+export const ICONO_VERIFICACION_MIN = 0;
+export const ICONO_VERIFICACION_MAX = 28;

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auth, authOpcional } from "../../middleware/auth";
-import { limitePerfilPublico } from "../../middleware/rateLimit";
+import { limitePerfilPublico, limiteVinculacionRiot } from "../../middleware/rateLimit";
 import { rbac } from "../../middleware/rbac";
 import { validate } from "../../middleware/validate";
 import * as controlador from "./perfiles.controller";
@@ -10,7 +10,10 @@ import {
   idParamSchema,
   perfilEquipoSchema,
   perfilJugadorSchema,
+  plataformaParamSchema,
+  verificarCuentaRiotSchema,
   vincularCuentaGamingSchema,
+  vincularCuentaRiotSchema,
 } from "./perfiles.schema";
 
 /**
@@ -69,13 +72,80 @@ perfilesRouter.post(
   controlador.endosar,
 );
 
-// TODO: Vincular una cuenta externa vía OAuth y guardar sus tokens cifrados.
+// TODO: Vincular una cuenta externa vía OAuth (RSO) y guardar sus tokens
+// cifrados. Necesita la clave de producción de Riot; hasta entonces, las dos
+// rutas de /cuentas-gaming/riot.
 perfilesRouter.post(
   "/cuentas-gaming",
   auth,
   rbac("JUGADOR"),
   validate(vincularCuentaGamingSchema),
   controlador.vincularCuenta,
+);
+
+// RF-02, RF-03 · Cuentas vinculadas del jugador, con su última sincronización
+perfilesRouter.get(
+  "/cuentas-gaming",
+  auth,
+  rbac("JUGADOR"),
+  controlador.listarCuentas,
+);
+
+// RF-02 · Vinculación con Riot, paso 1: Riot ID → icono que debe ponerse. Si
+// ya hay un desafío activo para esa cuenta, devuelve ése. Consulta a Riot:
+// comparte el límite de la vinculación con «generar otro icono».
+perfilesRouter.post(
+  "/cuentas-gaming/riot",
+  auth,
+  rbac("JUGADOR"),
+  limiteVinculacionRiot,
+  validate(vincularCuentaRiotSchema),
+  controlador.iniciarVinculacionRiot,
+);
+
+// RF-02 · Desafío activo, para retomarlo al volver a la vista o recargar
+perfilesRouter.get(
+  "/cuentas-gaming/riot/desafio",
+  auth,
+  rbac("JUGADOR"),
+  controlador.obtenerDesafioRiot,
+);
+
+// RF-02 · «Generar otro icono»: invalida el desafío activo y crea otro
+perfilesRouter.post(
+  "/cuentas-gaming/riot/desafio/regenerar",
+  auth,
+  rbac("JUGADOR"),
+  limiteVinculacionRiot,
+  controlador.regenerarDesafioRiot,
+);
+
+// RF-02 · Cancelar el desafío activo, para vincular otra cuenta
+perfilesRouter.delete(
+  "/cuentas-gaming/riot/desafio",
+  auth,
+  rbac("JUGADOR"),
+  controlador.cancelarDesafioRiot,
+);
+
+// RF-02 · Vinculación con Riot, paso 2: se comprueba el icono. No gasta el
+// límite de la vinculación: cada desafío tiene su propio cupo de
+// comprobaciones (MAX_COMPROBACIONES_DESAFIO), que cuenta el servicio.
+perfilesRouter.post(
+  "/cuentas-gaming/riot/verificar",
+  auth,
+  rbac("JUGADOR"),
+  validate(verificarCuentaRiotSchema),
+  controlador.verificarCuentaRiot,
+);
+
+// RF-02 · Desvincular la cuenta de una plataforma
+perfilesRouter.delete(
+  "/cuentas-gaming/:plataforma",
+  auth,
+  rbac("JUGADOR"),
+  validate(plataformaParamSchema, "params"),
+  controlador.desvincularCuenta,
 );
 
 // RF-05 · Perfil público del jugador, compartible y sin sesión. Va al final:

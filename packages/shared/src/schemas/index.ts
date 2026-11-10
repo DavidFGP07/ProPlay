@@ -2,6 +2,7 @@ export * from "./common";
 export * from "./auth";
 export * from "./usuario";
 export * from "./perfil";
+export * from "./cuentaGaming";
 export * from "./estadistica";
 export * from "./oferta";
 export * from "./matching";
