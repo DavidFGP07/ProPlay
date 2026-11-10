@@ -79,8 +79,11 @@ partidas nuevas desde la última captura, no se duplica la fila.
 
 | Método y ruta | Rol | Qué hace |
 | --- | --- | --- |
-| `POST /perfiles/cuentas-gaming/riot` | JUGADOR | Paso 1: `{ gameName, tagLine, servidor }` → icono que debe ponerse y `tokenDesafio` (válido 15 min). Con el paso 2, 10 intentos cada 15 min por usuario |
-| `POST /perfiles/cuentas-gaming/riot/verificar` | JUGADOR | Paso 2: `{ tokenDesafio }` → comprueba el icono en Riot y guarda la cuenta verificada |
+| `POST /perfiles/cuentas-gaming/riot` | JUGADOR | Paso 1: `{ gameName, tagLine, servidor }` → icono que debe ponerse y `tokenDesafio` (válido 15 min, guardado en Redis). Con un desafío activo para la misma cuenta devuelve ése; para otra, 409. Con «generar otro icono», 10 intentos cada 15 min por usuario |
+| `GET /perfiles/cuentas-gaming/riot/desafio` | JUGADOR | Desafío activo (`{ desafio }`, o `null`): el mismo icono con su caducidad, para retomarlo |
+| `POST /perfiles/cuentas-gaming/riot/desafio/regenerar` | JUGADOR | «Generar otro icono»: sustituye el desafío activo e invalida el anterior |
+| `DELETE /perfiles/cuentas-gaming/riot/desafio` | JUGADOR | Cancela el desafío activo, para vincular otra cuenta |
+| `POST /perfiles/cuentas-gaming/riot/verificar` | JUGADOR | Paso 2: `{ tokenDesafio }` → comprueba el icono en Riot: 201 `VERIFICADA` con la cuenta, o 200 `PENDIENTE` si Riot aún no refleja el cambio. 40 comprobaciones por desafío, aparte del límite anterior |
 | `GET /perfiles/cuentas-gaming` | JUGADOR | Cuentas vinculadas con su servidor, fecha de verificación y última sincronización |
 | `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | Desvincula la cuenta y borra las estadísticas que salieron de ella |
 | `POST /estadisticas/sincronizar` | JUGADOR | Descarga las estadísticas desde Riot (como mucho una vez cada 10 min, contando los intentos fallidos) |
