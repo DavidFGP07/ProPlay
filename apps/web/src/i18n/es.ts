@@ -1,11 +1,15 @@
 import type {
+  CercaniaGeografica,
   Departamento,
   DimensionMatching,
   EstadoOferta,
   EstadoPostulacion,
   LigaLol,
   Macrorregion,
+  MetricaTecnicaLol,
   Modalidad,
+  ModoMatching,
+  MotivoDimension,
   Plataforma,
   PosicionLol,
   RangoLol,
@@ -457,9 +461,9 @@ export const es = {
     pesosTitulo: 'Cómo pondera este equipo',
     pesosSubtitulo:
       'Pesos de las dimensiones que el equipo eligió para esta oferta. Suman 100 %.',
-    metodologiaTitulo: 'Cómo se calculará la compatibilidad',
+    metodologiaTitulo: 'Cómo se calcula la compatibilidad',
     metodologia:
-      'La compatibilidad entre un jugador y una oferta es el promedio ponderado de las dimensiones, normalizadas entre 0 y 1, con los pesos que elige el equipo: S(j, o) = Σ wₖ · dₖ(j, o), con Σ wₖ = 1. El cálculo llegará con el motor de matching.',
+      'La compatibilidad entre un jugador y una oferta es el promedio ponderado de las dimensiones, normalizadas entre 0 y 1, con los pesos que elige el equipo: S(j, o) = Σ wₖ · dₖ(j, o), con Σ wₖ = 1.',
     modalTitulo: 'Postularme a la oferta',
     mensaje: 'Mensaje para el equipo (opcional)',
     mensajeAyuda:
@@ -626,6 +630,175 @@ export const es = {
     postulaciones: (n: number) => (n === 1 ? '1 postulación' : `${n} postulaciones`),
     creadaEl: (fecha: string) => `Creada el ${fecha}`,
     gestionar: 'Gestionar',
+  },
+  // RF-09 · Ranking de candidatos de una oferta (/vacantes/:id/ranking)
+  ranking: {
+    titulo: 'Ranking de candidatos',
+    subtitulo: 'Del más al menos compatible con la oferta, con el aporte de cada dimensión al puntaje.',
+    volver: 'Volver a la oferta',
+    cargando: 'Cargando el ranking',
+    error: 'No pudimos cargar el ranking.',
+    noEncontrada: 'Oferta no encontrada',
+    noEncontradaDetalle: 'La oferta no existe o todavía no se ha publicado.',
+    sinPermiso: 'El ranking de una oferta lo ven la organización que la publicó y los scouts.',
+    calculo: 'Estado del cálculo',
+    calculadoEl: (fecha: string) => `Calculado el ${fecha}`,
+    modo: {
+      CONTENIDO: 'Basado en contenido',
+      HIBRIDO: 'Híbrido',
+    } satisfies Record<ModoMatching, string>,
+    modoDetalle: {
+      CONTENIDO:
+        'El puntaje sale de los datos verificados del jugador y de lo que pide la oferta. Todavía no hay historial de contrataciones del que aprender.',
+      HIBRIDO: 'El puntaje combina los datos del jugador con el historial de contrataciones.',
+    } satisfies Record<ModoMatching, string>,
+    formulas: (version: number) => `Fórmulas v${version}`,
+    alDia: 'Se recalcula solo cuando cambian la oferta, las postulaciones o los datos de un jugador.',
+    instantanea: (estado: string) =>
+      `La oferta está ${estado.toLowerCase()}: este ranking es su última instantánea y ya no cambia.`,
+    recalcular: 'Recalcular',
+    recalculado: 'Ranking recalculado.',
+    limiteRecalculo:
+      'Has recalculado muchas veces seguidas. Espera unos minutos; mientras tanto, el ranking se sigue actualizando solo.',
+    errorRecalcular: 'No pudimos recalcular el ranking. Inténtalo de nuevo.',
+    pesos: 'Pesos de la oferta',
+    pesosDetalle: 'La barra de cada candidato reparte su puntaje entre estas dimensiones: peso × valor.',
+    pesoDe: (dimension: string, porcentaje: number) => `${dimension} ${porcentaje} %`,
+    filtros: 'Filtros y orden',
+    mostrar: 'Mostrar',
+    todos: 'Todos los candidatos',
+    soloPostulados: 'Solo postulados',
+    ordenar: 'Ordenar por',
+    ordenPuntaje: 'Puntaje',
+    resultados: (n: number) => (n === 1 ? '1 candidato' : `${n} candidatos`),
+    lista: 'Candidatos',
+    vacio: 'Todavía no hay candidatos',
+    vacioDetalle: 'El ranking se llena con los jugadores registrados en ProPlay. Vuelve cuando haya perfiles.',
+    vacioPostulados: 'Nadie se ha postulado todavía',
+    vacioPostuladosDetalle: 'Cuando un jugador se postule aparecerá aquí con su puesto en el ranking.',
+    verTodos: 'Ver todos los candidatos',
+    puesto: (n: number) => `Puesto ${n}`,
+    compatibilidad: 'Compatibilidad',
+    porcentaje: (n: number) => `${n} %`,
+    verificado: 'Verificado',
+    sinCuenta: 'Sin cuenta verificada',
+    sinRango: 'Sin clasificar',
+    noPostulado: 'No se ha postulado',
+    postulado: 'Postulado',
+    faltanDatos: (datos: string) => `Faltan datos: ${datos}`,
+    dato: {
+      SIN_CUENTA_VERIFICADA: 'cuenta verificada',
+      SIN_CAPTURA: 'estadísticas',
+      SIN_DATOS_PILOTO: 'trayectoria',
+      SIN_ENDORSEMENTS: 'avales de equipos',
+      SIN_UBICACION: 'ubicación',
+      SIN_HORAS: 'horas disponibles',
+    } as Partial<Record<MotivoDimension, string>>,
+    verDetalle: 'Ver detalle',
+    verDetalleDe: (nombre: string) => `Ver el detalle de ${nombre}`,
+    desglose: 'Aporte de cada dimensión al puntaje',
+    otras: 'Otras dimensiones',
+    unidadPuntos: (n: number) => (n === 1 ? 'punto' : 'puntos'),
+    soloLectura: 'Sólo la organización que publicó la oferta cambia el estado de una postulación.',
+    entradaTitulo: 'Ranking de candidatos',
+    entradaDetalle:
+      'Los jugadores ordenados por su compatibilidad con esta oferta, con el aporte de cada dimensión y la explicación del puntaje.',
+    entradaVer: 'Ver ranking de candidatos',
+  },
+  // RF-09 · RF-11 · Detalle del candidato (/vacantes/:id/ranking/:jugadorId)
+  candidato: {
+    volver: 'Volver al ranking',
+    cargando: 'Cargando el candidato',
+    error: 'No pudimos cargar el candidato.',
+    noEncontrado: 'Este jugador no está en el ranking',
+    noEncontradoDetalle: 'Puede que la oferta no exista o que el jugador ya no esté activo.',
+    puestoDe: (puesto: number, total: number) => `Puesto ${puesto} de ${total}`,
+    paraOferta: (titulo: string) => `Candidato para «${titulo}»`,
+    verPerfil: 'Ver perfil público',
+    tablaTitulo: 'De dónde sale el puntaje',
+    tablaSubtitulo: 'Cada dimensión aporta su peso por su valor. La suma de los aportes es el puntaje.',
+    dimension: 'Dimensión',
+    valor: 'Valor',
+    peso: 'Peso',
+    aporte: 'Aporte',
+    total: 'Puntaje',
+    explicacionTitulo: 'Por qué tiene este puntaje',
+    explicacionSubtitulo: 'Qué datos usó el motor en cada dimensión. No interviene ningún modelo de lenguaje.',
+    valorDe: (porcentaje: number) => `Valor ${porcentaje} %`,
+    postulacion: 'Postulación',
+    navegacion: 'Otros candidatos',
+    anterior: (puesto: number, nombre: string) => `Puesto ${puesto}: ${nombre}`,
+    siguiente: (puesto: number, nombre: string) => `Puesto ${puesto}: ${nombre}`,
+    etiquetaAnterior: 'Candidato anterior',
+    etiquetaSiguiente: 'Candidato siguiente',
+  },
+  // RF-11 · Explicación determinista de cada dimensión, a partir de los datos
+  // que guardó el motor (sin modelo de lenguaje).
+  explicacion: {
+    faltanDatos: 'Faltan datos',
+    tecnica: {
+      sinCuenta:
+        'No tiene una cuenta de Riot verificada. La técnica se puntúa con 0: sin datos verificados no hay nada que comprobar.',
+      sinCaptura:
+        'Su cuenta de Riot está verificada, pero todavía no hay estadísticas sincronizadas. La técnica se puntúa con 0 hasta que las haya.',
+      posicionNunca: (posicion: string) =>
+        `No juega ${posicion} en clasificatoria solo/dúo. El factor de posición es 0, así que la técnica vale 0 por mucho rango que tenga.`,
+      posicionParcial: (posicion: string, porcentaje: number, factor: string) =>
+        `Juega ${posicion} en el ${porcentaje} % de sus partidas de solo/dúo. No llega al 60 % de un especialista: el factor de posición es ${factor}.`,
+      posicionEspecialista: (posicion: string, porcentaje: number) =>
+        `Juega ${posicion} en el ${porcentaje} % de sus partidas de solo/dúo: cuenta como especialista (factor de posición 1).`,
+      principal: (posicion: string) => `Su posición más jugada es ${posicion}.`,
+      rangoCumple: (rango: string, minimo: string) =>
+        `Es ${rango} y la oferta pide ${minimo} o más: cumple el rango (100 %).`,
+      rangoPorDebajo: (rango: string, minimo: string, porcentaje: number) =>
+        `Es ${rango} y la oferta pide ${minimo} o más: queda por debajo del mínimo (rango ${porcentaje} %).`,
+      rangoSinMinimo: (rango: string, porcentaje: number) =>
+        `Es ${rango}. La oferta no pide rango mínimo: cuenta su lugar en la escala de ligas (${porcentaje} %).`,
+      sinRango: 'No está clasificado esta temporada: la parte de rango vale 0.',
+      rendimiento: (porcentaje: number, metricas: number) =>
+        `Rendimiento ${porcentaje} %: media de las ${metricas} métricas que cuentan para la posición.`,
+      formula: (factor: string, rango: string, rendimiento: string, total: number) =>
+        `Técnica = factor de posición × (0,45 × rango + 0,55 × rendimiento) = ${factor} × (0,45 × ${rango} + 0,55 × ${rendimiento}) = ${total} %`,
+      metricasTitulo: 'Métricas del rendimiento',
+      metrica: 'Métrica',
+      valorMetrica: 'Valor',
+      normalizado: 'En la escala',
+      muestra: (partidas: number, fecha: string) =>
+        `${partidas === 1 ? '1 partida analizada' : `${partidas} partidas analizadas`} · datos de Riot del ${fecha}`,
+    },
+    geografica: {
+      ofertaRemota: 'La oferta es remota: la ubicación no cuenta y la dimensión vale 100 %.',
+      sinUbicacion:
+        'No ha registrado su ubicación. Se puntúa con el valor neutro (50 %), que ni premia ni castiga.',
+      modalidad: (modalidad: string) => `La oferta es ${modalidad.toLowerCase()}.`,
+      cercania: {
+        MISMO_DEPARTAMENTO: 'Vive en el mismo departamento que la oferta.',
+        MISMA_MACRORREGION: 'Vive en la misma macrorregión que la oferta, en otro departamento.',
+        MISMO_PAIS: 'Vive en el mismo país que la oferta, en otra macrorregión.',
+        OTRO_PAIS: 'Vive en un país distinto al de la oferta.',
+      } satisfies Record<CercaniaGeografica, string>,
+      viveEn: (lugar: string) => `Ubicación del jugador: ${lugar}.`,
+      relocalizacion: 'Está dispuesto a relocalizarse, y eso sube el valor de la cercanía.',
+      sinRelocalizacion: 'No ha indicado que esté dispuesto a relocalizarse.',
+    },
+    disponibilidad: {
+      ofertaSinHoras: 'La oferta no pide una dedicación mínima: la dimensión vale 100 %.',
+      sinHoras:
+        'No ha declarado cuántas horas tiene a la semana. Se puntúa con el valor neutro (50 %), que ni premia ni castiga.',
+      cubre: (jugador: number, oferta: number) =>
+        `Dispone de ${jugador} h a la semana y la oferta pide ${oferta} h: la cubre (100 %).`,
+      parcial: (jugador: number, oferta: number, porcentaje: number) =>
+        `Dispone de ${jugador} h a la semana de las ${oferta} h que pide la oferta (${porcentaje} %).`,
+    },
+    metrica: {
+      winRate: 'Win rate',
+      kda: 'KDA',
+      csPorMinuto: 'CS por minuto',
+      oroPorMinuto: 'Oro por minuto',
+      danoPorMinuto: 'Daño a campeones por minuto',
+      visionPorMinuto: 'Visión por minuto',
+      participacionKills: 'Participación en kills',
+    } satisfies Record<MetricaTecnicaLol, string>,
   },
   modalidad: {
     PRESENCIAL: 'Presencial',

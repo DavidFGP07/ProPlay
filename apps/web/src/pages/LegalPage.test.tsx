@@ -56,6 +56,11 @@ describe('Aviso de privacidad (/legal/privacidad)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Términos de uso' })).toBeInTheDocument()
     expect(screen.getByText(new RegExp(`Versión ${VERSION_AVISO_PRIVACIDAD.replace('.', '\\.')}`))).toBeInTheDocument()
     expect(screen.getByText(/isn't endorsed by Riot Games/)).toBeInTheDocument()
+    // Lo que el ranking de candidatos enseña a equipos y scouts (RF-09).
+    expect(screen.getByText(/En el buscador de talento y en el ranking de candidatos de cada oferta/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Puedes aparecer en el ranking de candidatos de una oferta aunque no te hayas postulado/),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Volver al inicio de sesión/ })).toHaveAttribute('href', '/login')
     // Es una vista publica: no redirige al login ni muestra el aviso de demostracion.
     expect(screen.queryByRole('heading', { name: /Iniciar sesion/i })).toBeNull()

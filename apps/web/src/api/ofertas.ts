@@ -87,13 +87,18 @@ export function usePostular() {
 const ofertasPropiasSchema = paginadoSchema(ofertaPropiaSchema)
 const postulacionesRecibidasSchema = z.array(postulacionRecibidaSchema)
 
-/** Tras un cambio de ofertas o postulaciones, se refresca todo lo de ese recurso. */
+/**
+ * Tras un cambio de ofertas o postulaciones, se refresca todo lo de ese
+ * recurso y el ranking de candidatos, que depende de los dos (los pesos de la
+ * oferta y el estado de cada postulación).
+ */
 function useInvalidarOfertas() {
   const cliente = useQueryClient()
   return () =>
     Promise.all([
       cliente.invalidateQueries({ queryKey: ['ofertas'] }),
       cliente.invalidateQueries({ queryKey: ['postulaciones'] }),
+      cliente.invalidateQueries({ queryKey: ['matching'] }),
     ])
 }
 

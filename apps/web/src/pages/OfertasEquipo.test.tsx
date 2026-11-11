@@ -305,6 +305,16 @@ describe('Detalle de una oferta propia', () => {
     )
   })
 
+  it('el equipo dueño entra al ranking de candidatos desde el detalle, también en su borrador', async () => {
+    sesionDe('EQUIPO')
+    rutas({ '/ofertas/oferta-1': oferta({ estado: 'BORRADOR', publicadaEn: null }), '/perfiles/me': PERFIL_EQUIPO })
+    renderRuta('/vacantes/oferta-1')
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver ranking de candidatos' }, ESPERA),
+    ).toHaveAttribute('href', '/vacantes/oferta-1/ranking')
+  })
+
   it('cerrar pide confirmación y avisa de las postulaciones en proceso', async () => {
     sesionDe('EQUIPO')
     rutas({ '/ofertas/oferta-1': oferta(), '/perfiles/me': PERFIL_EQUIPO, '/ofertas/oferta-1/postulaciones': RECIBIDAS })
@@ -355,6 +365,11 @@ describe('Detalle de una oferta propia', () => {
     const andres = (await screen.findByRole('heading', { name: 'Andrés Molina' }, ESPERA)).closest('article')!
     expect(within(andres).queryByRole('button')).toBeNull()
     expect(screen.getByText(/Como scout puedes consultar las postulaciones/)).toBeInTheDocument()
+    // El scout también entra al ranking de las ofertas publicadas.
+    expect(screen.getByRole('link', { name: 'Ver ranking de candidatos' })).toHaveAttribute(
+      'href',
+      '/vacantes/oferta-1/ranking',
+    )
     expect(screen.queryByRole('link', { name: /Editar/ })).toBeNull()
   })
 })

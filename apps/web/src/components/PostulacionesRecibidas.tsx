@@ -1,16 +1,10 @@
 import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
-import {
-  TRANSICIONES_POSTULACION,
-  type EstadoPostulacion,
-  type Oferta,
-  type PostulacionRecibida,
-} from '@proplay/shared'
-import { Avatar, Badge, Button, Card, CardHeader, EmptyState, EstadoError } from '@/components/ui'
+import type { Oferta, PostulacionRecibida } from '@proplay/shared'
+import { Avatar, Badge, Card, CardHeader, EmptyState, EstadoError } from '@/components/ui'
+import { AccionesPostulacion } from '@/components/AccionesPostulacion'
 import { RecorridoPostulacion } from '@/components/RecorridoPostulacion'
-import { codigoError } from '@/api/errores'
-import { useCambiarEstadoPostulacion, usePostulacionesRecibidas } from '@/api/ofertas'
-import { useToast } from '@/context/ToastContext'
+import { usePostulacionesRecibidas } from '@/api/ofertas'
 import { es } from '@/i18n/es'
 import { TONO_ESTADO_POSTULACION } from '@/lib/postulaciones'
 import { lugar } from '@/lib/ubicacion'
@@ -69,25 +63,7 @@ function Postulacion({
   postulacion: PostulacionRecibida
   acciones: boolean
 }) {
-  const { notificar } = useToast()
-  const cambio = useCambiarEstadoPostulacion()
   const { jugador } = postulacion
-  const siguientes: readonly EstadoPostulacion[] = TRANSICIONES_POSTULACION[postulacion.estado]
-
-  const mover = async (estado: EstadoPostulacion) => {
-    try {
-      await cambio.mutateAsync({ id: postulacion.id, estado })
-      notificar(t.cambiada(jugador.nombre, es.estadoPostulacion[estado]))
-    } catch (e) {
-      const codigo = codigoError(e)
-      notificar(
-        codigo === 'OFERTA_NO_ABIERTA'
-          ? t.congelada
-          : (es.gestionOferta.errores[codigo ?? ''] ?? es.comun.errores.generico),
-        'error',
-      )
-    }
-  }
 
   return (
     <article className="rounded-xl border border-white/8 bg-white/3 p-4">
@@ -123,22 +99,7 @@ function Postulacion({
         >
           {t.verPerfil}
         </Link>
-        {acciones &&
-          siguientes.map((estado) => {
-            const accion = t.acciones[estado] ?? es.estadoPostulacion[estado]
-            return (
-              <Button
-                key={estado}
-                tamano="sm"
-                variante={estado === 'RECHAZADA' ? 'peligro' : estado === 'ACEPTADA' ? 'exito' : 'secundario'}
-                disabled={cambio.isPending}
-                aria-label={t.accionPara(accion, jugador.nombre)}
-                onClick={() => void mover(estado)}
-              >
-                {accion}
-              </Button>
-            )
-          })}
+        {acciones && <AccionesPostulacion postulacion={postulacion} nombre={jugador.nombre} />}
       </div>
     </article>
   )
