@@ -281,6 +281,7 @@ Todos se ejecutan desde la raíz del monorepo.
 | `npm run db:migrate` | `prisma migrate dev` (desarrollo) |
 | `npm run db:deploy` | `prisma migrate deploy` (producción y CI) |
 | `npm run db:seed` | Carga los datos de prueba (idempotente) |
+| `npm run db:test -w api` | Crea y migra la base de las pruebas (`proplay_test`); `npm test` ya lo hace solo |
 | `npm run db:studio` | Abre Prisma Studio |
 | `npm run db:reset` | Borra la base, reaplica migraciones y siembra |
 | `npm run docker:up` / `docker:down` | Atajos de `docker compose` |
@@ -302,11 +303,16 @@ Postgres, así que la base de datos tiene que estar arriba. Cubren el registro,
 el login, el refresco de sesión, `/auth/me`, el acceso denegado sin token, el
 acceso denegado por rol y la forma del error del contrato.
 
-Las pruebas crean usuarios con correos aleatorios prefijados con
-`test-integracion` y los borran al terminar. En CI se ejecutan contra una base
-`proplay_test` aparte; en local usan la `DATABASE_URL` de `apps/api/.env`. Si
-prefieres aislarlas del todo, crea `proplay_test` y exporta `DATABASE_URL`
-antes de lanzar `npm test`.
+Las pruebas de la API **nunca corren contra la base de desarrollo**: usan una
+base propia en el mismo servidor, con el nombre de la de `DATABASE_URL` y el
+sufijo `_test` (`proplay` → `proplay_test`, la misma que en CI). `npm test` la
+crea si no existe y le aplica las migraciones pendientes antes de la primera
+prueba (`apps/api/scripts/base-pruebas.ts`); para prepararla sin ejecutar
+pruebas, `npm run db:test -w api`. Si la base a la que apuntan no termina en
+`_test`, las pruebas se detienen antes de abrir una conexión.
+
+Crean usuarios con correos aleatorios prefijados con `test-integracion` y los
+borran al terminar. La base de pruebas no lleva los datos del seed.
 
 ---
 

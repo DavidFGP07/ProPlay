@@ -60,6 +60,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Los datos sintéticos salen de un generador pseudoaleatorio con semilla fija | El seed produce siempre los mismos números, así las pruebas manuales son comparables entre máquinas. |
 | Las pruebas de integración corren contra una base real, no contra mocks | Lo que se quiere verificar es justo la integración: Zod, Prisma, middlewares y Express juntos. |
 | Las pruebas crean usuarios con correo aleatorio prefijado y los borran al terminar | Permite ejecutarlas contra la base de desarrollo sin arrastrar basura ni chocar entre ejecuciones. |
+| Las pruebas de integración de la API corren **siempre contra una base propia**, `proplay_test`: la de `DATABASE_URL` con el sufijo `_test`, en el mismo servidor. `vitest.config.ts` fija esa URL para las pruebas, un `globalSetup` la crea si no existe y le aplica las migraciones (`scripts/base-pruebas.ts`, también `npm run db:test -w api`) y un `setupFiles` detiene la ejecución si la base no termina en `_test`. En el CI, `DATABASE_URL` ya es `proplay_test` y no cambia nada | En local usaban la base de desarrollo. Borraban sus usuarios al terminar, pero dejaban las trazas de `AuditLog` (que no caen en cascada: unas 4.700 filas acumuladas) y recalculaban vectores y rankings sobre los datos del seed, de modo que una prueba podía cambiar lo que se ve en la demostración, y los datos de desarrollo podían hacer pasar o fallar una prueba. Con la misma base que el CI, lo que pasa en local es lo que pasa en el CI. |
 
 ## Frontend
 
