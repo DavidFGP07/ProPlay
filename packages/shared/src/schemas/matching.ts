@@ -11,8 +11,9 @@ import {
   METRICAS_TECNICA_LOL,
   MODOS_MATCHING,
   MOTIVOS_DIMENSION,
+  ORDENES_RANKING,
 } from "../constants";
-import { paginacionQuerySchema, paginadoSchema } from "./common";
+import { idSchema, paginacionQuerySchema, paginadoSchema } from "./common";
 import { pesosMatchingSchema } from "./oferta";
 import { jugadorEncontradoSchema } from "./scouting";
 
@@ -128,8 +129,27 @@ export const explicacionMatchingSchema = z.object({
 
 // ----------------------------------------------------------- ranking
 
-/** Query de `GET /matching/ofertas/:id/ranking`. */
-export const rankingOfertaQuerySchema = paginacionQuerySchema;
+/**
+ * Query de `GET /matching/ofertas/:id/ranking` y de `POST …/recalcular`: la
+ * paginación común más el filtro y el orden de la vista del ranking.
+ * - `soloPostulados`: sólo los candidatos que se postularon a la oferta.
+ * - `orden`: por puntaje (por defecto) o por el valor de una dimensión, de
+ *   mayor a menor; a igualdad, por el puesto. Es una lista blanca
+ *   (`ORDENES_RANKING`): cualquier otro valor se rechaza con 422.
+ *
+ * Ni el filtro ni el orden cambian el `puesto` de un candidato, que es siempre
+ * el que ocupa en el ranking completo por puntaje.
+ */
+export const rankingOfertaQuerySchema = paginacionQuerySchema.extend({
+  soloPostulados: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((valor) => valor === "true"),
+  orden: z.enum(ORDENES_RANKING).default("puntaje"),
+});
+
+/** `/:id/candidatos/:jugadorId` en los parámetros de ruta. */
+export const candidatoOfertaParamsSchema = z.object({ id: idSchema, jugadorId: idSchema });
 
 /**
  * Un candidato del ranking. `jugador` es la misma lista blanca que el
@@ -137,7 +157,10 @@ export const rankingOfertaQuerySchema = paginacionQuerySchema;
  * mismos roles. `verificacion: null` es la marca «Sin cuenta verificada».
  */
 export const candidatoRankingSchema = z.object({
-  /** Puesto en el ranking, desde 1. */
+  /**
+   * Puesto en el ranking completo por puntaje, desde 1. No cambia al filtrar
+   * por postulados ni al ordenar por una dimensión.
+   */
   puesto: z.number().int().positive(),
   jugador: jugadorEncontradoSchema,
   puntaje: valorDimension,
@@ -159,7 +182,8 @@ export const candidatoRankingSchema = z.object({
  * puntaje (a igualdad, por técnica y por id del jugador) y los datos de la
  * oferta y del cálculo.
  */
-export const rankingOfertaSchema = paginadoSchema(candidatoRankingSchema).extend({
+/** La oferta y los datos del cálculo: comunes al ranking y al detalle de un candidato. */
+const calculoRanking = {
   oferta: z.object({
     id: z.string(),
     titulo: z.string(),
@@ -172,6 +196,29 @@ export const rankingOfertaSchema = paginadoSchema(candidatoRankingSchema).extend
   modo: z.enum(MODOS_MATCHING),
   /** Peso del componente colaborativo: 0 en arranque en frío. */
   pesoColaborativo: valorDimension,
+};
+
+export const rankingOfertaSchema = paginadoSchema(candidatoRankingSchema).extend(calculoRanking);
+
+/** Vecino de un candidato en el ranking: lo justo para enlazarlo. */
+const vecinoRankingSchema = z.object({ id: z.string(), nombre: z.string() });
+
+/**
+ * Detalle de un candidato en el ranking de una oferta
+ * (`GET /matching/ofertas/:id/candidatos/:jugadorId`, RF-09 y RF-11): el mismo
+ * candidato que trae el ranking, con su explicación, más los vecinos por
+ * puesto (para pasar de un candidato a otro sin volver a la lista), el total
+ * de candidatos y los datos del cálculo.
+ */
+export const candidatoOfertaSchema = z.object({
+  candidato: candidatoRankingSchema,
+  /** Candidato del puesto anterior (mejor puntaje); nulo en el primero. */
+  anterior: vecinoRankingSchema.nullable(),
+  /** Candidato del puesto siguiente; nulo en el último. */
+  siguiente: vecinoRankingSchema.nullable(),
+  /** Candidatos del ranking completo. */
+  total: z.number().int().min(0),
+  ...calculoRanking,
 });
 
 // ----------------------------------------------------------- andamiaje
@@ -193,7 +240,11 @@ export type ExplicacionGeografica = z.infer<typeof explicacionGeograficaSchema>;
 export type ExplicacionDisponibilidad = z.infer<typeof explicacionDisponibilidadSchema>;
 export type ExplicacionHabilidadesBlandas = z.infer<typeof explicacionHabilidadesBlandasSchema>;
 export type ExplicacionExperiencia = z.infer<typeof explicacionExperienciaSchema>;
+/** La query ya validada, con sus valores por defecto. */
 export type RankingOfertaQuery = z.infer<typeof rankingOfertaQuerySchema>;
+/** La query como la envía el cliente: todo opcional y el filtro como texto. */
+export type RankingOfertaQueryInput = z.input<typeof rankingOfertaQuerySchema>;
+export type CandidatoOferta = z.infer<typeof candidatoOfertaSchema>;
 export type CandidatoRanking = z.infer<typeof candidatoRankingSchema>;
 export type RankingOferta = z.infer<typeof rankingOfertaSchema>;
 export type Matching = z.infer<typeof matchingSchema>;

@@ -160,6 +160,18 @@ export const MODOS_MATCHING = ["CONTENIDO", "HIBRIDO"] as const;
 export type ModoMatching = (typeof MODOS_MATCHING)[number];
 
 /**
+ * Órdenes que admite el ranking de candidatos (`orden` en la query): por
+ * puntaje (el del ranking) o por el valor de una de las cinco dimensiones. Es
+ * la lista blanca que valida `rankingOfertaQuerySchema`: un valor que no esté
+ * aquí no llega al servidor de datos.
+ */
+export const ORDENES_RANKING = ["puntaje", ...DIMENSIONES_MATCHING] as const satisfies readonly (
+  | "puntaje"
+  | DimensionMatching
+)[];
+export type OrdenRanking = (typeof ORDENES_RANKING)[number];
+
+/**
  * Margen admitido en la suma de los pesos de una oferta. Los deslizadores
  * trabajan en porcentajes enteros, pero la suma en coma flotante de cinco
  * décimas no siempre da 1 exacto.

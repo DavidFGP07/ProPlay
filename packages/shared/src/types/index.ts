@@ -73,6 +73,7 @@ export type {
 
 export type {
   DesgloseMatching,
+  CandidatoOferta,
   CandidatoRanking,
   ExplicacionDisponibilidad,
   ExplicacionExperiencia,
@@ -83,6 +84,7 @@ export type {
   Matching,
   RankingOferta,
   RankingOfertaQuery,
+  RankingOfertaQueryInput,
 } from "../schemas/matching";
 
 export type { BusquedaJugadores, JugadorEncontrado } from "../schemas/scouting";
