@@ -15,11 +15,22 @@ function actor(req: { usuario?: { id: string; rol: servicio.Actor["rol"] } }): s
 
 /**
  * GET /api/v1/matching/ofertas/:id/ranking
- * RF-09 · Ranking de candidatos con puntaje de compatibilidad y desglose.
+ * RF-09 · Ranking de candidatos con puntaje de compatibilidad y desglose,
+ * con el filtro de postulados y el orden de la query.
  */
 export const ranking = asyncHandler(async (req, res) => {
   const query = queryValidada(req, rankingOfertaQuerySchema);
   res.status(200).json(await servicio.ranking(String(req.params.id), actor(req), query));
+});
+
+/**
+ * GET /api/v1/matching/ofertas/:id/candidatos/:jugadorId
+ * RF-09 · RF-11 · Un candidato del ranking con la explicación de su puntaje.
+ */
+export const candidato = asyncHandler(async (req, res) => {
+  res
+    .status(200)
+    .json(await servicio.candidato(String(req.params.id), String(req.params.jugadorId), actor(req)));
 });
 
 /**

@@ -6,6 +6,8 @@
  * con los mismos. No declares esquemas nuevos en este archivo.
  */
 export {
+  candidatoOfertaParamsSchema,
+  candidatoOfertaSchema,
   candidatoRankingSchema,
   desgloseMatchingSchema,
   explicacionMatchingSchema,
@@ -16,6 +18,7 @@ export {
 } from "@proplay/shared";
 
 export type {
+  CandidatoOferta,
   CandidatoRanking,
   DesgloseMatching,
   ExplicacionMatching,

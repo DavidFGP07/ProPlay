@@ -8,6 +8,7 @@ import {
   JUEGO_PILOTO,
   PERFIL_VECTOR_VERSION,
   VERSION_FORMULAS_MATCHING,
+  candidatoOfertaSchema,
   rankingOfertaSchema,
   type CandidatoRanking,
   type Departamento,
@@ -28,7 +29,8 @@ import { conToken, crearOferta, registrar } from "./utils/ofertas";
 
 /**
  * RF-09 · RNF-01 · Ranking de candidatos: GET /matching/ofertas/:id/ranking y
- * POST …/recalcular. Permisos de los cuatro roles, persistencia en `Matching`
+ * POST …/recalcular, y GET …/candidatos/:jugadorId. Permisos de los cuatro roles,
+ * filtro de postulados y orden por dimensión (lista blanca), persistencia en `Matching`
  * con la explicación, orden estable, paginación, recálculo al cambiar los
  * datos y el recuperador HNSW con más de 40 candidatos (`hnsw.ef_search`).
  *
@@ -125,7 +127,7 @@ let oferta: string;
 let borrador: string;
 const ids: Record<string, string> = {};
 
-const ranking = (id: string, token: string, query: Record<string, number> = {}) =>
+const ranking = (id: string, token: string, query: Record<string, number | string | boolean> = {}) =>
   conToken(token).get(`${RUTA}/${id}/ranking`).query(query);
 
 const candidatoDe = (cuerpo: RankingOferta, id: string): CandidatoRanking | undefined =>
@@ -307,6 +309,174 @@ describe("permisos del ranking (RNF-04)", () => {
 
   it("una oferta que no existe responde 404", async () => {
     expect((await ranking("no-existe", tokenScout)).status).toBe(404);
+  });
+});
+
+describe("filtro y orden del ranking", () => {
+  let completo: RankingOferta;
+
+  beforeAll(async () => {
+    completo = rankingOfertaSchema.parse((await ranking(oferta, tokenEquipo, { pageSize: 100 })).body);
+  });
+
+  it("soloPostulados deja sólo a quienes se postularon, con su puesto del ranking completo", async () => {
+    const respuesta = await ranking(oferta, tokenEquipo, { soloPostulados: true, pageSize: 100 });
+    expect(respuesta.status).toBe(200);
+    const cuerpo = rankingOfertaSchema.parse(respuesta.body);
+    expect(cuerpo.data.map((c) => c.jugador.id)).toEqual([ids.sinCuenta]);
+    expect(cuerpo.meta.total).toBe(1);
+    expect(cuerpo.data.every((c) => c.postulacion !== null)).toBe(true);
+    // El puesto no se renumera: es el del ranking completo.
+    expect(cuerpo.data[0]!.puesto).toBe(candidatoDe(completo, ids.sinCuenta!)!.puesto);
+    expect(cuerpo.data[0]!.puesto).toBeGreaterThan(1);
+  });
+
+  it("soloPostulados=false y sin el parámetro devuelven el ranking completo", async () => {
+    const explicito = rankingOfertaSchema.parse(
+      (await ranking(oferta, tokenEquipo, { soloPostulados: false, pageSize: 100 })).body,
+    );
+    expect(explicito.meta.total).toBe(completo.meta.total);
+    expect(explicito.data.map((c) => c.jugador.id)).toEqual(completo.data.map((c) => c.jugador.id));
+  });
+
+  it.each(["geografica", "disponibilidad", "tecnica"] as const)(
+    "orden=%s ordena por esa dimensión y, a igualdad, por el puesto, sin cambiar los puestos",
+    async (dimension) => {
+      const respuesta = await ranking(oferta, tokenEquipo, { orden: dimension, pageSize: 100 });
+      expect(respuesta.status).toBe(200);
+      const cuerpo = rankingOfertaSchema.parse(respuesta.body);
+      expect(cuerpo.meta.total).toBe(completo.meta.total);
+      for (let i = 1; i < cuerpo.data.length; i++) {
+        const [a, b] = [cuerpo.data[i - 1]!, cuerpo.data[i]!];
+        const enOrden =
+          a.desglose[dimension] > b.desglose[dimension] ||
+          (a.desglose[dimension] === b.desglose[dimension] && a.puesto < b.puesto);
+        expect(enOrden).toBe(true);
+      }
+      for (const c of cuerpo.data) {
+        expect(c.puesto).toBe(candidatoDe(completo, c.jugador.id)!.puesto);
+      }
+    },
+  );
+
+  it("ordenar por una dimensión cambia el orden respecto al del puntaje", async () => {
+    // El jugador sin ubicación (geográfica 0,5) queda por detrás de los de Vichada (1).
+    const cuerpo = rankingOfertaSchema.parse(
+      (await ranking(oferta, tokenEquipo, { orden: "geografica", pageSize: 100 })).body,
+    );
+    const indice = (id: string) => cuerpo.data.findIndex((c) => c.jugador.id === id);
+    expect(indice(ids.sinCuenta!)).toBeLessThan(indice(ids.sinUbicacion!));
+    expect(candidatoDe(completo, ids.sinCuenta!)!.puesto).toBeGreaterThan(
+      candidatoDe(completo, ids.sinUbicacion!)!.puesto,
+    );
+  });
+
+  it("orden=puntaje es el orden por defecto", async () => {
+    const cuerpo = rankingOfertaSchema.parse(
+      (await ranking(oferta, tokenEquipo, { orden: "puntaje", pageSize: 100 })).body,
+    );
+    expect(cuerpo.data.map((c) => c.jugador.id)).toEqual(completo.data.map((c) => c.jugador.id));
+  });
+
+  it("el filtro y el orden se combinan con la paginación", async () => {
+    const cuerpo = rankingOfertaSchema.parse(
+      (await ranking(oferta, tokenEquipo, { soloPostulados: true, orden: "disponibilidad", page: 2, pageSize: 1 })).body,
+    );
+    expect(cuerpo.data).toEqual([]);
+    expect(cuerpo.meta).toMatchObject({ page: 2, pageSize: 1, total: 1 });
+    expect(cuerpo.calculadoEn.getTime()).toBe(completo.calculadoEn.getTime());
+  });
+
+  it.each([
+    ["una columna que no es una dimensión", "nombre"],
+    ["una dimensión mal escrita", "Tecnica"],
+    ["un intento de inyección", 'puntaje; DROP TABLE "Matching"; --'],
+    ["una expresión SQL", "(SELECT 1)"],
+    ["vacío", ""],
+  ])("un orden fuera de la lista blanca responde 422 (%s)", async (_caso, orden) => {
+    const respuesta = await ranking(oferta, tokenEquipo, { orden });
+    expect(respuesta.status).toBe(422);
+    expect(respuesta.body.error.code).toBe("VALIDATION_ERROR");
+    expect(respuesta.body.error.details.campos[0].campo).toBe("orden");
+  });
+
+  it("un soloPostulados que no es true ni false responde 422", async () => {
+    const respuesta = await ranking(oferta, tokenEquipo, { soloPostulados: "quizas" });
+    expect(respuesta.status).toBe(422);
+    expect(respuesta.body.error.details.campos[0].campo).toBe("soloPostulados");
+  });
+
+  it("el ranking sigue en la base después de los intentos rechazados", async () => {
+    expect(await prisma.matching.count({ where: { ofertaId: oferta } })).toBeGreaterThanOrEqual(completo.meta.total);
+  });
+
+  it("recalcular también valida el orden (422)", async () => {
+    const respuesta = await conToken(tokenEquipo).post(`${RUTA}/${oferta}/recalcular?orden=nombre`);
+    expect(respuesta.status).toBe(422);
+  });
+});
+
+describe("GET /matching/ofertas/:id/candidatos/:jugadorId", () => {
+  let completo: RankingOferta;
+  const detalle = (id: string, jugadorId: string, token: string) =>
+    conToken(token).get(`${RUTA}/${id}/candidatos/${jugadorId}`);
+
+  beforeAll(async () => {
+    completo = rankingOfertaSchema.parse((await ranking(oferta, tokenEquipo, { pageSize: 100 })).body);
+  });
+
+  it("devuelve el mismo candidato que el ranking, con los datos del cálculo y el total", async () => {
+    const esperado = candidatoDe(completo, ids.fuerte!)!;
+    const respuesta = await detalle(oferta, ids.fuerte!, tokenEquipo);
+    expect(respuesta.status).toBe(200);
+    const cuerpo = candidatoOfertaSchema.parse(respuesta.body);
+    expect(cuerpo.candidato).toEqual(esperado);
+    expect(cuerpo.total).toBe(completo.meta.total);
+    expect(cuerpo.oferta).toEqual(completo.oferta);
+    expect(cuerpo).toMatchObject({ versionFormulas: VERSION_FORMULAS_MATCHING, modo: "CONTENIDO", pesoColaborativo: 0 });
+    expect(cuerpo.calculadoEn.getTime()).toBe(completo.calculadoEn.getTime());
+  });
+
+  it("trae los vecinos por puesto: nulo antes del primero y después del último", async () => {
+    const vecino = (i: number) => {
+      const c = completo.data[i];
+      return c ? { id: c.jugador.id, nombre: c.jugador.nombre } : null;
+    };
+    const ultimo = completo.data.length - 1;
+    expect(completo.meta.total).toBe(completo.data.length);
+    for (const i of [0, 1, ultimo]) {
+      const cuerpo = candidatoOfertaSchema.parse(
+        (await detalle(oferta, completo.data[i]!.jugador.id, tokenEquipo)).body,
+      );
+      expect(cuerpo.candidato.puesto).toBe(i + 1);
+      expect(cuerpo.anterior).toEqual(vecino(i - 1));
+      expect(cuerpo.siguiente).toEqual(vecino(i + 1));
+    }
+  });
+
+  it("el candidato sin cuenta verificada trae su postulación y la explicación con «faltan datos»", async () => {
+    const cuerpo = candidatoOfertaSchema.parse((await detalle(oferta, ids.sinCuenta!, tokenEquipo)).body);
+    expect(cuerpo.candidato.jugador.verificacion).toBeNull();
+    expect(cuerpo.candidato.postulacion).toMatchObject({ estado: "ENVIADA" });
+    expect(cuerpo.candidato.explicacion.dimensiones.tecnica).toMatchObject({
+      faltanDatos: true,
+      motivo: "SIN_CUENTA_VERIFICADA",
+    });
+  });
+
+  it("un jugador que no está en el ranking responde 404", async () => {
+    expect((await detalle(oferta, "no-existe", tokenEquipo)).status).toBe(404);
+  });
+
+  it("mismos permisos que el ranking", async () => {
+    expect((await request((await import("./utils/entorno")).app).get(`${RUTA}/${oferta}/candidatos/${ids.fuerte}`)).status).toBe(401);
+    expect((await detalle(oferta, ids.fuerte!, tokenJugador)).status).toBe(403);
+    expect((await detalle(oferta, ids.fuerte!, tokenOtroEquipo)).status).toBe(403);
+    expect((await detalle(borrador, ids.fuerte!, tokenOtroEquipo)).status).toBe(404);
+    expect((await detalle(oferta, ids.fuerte!, tokenScout)).status).toBe(200);
+    expect((await detalle(oferta, ids.fuerte!, tokenAdmin)).status).toBe(200);
+    expect((await detalle(borrador, ids.fuerte!, tokenScout)).status).toBe(404);
+    expect((await detalle(borrador, ids.fuerte!, tokenEquipo)).status).toBe(200);
   });
 });
 
