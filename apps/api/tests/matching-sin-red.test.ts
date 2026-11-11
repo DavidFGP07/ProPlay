@@ -3,7 +3,7 @@ import https from "node:https";
 import net from "node:net";
 import tls from "node:tls";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { JUEGO_PILOTO, PESOS_MATCHING, rankingOfertaSchema } from "@proplay/shared";
+import { JUEGO_PILOTO, PESOS_MATCHING, rankingOfertaQuerySchema, rankingOfertaSchema } from "@proplay/shared";
 import { prisma } from "../src/config/prisma";
 import * as servicio from "../src/modules/matching/matching.service";
 import { cerrarConexiones, emailDePrueba, limpiarUsuariosDePrueba } from "./utils/entorno";
@@ -113,8 +113,9 @@ describe("el motor de matching no hace llamadas de red", () => {
     ];
 
     const actor = { id: equipoUsuarioId, rol: "EQUIPO" as const };
-    const recalculado = await servicio.recalcular(ofertaId, actor, { page: 1, pageSize: 20 });
-    const leido = await servicio.ranking(ofertaId, actor, { page: 1, pageSize: 20 });
+    const query = rankingOfertaQuerySchema.parse({});
+    const recalculado = await servicio.recalcular(ofertaId, actor, query);
+    const leido = await servicio.ranking(ofertaId, actor, query);
 
     expect(rankingOfertaSchema.safeParse(recalculado).success).toBe(true);
     expect(leido.meta.total).toBeGreaterThan(0);

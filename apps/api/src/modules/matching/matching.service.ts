@@ -4,6 +4,8 @@ import {
   candidatoRankingSchema,
   explicacionMatchingSchema,
   desgloseMatchingSchema,
+  type CandidatoOferta,
+  type CandidatoRanking,
   type EstadoOferta,
   type RankingOferta,
   type RankingOfertaQuery,
@@ -164,56 +166,95 @@ function estaObsoleto(estado: repositorio.EstadoRanking, oferta: repositorio.Ofe
   return estado.ultimoCambio !== null && estado.ultimoCambio > estado.calculadoEn;
 }
 
-async function respuesta(
-  oferta: repositorio.OfertaDb,
-  query: RankingOfertaQuery,
-): Promise<RankingOferta> {
-  const rango = calcularRango(query);
-  const [filas, total] = await repositorio.paginaRanking(oferta.id, rango);
-  const data = filas.map((f, i) =>
-    candidatoRankingSchema.parse({
-      puesto: rango.skip + i + 1,
-      jugador: {
-        id: f.jugadorId,
-        nombre: f.nombre,
-        avatarUrl: f.avatarUrl,
-        pais: f.pais,
-        departamento: f.departamento,
-        disponibilidadHoras: f.disponibilidadHoras,
-        dispuestoRelocalizar: f.dispuestoRelocalizar,
-        verificacion:
-          f.plataforma && f.verificadaEn ? { plataforma: f.plataforma, verificadaEn: f.verificadaEn } : null,
-        posicion: f.posicion,
-        rango: f.rango,
-        datosDel: f.datosDel,
-      },
-      puntaje: f.puntaje,
-      desglose: desgloseMatchingSchema.parse(f.desglose),
-      explicacion: explicacionMatchingSchema.parse(f.explicacion),
-      similitud: f.similitud,
-      postulacion:
-        f.postulacionId && f.postulacionEstado
-          ? { id: f.postulacionId, estado: f.postulacionEstado }
-          : null,
-    }),
-  );
-  const motor = ofertaMotor(oferta);
+/** Fila del ranking guardado → candidato del contrato. */
+function aCandidato(f: repositorio.FilaRankingDb): CandidatoRanking {
+  return candidatoRankingSchema.parse({
+    puesto: f.puesto,
+    jugador: {
+      id: f.jugadorId,
+      nombre: f.nombre,
+      avatarUrl: f.avatarUrl,
+      pais: f.pais,
+      departamento: f.departamento,
+      disponibilidadHoras: f.disponibilidadHoras,
+      dispuestoRelocalizar: f.dispuestoRelocalizar,
+      verificacion:
+        f.plataforma && f.verificadaEn ? { plataforma: f.plataforma, verificadaEn: f.verificadaEn } : null,
+      posicion: f.posicion,
+      rango: f.rango,
+      datosDel: f.datosDel,
+    },
+    puntaje: f.puntaje,
+    desglose: desgloseMatchingSchema.parse(f.desglose),
+    explicacion: explicacionMatchingSchema.parse(f.explicacion),
+    similitud: f.similitud,
+    postulacion:
+      f.postulacionId && f.postulacionEstado
+        ? { id: f.postulacionId, estado: f.postulacionEstado }
+        : null,
+  });
+}
+
+/** La oferta y los datos del cálculo, comunes al ranking y al detalle de un candidato. */
+function datosDelCalculo(oferta: repositorio.OfertaDb, calculadoEn: Date) {
   const pesoColaborativo = colaborativo.peso(oferta.equipoId);
   return {
-    ...paginar(data, total, rango),
-    oferta: { id: oferta.id, titulo: oferta.titulo, estado: oferta.estado, rol: oferta.rol, pesos: motor.pesos },
-    calculadoEn: filas[0]?.calculadoEn ?? (await repositorio.estadoRanking(oferta.id)).calculadoEn ?? new Date(),
+    oferta: {
+      id: oferta.id,
+      titulo: oferta.titulo,
+      estado: oferta.estado,
+      rol: oferta.rol,
+      pesos: ofertaMotor(oferta).pesos,
+    },
+    calculadoEn,
     versionFormulas: VERSION_FORMULAS_MATCHING,
     modo: modoDe(pesoColaborativo),
     pesoColaborativo,
   };
 }
 
+async function respuesta(
+  oferta: repositorio.OfertaDb,
+  query: RankingOfertaQuery,
+): Promise<RankingOferta> {
+  const rango = calcularRango(query);
+  const [filas, total] = await repositorio.paginaRanking(oferta.id, rango, {
+    soloPostulados: query.soloPostulados,
+    // `orden` llega validado contra ORDENES_RANKING: «puntaje» o una dimensión.
+    dimension: query.orden === "puntaje" ? null : query.orden,
+  });
+  // Una página vacía (filtro sin resultados o más allá del final) no trae la fecha.
+  const calculadoEn =
+    filas[0]?.calculadoEn ?? (await repositorio.estadoRanking(oferta.id)).calculadoEn ?? new Date();
+  return {
+    ...paginar(filas.map(aCandidato), total, rango),
+    ...datosDelCalculo(oferta, calculadoEn),
+  };
+}
+
 /**
- * RF-09 · Ranking de candidatos de una oferta, paginado. Se recalcula al
- * leerlo si quedó obsoleto (vectores, postulaciones, endorsements, la oferta o
- * la versión de las fórmulas cambiaron). Una oferta cubierta o cerrada sirve
- * su última instantánea, y sólo se calcula si nunca se calculó.
+ * Deja el ranking de la oferta al día antes de leerlo: lo recalcula si quedó
+ * obsoleto (vectores, postulaciones, endorsements, la oferta o la versión de
+ * las fórmulas cambiaron). Una oferta cubierta o cerrada conserva su última
+ * instantánea, y sólo se calcula si nunca se calculó.
+ */
+async function asegurarRanking(oferta: repositorio.OfertaDb): Promise<void> {
+  if (esFinal(oferta.estado)) {
+    if ((await repositorio.estadoRanking(oferta.id)).filas === 0) {
+      await revectorizarObsoletos();
+      await calcularRanking(oferta);
+    }
+    return;
+  }
+  await revectorizarObsoletos();
+  if (estaObsoleto(await repositorio.estadoRanking(oferta.id), oferta)) {
+    await calcularRanking(oferta);
+  }
+}
+
+/**
+ * RF-09 · Ranking de candidatos de una oferta, paginado, con el filtro de
+ * postulados y el orden pedidos. Se recalcula al leerlo si quedó obsoleto.
  */
 export async function ranking(
   ofertaId: string,
@@ -221,18 +262,33 @@ export async function ranking(
   query: RankingOfertaQuery,
 ): Promise<RankingOferta> {
   const oferta = await ofertaDelRanking(ofertaId, actor);
-  if (esFinal(oferta.estado)) {
-    if ((await repositorio.estadoRanking(oferta.id)).filas === 0) {
-      await revectorizarObsoletos();
-      await calcularRanking(oferta);
-    }
-    return respuesta(oferta, query);
-  }
-  await revectorizarObsoletos();
-  if (estaObsoleto(await repositorio.estadoRanking(oferta.id), oferta)) {
-    await calcularRanking(oferta);
-  }
+  await asegurarRanking(oferta);
   return respuesta(oferta, query);
+}
+
+/**
+ * RF-09 · RF-11 · Un candidato del ranking de la oferta, con su explicación,
+ * sus vecinos por puesto y los datos del cálculo. Mismos permisos y mismo
+ * recálculo al leer que el ranking; 404 si el jugador no está en él.
+ */
+export async function candidato(
+  ofertaId: string,
+  jugadorId: string,
+  actor: Actor,
+): Promise<CandidatoOferta> {
+  const oferta = await ofertaDelRanking(ofertaId, actor);
+  await asegurarRanking(oferta);
+  const fila = await repositorio.candidatoDelRanking(oferta.id, jugadorId);
+  if (!fila) throw new NotFoundError("El jugador no está en el ranking de esta oferta");
+  const vecino = (id: string | null, nombre: string | null) =>
+    id !== null && nombre !== null ? { id, nombre } : null;
+  return {
+    candidato: aCandidato(fila),
+    anterior: vecino(fila.anteriorId, fila.anteriorNombre),
+    siguiente: vecino(fila.siguienteId, fila.siguienteNombre),
+    total: fila.total,
+    ...datosDelCalculo(oferta, fila.calculadoEn),
+  };
 }
 
 /** RF-09 · Fuerza el recálculo del ranking y devuelve su primera página (o la pedida). */

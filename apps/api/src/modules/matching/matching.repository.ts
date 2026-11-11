@@ -4,6 +4,7 @@ import {
   JUEGO_PILOTO,
   POSICIONES_LOL,
   type Departamento,
+  type DimensionMatching,
   type EstadoOferta,
   type EstadoPostulacion,
   type Modalidad,
@@ -403,6 +404,8 @@ export async function guardarRanking(
 
 export interface FilaRankingDb {
   jugadorId: string;
+  /** Puesto en el ranking completo por puntaje, desde 1. */
+  puesto: number;
   puntaje: number;
   desglose: Prisma.JsonValue;
   explicacion: Prisma.JsonValue;
@@ -423,43 +426,99 @@ export interface FilaRankingDb {
   postulacionEstado: EstadoPostulacion | null;
 }
 
+/** Filtro y orden de una página del ranking (ya validados contra el contrato). */
+export interface OpcionesRanking {
+  soloPostulados: boolean;
+  /** Dimensión por la que se ordena; nula para el orden del ranking (puntaje). */
+  dimension: DimensionMatching | null;
+}
+
 /**
- * Página del ranking guardado con lo que la respuesta muestra de cada jugador
- * (la lista blanca del buscador) y su postulación a la oferta. Mismo orden que
- * `ordenarRanking`: puntaje, técnica e id (con collation binaria, como en JS).
+ * Ranking guardado de la oferta con el puesto de cada candidato: el mismo
+ * orden que `ordenarRanking` (puntaje, técnica e id, con collation binaria,
+ * como en JS) sobre los jugadores activos. El puesto se calcula aquí, antes de
+ * filtrar o reordenar, para que sea siempre el del ranking completo.
+ */
+function clasificado(ofertaId: string): Prisma.Sql {
+  return Prisma.sql`
+    SELECT m."jugadorId", m.puntaje, m.desglose, m.explicacion, m.similitud, m."calculadoEn",
+           u.nombre,
+           (row_number() OVER orden)::int AS puesto,
+           lag(m."jugadorId") OVER orden AS "anteriorId",
+           lag(u.nombre) OVER orden AS "anteriorNombre",
+           lead(m."jugadorId") OVER orden AS "siguienteId",
+           lead(u.nombre) OVER orden AS "siguienteNombre",
+           (count(*) OVER ())::int AS total
+      FROM "Matching" m
+      JOIN "PerfilJugador" pj ON pj.id = m."jugadorId"
+      JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
+     WHERE m."ofertaId" = ${ofertaId}
+    WINDOW orden AS (
+      ORDER BY m.puntaje DESC,
+               (m.desglose->>'tecnica')::double precision DESC,
+               m."jugadorId" COLLATE "C" ASC
+    )
+  `;
+}
+
+/**
+ * Lo que la respuesta muestra de cada candidato (la lista blanca del buscador)
+ * y su postulación a la oferta, sobre el ranking ya clasificado (`c`).
+ */
+function columnasCandidato(): Prisma.Sql {
+  return Prisma.sql`
+    c."jugadorId", c.puesto, c.puntaje, c.desglose, c.explicacion, c.similitud, c."calculadoEn",
+    c.nombre, pj."avatarUrl", pj.pais::text AS pais, pj.departamento,
+    pj."disponibilidadHoras", pj."dispuestoRelocalizar",
+    cg.plataforma, cg."verificadaEn",
+    ultima.rol AS posicion, ultima.rango, ultima."capturadaEn" AS "datosDel",
+    p.id AS "postulacionId", p.estado AS "postulacionEstado"
+  `;
+}
+
+function unionesCandidato(ofertaId: string): Prisma.Sql {
+  return Prisma.sql`
+    JOIN "PerfilJugador" pj ON pj.id = c."jugadorId"
+    LEFT JOIN "CuentaGaming" cg
+      ON cg."jugadorId" = pj.id AND cg.plataforma = 'RIOT' AND cg."verificadaEn" IS NOT NULL
+    LEFT JOIN LATERAL (
+      SELECT e.rol, e.rango, e."capturadaEn"
+        FROM "Estadistica" e
+       WHERE cg.id IS NOT NULL
+         AND e."jugadorId" = pj.id
+         AND e.fuente = 'RIOT'
+         AND e.juego = ${JUEGO_PILOTO}
+       ORDER BY e."capturadaEn" DESC, e.id DESC
+       LIMIT 1
+    ) ultima ON TRUE
+    LEFT JOIN "Postulacion" p ON p."ofertaId" = ${ofertaId} AND p."jugadorId" = c."jugadorId"
+  `;
+}
+
+/**
+ * Página del ranking guardado, con el filtro de postulados y el orden pedidos.
+ *
+ * Todo va como parámetro de `$queryRaw`, también la dimensión del orden: es la
+ * clave con la que se lee el desglose (`desglose->>$n`), nunca un trozo de SQL
+ * concatenado, y llega aquí ya validada contra `ORDENES_RANKING`. Con el orden
+ * por puntaje la clave es nula, la expresión vale `NULL` en todas las filas y
+ * decide el puesto.
  */
 export async function paginaRanking(
   ofertaId: string,
   rango: RangoPrisma,
+  opciones: OpcionesRanking,
 ): Promise<[FilaRankingDb[], number]> {
+  const { soloPostulados, dimension } = opciones;
   const [filas, conteo] = await Promise.all([
     prisma.$queryRaw<FilaRankingDb[]>`
-      SELECT m."jugadorId", m.puntaje, m.desglose, m.explicacion, m.similitud, m."calculadoEn",
-             u.nombre, pj."avatarUrl", pj.pais::text AS pais, pj.departamento,
-             pj."disponibilidadHoras", pj."dispuestoRelocalizar",
-             cg.plataforma, cg."verificadaEn",
-             ultima.rol AS posicion, ultima.rango, ultima."capturadaEn" AS "datosDel",
-             p.id AS "postulacionId", p.estado AS "postulacionEstado"
-        FROM "Matching" m
-        JOIN "PerfilJugador" pj ON pj.id = m."jugadorId"
-        JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
-        LEFT JOIN "CuentaGaming" cg
-          ON cg."jugadorId" = pj.id AND cg.plataforma = 'RIOT' AND cg."verificadaEn" IS NOT NULL
-        LEFT JOIN LATERAL (
-          SELECT e.rol, e.rango, e."capturadaEn"
-            FROM "Estadistica" e
-           WHERE cg.id IS NOT NULL
-             AND e."jugadorId" = pj.id
-             AND e.fuente = 'RIOT'
-             AND e.juego = ${JUEGO_PILOTO}
-           ORDER BY e."capturadaEn" DESC, e.id DESC
-           LIMIT 1
-        ) ultima ON TRUE
-        LEFT JOIN "Postulacion" p ON p."ofertaId" = m."ofertaId" AND p."jugadorId" = m."jugadorId"
-       WHERE m."ofertaId" = ${ofertaId}
-       ORDER BY m.puntaje DESC,
-                (m.desglose->>'tecnica')::double precision DESC,
-                m."jugadorId" COLLATE "C" ASC
+      WITH c AS (${clasificado(ofertaId)})
+      SELECT ${columnasCandidato()}
+        FROM c
+        ${unionesCandidato(ofertaId)}
+       WHERE (NOT ${soloPostulados}::boolean OR p.id IS NOT NULL)
+       ORDER BY (c.desglose->>${dimension}::text)::double precision DESC NULLS LAST,
+                c.puesto ASC
        LIMIT ${rango.take} OFFSET ${rango.skip}
     `,
     prisma.$queryRaw<{ total: number }[]>`
@@ -467,10 +526,40 @@ export async function paginaRanking(
         FROM "Matching" m
         JOIN "PerfilJugador" pj ON pj.id = m."jugadorId"
         JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
+        LEFT JOIN "Postulacion" p ON p."ofertaId" = m."ofertaId" AND p."jugadorId" = m."jugadorId"
        WHERE m."ofertaId" = ${ofertaId}
+         AND (NOT ${soloPostulados}::boolean OR p.id IS NOT NULL)
     `,
   ]);
   return [filas, conteo[0]?.total ?? 0];
+}
+
+export interface FilaCandidatoDb extends FilaRankingDb {
+  anteriorId: string | null;
+  anteriorNombre: string | null;
+  siguienteId: string | null;
+  siguienteNombre: string | null;
+  /** Candidatos del ranking completo. */
+  total: number;
+}
+
+/**
+ * Un candidato del ranking guardado, con sus vecinos por puesto y el total;
+ * nulo si el jugador no está en el ranking de la oferta.
+ */
+export async function candidatoDelRanking(
+  ofertaId: string,
+  jugadorId: string,
+): Promise<FilaCandidatoDb | null> {
+  const filas = await prisma.$queryRaw<FilaCandidatoDb[]>`
+    WITH c AS (${clasificado(ofertaId)})
+    SELECT ${columnasCandidato()},
+           c."anteriorId", c."anteriorNombre", c."siguienteId", c."siguienteNombre", c.total
+      FROM c
+      ${unionesCandidato(ofertaId)}
+     WHERE c."jugadorId" = ${jugadorId}
+  `;
+  return filas[0] ?? null;
 }
 
 /** TODO: Devolver las ofertas más compatibles con el jugador autenticado. */

@@ -5,9 +5,12 @@ import {
   DIMENSIONES_SIN_DATOS_PILOTO,
   MOTIVOS_DIMENSION,
   MOTIVOS_FALTAN_DATOS,
+  ORDENES_RANKING,
   PESOS_MATCHING,
+  candidatoOfertaSchema,
   candidatoRankingSchema,
   pesosMatchingSchema,
+  rankingOfertaQuerySchema,
   rankingOfertaSchema,
   type CandidatoRanking,
 } from "@proplay/shared";
@@ -151,5 +154,67 @@ describe("rankingOfertaSchema", () => {
 
   it("rechaza un modo que no existe", () => {
     expect(rankingOfertaSchema.safeParse({ ...ranking, modo: "COLABORATIVO" }).success).toBe(false);
+  });
+});
+
+describe("rankingOfertaQuerySchema", () => {
+  it("por defecto: primera página, todos los candidatos y orden por puntaje", () => {
+    expect(rankingOfertaQuerySchema.parse({})).toEqual({
+      page: 1,
+      pageSize: 20,
+      soloPostulados: false,
+      orden: "puntaje",
+    });
+  });
+
+  it("la lista blanca del orden es el puntaje y las cinco dimensiones, nada más", () => {
+    expect([...ORDENES_RANKING]).toEqual(["puntaje", ...DIMENSIONES_MATCHING]);
+    for (const orden of ORDENES_RANKING) {
+      expect(rankingOfertaQuerySchema.parse({ orden }).orden).toBe(orden);
+    }
+  });
+
+  it("rechaza cualquier orden fuera de la lista blanca", () => {
+    for (const orden of ["nombre", "PUNTAJE", "puntaje desc", "tecnica; DROP TABLE x", "", "m.puntaje"]) {
+      expect(rankingOfertaQuerySchema.safeParse({ orden }).success).toBe(false);
+    }
+  });
+
+  it("soloPostulados llega como texto de la query y sólo admite true o false", () => {
+    expect(rankingOfertaQuerySchema.parse({ soloPostulados: "true" }).soloPostulados).toBe(true);
+    expect(rankingOfertaQuerySchema.parse({ soloPostulados: "false" }).soloPostulados).toBe(false);
+    expect(rankingOfertaQuerySchema.safeParse({ soloPostulados: "1" }).success).toBe(false);
+  });
+});
+
+describe("candidatoOfertaSchema", () => {
+  const detalle = {
+    candidato,
+    anterior: null,
+    siguiente: { id: "jugador-2", nombre: "Luis" },
+    total: 2,
+    oferta: {
+      id: "oferta-1",
+      titulo: "MID para la academia",
+      estado: "ABIERTA",
+      rol: "MID",
+      pesos: { ...PESOS_MATCHING },
+    },
+    calculadoEn: "2026-11-10T12:00:00.000Z",
+    versionFormulas: 2,
+    modo: "CONTENIDO",
+    pesoColaborativo: 0,
+  };
+
+  it("acepta el detalle de un candidato con sus vecinos y convierte las fechas", () => {
+    const resultado = candidatoOfertaSchema.parse(detalle);
+    expect(resultado.calculadoEn).toBeInstanceOf(Date);
+    expect(resultado.anterior).toBeNull();
+    expect(resultado.siguiente).toEqual({ id: "jugador-2", nombre: "Luis" });
+  });
+
+  it("exige los datos del cálculo", () => {
+    const { modo: _modo, ...sinModo } = detalle;
+    expect(candidatoOfertaSchema.safeParse(sinModo).success).toBe(false);
   });
 });

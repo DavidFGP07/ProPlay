@@ -224,7 +224,13 @@ flowchart LR
   reemplaza la instantánea de la oferta en `Matching`. Una oferta cubierta o
   cerrada conserva la última.
 - **Orden.** Puntaje de mayor a menor; a igualdad, técnica y, por último, el id
-  del jugador. Es estable entre páginas.
+  del jugador. Es estable entre páginas, y de él sale el `puesto` de cada
+  candidato.
+- **Filtro y orden de la vista.** La query admite `soloPostulados` y `orden`
+  (`ORDENES_RANKING`: el puntaje o el valor de una dimensión, de mayor a menor;
+  a igualdad, el puesto). Ninguno cambia el `puesto`, que es siempre el del
+  ranking completo. `GET /matching/ofertas/:id/candidatos/:jugadorId` devuelve
+  un candidato con su explicación y sus vecinos por puesto.
 
 ### Las cinco dimensiones
 
