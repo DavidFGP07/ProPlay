@@ -619,7 +619,7 @@ export const es = {
     subtituloScout: 'Consulta de ofertas y procesos de selección del ecosistema.',
     publicar: 'Publicar oferta',
     notaScout:
-      'Tu rol de scout puede consultar ofertas, postulaciones y rankings, pero no publicar ofertas ni cambiar el estado de una postulación: eso lo hace la organización que contrata.',
+      'Tu rol de scout puede consultar ofertas, postulaciones y rankings (desde el detalle de cada oferta), pero no publicar ofertas ni cambiar el estado de una postulación: eso lo hace la organización que contrata.',
     verOfertas: 'Ver las ofertas abiertas',
     misOfertas: 'Tus ofertas',
     misOfertasSubtitulo: 'Todas tus ofertas, en cualquier estado, con sus postulaciones.',
@@ -630,6 +630,18 @@ export const es = {
     postulaciones: (n: number) => (n === 1 ? '1 postulación' : `${n} postulaciones`),
     creadaEl: (fecha: string) => `Creada el ${fecha}`,
     gestionar: 'Gestionar',
+    ranking: 'Ranking',
+    candidatos: 'Mejores candidatos de tus ofertas abiertas',
+    candidatosSubtitulo:
+      'Los tres primeros del ranking de cada oferta, con el aporte de cada dimensión a su puntaje.',
+    cargandoCandidatos: 'Cargando los candidatos',
+    errorCandidatos: 'No pudimos cargar el ranking de esta oferta.',
+    sinAbiertas: 'No tienes ofertas abiertas',
+    sinAbiertasDetalle: 'Publica una oferta para que el motor calcule su ranking de candidatos.',
+    sinCandidatos: 'Todavía no hay candidatos para esta oferta.',
+    verRanking: 'Ver ranking completo',
+    verRankingDe: (titulo: string) => `Ver el ranking completo de ${titulo}`,
+    masAbiertas: (n: number) => `Se muestran tus ${n} ofertas abiertas más recientes.`,
   },
   // RF-09 · Ranking de candidatos de una oferta (/vacantes/:id/ranking)
   ranking: {

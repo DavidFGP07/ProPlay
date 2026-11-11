@@ -140,9 +140,9 @@ describe('Datos de la organización en el panel de equipo', () => {
     expect(await t.findByLabelText(/^Nombre de la organización/)).toHaveValue('Lobos del Caribe')
     expect(screen.getByText('Lobos del Caribe', { selector: 'p' })).toBeInTheDocument()
     expect(doble.get).toHaveBeenCalledWith('/perfiles/me')
-    // Sin aviso de página: las secciones simuladas llevan su marca y la tarjeta no.
+    // Sin aviso de página: la única sección simulada (los indicadores) lleva su marca y la tarjeta no.
     expect(t.queryByText('Datos de demostracion')).toBeNull()
-    expect(screen.getAllByText('Datos de demostracion').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(1)
     expect(screen.queryByText(/Lo que ves en esta seccion/)).toBeNull()
   })
 
