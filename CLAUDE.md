@@ -235,8 +235,8 @@ dentro de cada vista.
 | Panel del equipo (datos de la organización y «Tus ofertas» reales; indicadores y recomendaciones, simulados) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
 | Buscador de talento (datos reales; posición y rango sólo de cuentas de Riot verificadas) | `/explorar` | RF-08 | Soporte: filtros por posición, rango mínimo y departamento |
 | Crear oferta, **con ajuste de los pesos de las dimensiones** (también su edición; en el piloto sólo se ven las tres con datos, `DIMENSIONES_SIN_DATOS_PILOTO` oculta experiencia y habilidades blandas) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
-| **Ranking de candidatos con desglose por dimensión** | — | RF-09 | Núcleo |
-| Detalle del candidato con la explicación del matching | — | RF-09, RF-11 | Núcleo |
+| **Ranking de candidatos con desglose por dimensión** (barra con el aporte de cada dimensión, filtro de postulados, orden y «Recalcular») | `/vacantes/:id/ranking`; se entra desde el detalle de la oferta | RF-09 | Núcleo |
+| Detalle del candidato con la explicación del matching (determinista; la generada con LLM es del S4) | `/vacantes/:id/ranking/:jugadorId` | RF-09, RF-11 | Núcleo |
 | Comparador de candidatos | — | RF-09 | Futuro (descartada) |
 | Postulaciones recibidas | dentro de `/vacantes/:id` | RF-10 | Soporte: dentro del detalle de la oferta, sin vista propia |
 | Lista de seguimiento | — | RF-08 | Futuro (descartada) |
@@ -346,7 +346,8 @@ indicando el sprint que lo conecta. Hablan ya con la API real la autenticación,
 (nombre y contraseña), el registro con su aceptación, el perfil público `/jugador/:id` (sin
 sesión), Explorar oportunidades (`/vacantes`) y el detalle de la oferta con la postulación
 (`/vacantes/:id`, que para el equipo dueño incluye la gestión de la oferta y las postulaciones
-recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), el buscador de talento
+recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), el ranking de candidatos
+(`/vacantes/:id/ranking`) y el detalle del candidato (`/vacantes/:id/ranking/:jugadorId`), el buscador de talento
 (`/explorar`), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y
 desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
