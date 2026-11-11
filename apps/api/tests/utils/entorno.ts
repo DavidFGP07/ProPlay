@@ -9,8 +9,8 @@ import { cerrarColaIngesta } from "../../src/ingesta/cola";
  * Utilidades compartidas por las pruebas de integración.
  *
  * Las pruebas hablan con la app real (Express + Prisma) contra la base de
- * datos de DATABASE_URL, así que crean usuarios con correos aleatorios y los
- * borran al terminar. En CI la base es proplay_test.
+ * pruebas (`proplay_test`, nunca la de desarrollo: scripts/base-pruebas.ts).
+ * Crean usuarios con correos aleatorios y los borran al terminar.
  */
 
 export const app: Express = crearApp();

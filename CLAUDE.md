@@ -53,6 +53,9 @@ npm run rnf01 -w api        # mide RNF-01 (p95 del ranking, 1.000 perfiles) en d
 
 - `db:deploy` aplica migraciones; `db:migrate` (`prisma migrate dev`) es sólo para **crear**
   una migración nueva y tiene sus reglas en §4. Nunca lo uses para ponerte al día.
+- Las pruebas de la API usan su propia base, `proplay_test` (la de `DATABASE_URL` con el
+  sufijo `_test`), que `npm test` crea y migra sola; nunca la de desarrollo. No apuntes las
+  pruebas a otra base ni quites la comprobación de `tests/utils/soloBaseDePruebas.ts`.
 - El cliente de Prisma de `node_modules` es compartido por todas las ramas. Al cambiar a una
   rama con otro `schema.prisma`, ejecuta `npm run db:generate` y `npm run db:deploy`; si
   no, la API falla con `P2022` (pide columnas que tu base no tiene).
