@@ -19,6 +19,8 @@ const FeedPage = lazy(() => import('@/pages/FeedPage'))
 const ScoutingPage = lazy(() => import('@/pages/ScoutingPage'))
 const OfertasPage = lazy(() => import('@/pages/OfertasPage'))
 const OfertaDetallePage = lazy(() => import('@/pages/OfertaDetallePage'))
+const RankingOfertaPage = lazy(() => import('@/pages/RankingOfertaPage'))
+const CandidatoDetallePage = lazy(() => import('@/pages/CandidatoDetallePage'))
 const OfertaFormularioPage = lazy(() => import('@/pages/OfertaFormularioPage'))
 const PanelEquipoPage = lazy(() => import('@/pages/PanelEquipoPage'))
 const PerfilJugadorPage = lazy(() => import('@/pages/PerfilJugadorPage'))
@@ -123,6 +125,13 @@ export default function App() {
             <Route path="explorar" element={diferida(ScoutingPage)} />
             <Route path="panel-equipo" element={diferida(PanelEquipoPage)} />
             <Route path="dashboard" element={diferida(DashboardPage)} />
+            {/* RF-09 · Ranking de candidatos de una oferta con el desglose por dimension */}
+            <Route path="vacantes/:id/ranking" element={diferida(RankingOfertaPage)} />
+            {/* RF-09 · RF-11 · Detalle del candidato con la explicacion del puntaje */}
+            <Route
+              path="vacantes/:id/ranking/:jugadorId"
+              element={diferida(CandidatoDetallePage)}
+            />
           </Route>
 
           {/* RF-07 · RF-09 · Crear y editar ofertas: sólo el equipo */}

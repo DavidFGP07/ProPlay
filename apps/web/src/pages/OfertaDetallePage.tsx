@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Briefcase, CheckCircle2, Send, Sigma, Weight } from 'lucide-react'
+import { ArrowLeft, Briefcase, CheckCircle2, Send, Sigma, Trophy, Weight } from 'lucide-react'
 import {
   crearPostulacionSchema,
   type CrearPostulacionInput,
@@ -51,8 +51,8 @@ const claseEnlace =
 // RF-07 · RF-10 · Detalle de la oferta y postulación: datos reales de
 // GET /api/v1/ofertas/:id y POST /api/v1/ofertas/:id/postulaciones. El equipo
 // dueño la gestiona desde aquí y ve las postulaciones recibidas; el scout las
-// consulta. El ranking de candidatos y su explicación son otra vista (motor de
-// matching).
+// consulta. Los tres roles que ven el ranking de candidatos (RF-09) entran a
+// él desde aquí; es una vista propia, /vacantes/:id/ranking.
 export default function OfertaDetallePage() {
   const { id } = useParams<{ id: string }>()
   const consulta = useOferta(id)
@@ -108,6 +108,9 @@ function Detalle({ oferta }: { oferta: Oferta }) {
     propio.data?.tipo === 'EQUIPO' && propio.data.perfil.id === oferta.equipo.id
   // El equipo ve las de sus ofertas; el scout y el administrador, las de cualquiera publicada.
   const veRecibidas = oferta.estado !== 'BORRADOR' && (esPropia || rol === 'SCOUT' || rol === 'ADMIN')
+  // El ranking lo ve el equipo dueño (también de su borrador, para probar los
+  // pesos), y el scout y el administrador en las ofertas publicadas.
+  const veRanking = esPropia || veRecibidas
   // Sólo las dimensiones con datos en el piloto, en porcentajes que suman 100.
   const porcentajes = redondear(aPorcentajes(oferta.pesos))
   const ficha: [string, string][] = [
@@ -187,6 +190,30 @@ function Detalle({ oferta }: { oferta: Oferta }) {
           </dl>
         </Card>
       </div>
+
+      {veRanking && (
+        <Card className="border-brand-500/30 bg-brand-500/5">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-500/15 text-brand-300">
+                <Trophy size={16} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-slate-100">{es.ranking.entradaTitulo}</h2>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                  {es.ranking.entradaDetalle}
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/vacantes/${oferta.id}/ranking`}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-600 to-accent-600 px-4 text-sm font-medium text-white shadow-lg shadow-brand-900/40 transition hover:from-brand-500 hover:to-accent-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
+              {es.ranking.entradaVer}
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {veRecibidas && <PostulacionesRecibidas oferta={oferta} gestiona={esPropia} />}
 
