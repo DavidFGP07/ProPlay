@@ -572,6 +572,7 @@ lo que hay: no cambia decisiones ni alcance.
 | Los documentos de `docs/prototipo/` llevan un aviso con sus diferencias con la aplicación actual y no se reescriben | Son la historia del prototipo (ver «Integración del cliente de `Fronted`»). El de pruebas piloto queda señalado porque contradice la medición de H1 decidida (lista siguiente). |
 | Las divergencias resueltas de «Divergencias con `@proplay/shared`» se marcan en su última columna en lugar de borrarse | Este archivo es de sólo añadir; la regla antigua de borrarlas contradecía esa convención. |
 | `docs/espiga-riot.md` no existe en el repositorio | La espiga de Riot (`chore/espiga-riot`) nunca se fusionó; sus conclusiones están en «Vinculación con Riot» e «Integración con Riot». |
+| **`Publicacion` es el soporte del Feed**, vista de trabajo futuro (descartada en el recorte de alcance), y **se conserva en `schema.prisma` sin uso en el piloto**: ningún endpoint la lee ni la escribe | Viene del prototipo y del modelo del documento para el feed. Quitarla y volver a añadirla si se recupera el feed costaría dos migraciones, y una tabla vacía no afecta al piloto. Resuelve la contradicción 2 de la lista siguiente. |
 
 ### Contradicciones entre el código y las decisiones
 
@@ -582,7 +583,7 @@ decisión.
    el panel de administración (`/admin`) siguen en el enrutador y en el menú
    (`components/Layout.tsx`), con datos simulados, aunque la decisión 0.10 los deja fuera.
    Es la tarea 1.7, pendiente.
-2. **Tres tablas fuera de las 15 entidades del documento.** `schema.prisma` tiene
+2. **Resuelta por la entrada sobre `Publicacion` de la tabla anterior.** **Tres tablas fuera de las 15 entidades del documento.** `schema.prisma` tiene
    `Publicacion`, `Conversacion` y `ParticipanteConversacion`. La mensajería con hilos está
    justificada en «Divergencias» (y es trabajo futuro); `Publicacion` (el feed, descartado)
    no tiene decisión que la sostenga.

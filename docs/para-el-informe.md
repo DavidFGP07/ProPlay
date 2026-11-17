@@ -359,6 +359,11 @@ Para la sección de limitaciones del informe:
    rango mínimo.
 9. **Umbral de privacidad.** Con pocos jugadores por celda, el mapa del talento oculta buena
    parte del desglose. En el seed, todas las posiciones del Caribe quedan ocultas.
+10. **Sin monitoreo de errores ni registros centralizados.** Sentry y Logtail, que cita la
+    Sección X, no están integrados: los registros son los de pino por la salida estándar.
+    Queda pendiente de decidir al desplegar (tarea 2.13).
+11. **RNF-07 sin medir.** El diseño responsivo se comprobó a 375 y 1440 px, pero no se ha
+    medido que un scout llegue a un ranking en tres interacciones o menos.
 
 ## Anexos sugeridos
 
