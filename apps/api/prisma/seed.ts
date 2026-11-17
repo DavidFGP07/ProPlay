@@ -23,10 +23,10 @@ import {
 /**
  * Datos de prueba de ProPlay.
  *
- * Carga: el catálogo de habilidades, 3 equipos, 15 jugadores (10 con cuenta
+ * Carga: el catálogo de habilidades, 3 equipos, 21 jugadores (16 con cuenta
  * de Riot verificada y estadísticas de LoL con posición y rango; sus vectores
- * los calcula el motor de matching), endorsements de equipos a tres de ellos, 5 ofertas de League of Legends en todos los estados
- * con postulaciones fechadas (para el embudo), un scout y un administrador.
+ * los calcula el motor de matching), endorsements de equipos a tres de ellos, 9 ofertas de League of Legends en todos los estados
+ * con postulaciones fechadas (para el embudo y la analítica), un scout y un administrador.
  *
  * Es idempotente (usa upsert), así que se puede ejecutar varias veces:
  *   npm run db:seed
@@ -68,10 +68,13 @@ const HABILIDADES_BLANDAS = [
 ];
 
 /**
- * Cuenta de Riot y datos de juego de los 15 jugadores, en orden. Los diez
+ * Cuenta de Riot y datos de juego de los 21 jugadores, en orden. Los diez
  * primeros tienen la cuenta verificada y dos capturas de estadísticas (la
  * anterior, un mes antes y con un rango más bajo, para que haya historia); los
- * cinco últimos no tienen cuenta, como un jugador recién registrado. Sólo
+ * cinco siguientes no tienen cuenta, como un jugador recién registrado. Los
+ * seis últimos, verificados, son de Antioquia y Bogotá: con ellos el mapa del
+ * talento tiene celdas fuera del Caribe por encima del umbral de privacidad.
+ * Ninguno juega ADC ni MID, para no mover los rankings de la demostración. Sólo
  * League of Legends, el juego del piloto. Los puuid llevan el prefijo `seed-`
  * para que nunca se confundan con uno real.
  */
@@ -91,6 +94,12 @@ const DATOS_RIOT: ({ posicion: PosicionLol; rango: RangoLol; rangoAnterior: Rang
   null,
   null,
   null,
+  { posicion: "TOP", rango: "ESMERALDA_II", rangoAnterior: "ESMERALDA_IV" },
+  { posicion: "JUNGLA", rango: "DIAMANTE_III", rangoAnterior: "DIAMANTE_IV" },
+  { posicion: "SOPORTE", rango: "PLATINO_II", rangoAnterior: "PLATINO_IV" },
+  { posicion: "TOP", rango: "ORO_I", rangoAnterior: "ORO_III" },
+  { posicion: "SOPORTE", rango: "ESMERALDA_IV", rangoAnterior: "PLATINO_I" },
+  { posicion: "JUNGLA", rango: "PLATINO_III", rangoAnterior: "ORO_I" },
 ];
 
 
@@ -105,9 +114,9 @@ const ENDORSEMENTS_SEED: [number, number[]][] = [
 ];
 
 /**
- * Ubicación de los 15 jugadores, en orden: mayoría del Caribe colombiano (el
+ * Ubicación de los 21 jugadores, en orden: mayoría del Caribe colombiano (el
  * piloto), algunos del resto del país y uno de fuera, para cubrir los tres
- * niveles de la dimensión geográfica.
+ * niveles de la dimensión geográfica. Los seis últimos, en Antioquia y Bogotá.
  */
 const UBICACIONES: { pais: Pais; departamento: Departamento | null }[] = [
   { pais: "CO", departamento: "ATLANTICO" },
@@ -125,6 +134,12 @@ const UBICACIONES: { pais: Pais; departamento: Departamento | null }[] = [
   { pais: "CO", departamento: "VALLE_DEL_CAUCA" },
   { pais: "CO", departamento: "SAN_ANDRES" },
   { pais: "MX", departamento: null },
+  { pais: "CO", departamento: "ANTIOQUIA" },
+  { pais: "CO", departamento: "ANTIOQUIA" },
+  { pais: "CO", departamento: "ANTIOQUIA" },
+  { pais: "CO", departamento: "BOGOTA_DC" },
+  { pais: "CO", departamento: "BOGOTA_DC" },
+  { pais: "CO", departamento: "BOGOTA_DC" },
 ];
 
 const EQUIPOS: {
@@ -197,9 +212,17 @@ function otraPosicion(posicion: PosicionLol, partidas: number) {
   return { [siguiente]: partidas };
 }
 
+/**
+ * Momento de referencia de todo el seed. Fijo, y no `Date.now()` en cada
+ * llamada, para que las fechas del mismo día coincidan al milisegundo: el
+ * rechazo automático al cerrar una oferta se reconoce porque su `rechazadaEn`
+ * es igual al `cerradaEn` de la oferta.
+ */
+const AHORA = Date.now();
+
 /** Fecha `dias` días antes del momento del seed. */
 function haceDias(dias: number): Date {
-  return new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  return new Date(AHORA - dias * 24 * 60 * 60 * 1000);
 }
 
 /** Paso del recorrido de una postulación: estado y hace cuántos días se alcanzó. */
@@ -232,10 +255,10 @@ interface OfertaSemilla {
 }
 
 /**
- * Las 5 ofertas, todas de League of Legends, cubren los cuatro estados que el
+ * Las 9 ofertas, todas de League of Legends, cubren los cuatro estados que el
  * embudo distingue y las tres modalidades. Las postulaciones recorren todos los
- * estados; las de la oferta cubierta que seguían abiertas al cerrarla terminan
- * rechazadas en la fecha del cierre, como hará la API.
+ * estados; las de las ofertas cubiertas o cerradas que seguían abiertas al
+ * cerrarlas terminan rechazadas en la fecha del cierre, como hace la API.
  */
 const OFERTAS: OfertaSemilla[] = [
   {
@@ -369,6 +392,93 @@ const OFERTAS: OfertaSemilla[] = [
     cerradaHaceDias: null,
     postulaciones: [],
   },
+  // Historial de Caribe eSports para la analítica (RF-13): tres vacantes
+  // cubiertas en 12, 21 y 45 días (de la publicación a la primera aceptación:
+  // mediana 21, media 26, así se ve por qué la mediana resiste un caso
+  // extremo) y una cerrada sin cubrir. Hay rechazos del equipo en cada etapa y
+  // rechazos automáticos al cerrar (fecha igual a la del cierre). Con las dos
+  // ofertas abiertas del equipo, el primer tryout llega en 6, 7, 8 y 9 días.
+  {
+    equipo: 0,
+    titulo: "Soporte para la Copa del Caribe",
+    rol: "SOPORTE",
+    rangoMinimo: "PLATA_I",
+    modalidad: "PRESENCIAL",
+    pais: "CO",
+    departamento: "ATLANTICO",
+    horasSemana: 20,
+    descripcion:
+      "Soporte para el roster de la Copa del Caribe. Entrenamientos presenciales en Barranquilla tres tardes por semana.",
+    pesos: { ...PESOS_MATCHING },
+    estado: "CUBIERTA",
+    publicadaHaceDias: 70,
+    cerradaHaceDias: 55,
+    postulaciones: [
+      { jugador: 1, recorrido: [["ENVIADA", 68], ["EN_REVISION", 66], ["ENTREVISTA", 63], ["ACEPTADA", 58]] },
+      { jugador: 6, recorrido: [["ENVIADA", 67], ["EN_REVISION", 65], ["RECHAZADA", 64]] },
+      { jugador: 13, recorrido: [["ENVIADA", 60], ["RECHAZADA", 55]] },
+    ],
+  },
+  {
+    equipo: 0,
+    titulo: "Jungla para la liga universitaria",
+    rol: "JUNGLA",
+    rangoMinimo: "ESMERALDA_IV",
+    modalidad: "HIBRIDA",
+    pais: "CO",
+    departamento: "ATLANTICO",
+    horasSemana: 20,
+    descripcion:
+      "Jungla para la liga universitaria regional. Partidas en línea y una concentración presencial al mes en Barranquilla.",
+    pesos: { ...PESOS_MATCHING },
+    estado: "CUBIERTA",
+    publicadaHaceDias: 90,
+    cerradaHaceDias: 66,
+    postulaciones: [
+      { jugador: 3, recorrido: [["ENVIADA", 88], ["EN_REVISION", 85], ["ENTREVISTA", 80], ["ACEPTADA", 69]] },
+      { jugador: 7, recorrido: [["ENVIADA", 87], ["EN_REVISION", 84], ["ENTREVISTA", 81], ["RECHAZADA", 75]] },
+      { jugador: 12, recorrido: [["ENVIADA", 70], ["EN_REVISION", 68], ["RECHAZADA", 66]] },
+    ],
+  },
+  {
+    equipo: 0,
+    titulo: "Top para el clasificatorio regional",
+    rol: "TOP",
+    rangoMinimo: "PLATINO_IV",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 15,
+    descripcion:
+      "Top para el clasificatorio regional en línea. Scrims entre semana y partidas oficiales los sábados.",
+    pesos: { tecnica: 0.6, experiencia: 0, habilidadesBlandas: 0, geografica: 0, disponibilidad: 0.4 },
+    estado: "CUBIERTA",
+    publicadaHaceDias: 120,
+    cerradaHaceDias: 70,
+    postulaciones: [
+      { jugador: 2, recorrido: [["ENVIADA", 115], ["EN_REVISION", 110], ["ENTREVISTA", 100], ["ACEPTADA", 75]] },
+      { jugador: 9, recorrido: [["ENVIADA", 118], ["EN_REVISION", 116], ["ENTREVISTA", 112], ["RECHAZADA", 90]] },
+    ],
+  },
+  {
+    equipo: 0,
+    titulo: "ADC suplente para la temporada",
+    rol: "ADC",
+    rangoMinimo: "ORO_IV",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 10,
+    descripcion: "ADC suplente para cubrir ausencias durante la temporada. Se cerró sin cubrir.",
+    pesos: { tecnica: 0.6, experiencia: 0, habilidadesBlandas: 0, geografica: 0, disponibilidad: 0.4 },
+    estado: "CERRADA",
+    publicadaHaceDias: 50,
+    cerradaHaceDias: 35,
+    postulaciones: [
+      { jugador: 4, recorrido: [["ENVIADA", 48], ["EN_REVISION", 45], ["RECHAZADA", 35]] },
+      { jugador: 8, recorrido: [["ENVIADA", 47], ["RECHAZADA", 44]] },
+    ],
+  },
 ];
 
 const NOMBRES_JUGADORES = [
@@ -387,6 +497,12 @@ const NOMBRES_JUGADORES = [
   "Nicolás Mejía",
   "Paula Restrepo",
   "Samuel Arango",
+  "Juan Pablo Henao",
+  "Catalina Gómez",
+  "Mateo Salazar",
+  "Alejandra Rincón",
+  "Santiago Torres",
+  "Valeria Cárdenas",
 ];
 
 async function main() {
@@ -703,7 +819,7 @@ async function main() {
     }
   }
   console.log(
-    `  · ${OFERTAS.length} ofertas (abiertas, cubierta y borrador) y ${postulacionesCreadas} postulaciones con sus fechas`,
+    `  · ${OFERTAS.length} ofertas (abiertas, cubiertas, cerrada y borrador) y ${postulacionesCreadas} postulaciones con sus fechas`,
   );
 
   // ---------------------------------------------------------------- vectores
@@ -716,7 +832,7 @@ async function main() {
   console.log(
     `\nListo. Todas las cuentas de prueba usan la contraseña ${PASSWORD_DEMO}\n` +
       "  admin@proplay.gg (ADMIN) · scout@proplay.gg (SCOUT)\n" +
-      "  equipo@caribeesports.gg (EQUIPO) · jugador1@proplay.gg … jugador15@proplay.gg (JUGADOR)",
+      "  equipo@caribeesports.gg (EQUIPO) · jugador1@proplay.gg … jugador21@proplay.gg (JUGADOR)",
   );
 }
 
