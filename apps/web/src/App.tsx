@@ -8,14 +8,13 @@ import { useAuth } from '@/context/AuthContext'
 import LoginPage from '@/pages/LoginPage'
 import NoEncontradaPage from '@/pages/NoEncontradaPage'
 import LegalPage from '@/pages/LegalPage'
-import { AREAS } from '@/router/areas'
+import { AREAS, inicioDe } from '@/router/areas'
 
 /**
  * Carga diferida por ruta. Cada pantalla se descarga solo cuando se visita,
  * de modo que el bundle inicial no arrastra el graficador (recharts) ni las
  * pantallas de gestion que un jugador no visitara.
  */
-const FeedPage = lazy(() => import('@/pages/FeedPage'))
 const ScoutingPage = lazy(() => import('@/pages/ScoutingPage'))
 const OfertasPage = lazy(() => import('@/pages/OfertasPage'))
 const OfertaDetallePage = lazy(() => import('@/pages/OfertaDetallePage'))
@@ -26,8 +25,7 @@ const PanelEquipoPage = lazy(() => import('@/pages/PanelEquipoPage'))
 const PerfilJugadorPage = lazy(() => import('@/pages/PerfilJugadorPage'))
 const MiPerfilPage = lazy(() => import('@/pages/MiPerfilPage'))
 const AnaliticaPage = lazy(() => import('@/pages/AnaliticaPage'))
-const MensajesPage = lazy(() => import('@/pages/MensajesPage'))
-const AdminPage = lazy(() => import('@/pages/AdminPage'))
+const NoDisponiblePage = lazy(() => import('@/pages/NoDisponiblePage'))
 const CuentaPage = lazy(() => import('@/pages/CuentaPage'))
 const CuentasVinculadasPage = lazy(() => import('@/pages/CuentasVinculadasPage'))
 const MisEstadisticasPage = lazy(() => import('@/pages/MisEstadisticasPage'))
@@ -56,6 +54,13 @@ function Privado({ roles }: { roles?: readonly Rol[] }) {
     )
   }
   return <Outlet />
+}
+
+/** `/`: la vista principal del rol en sesión (tarea 1.7). */
+function Inicio() {
+  const { usuario } = useAuth()
+  if (!usuario) return <Navigate to="/login" replace />
+  return <Navigate to={inicioDe(usuario.rol)} replace />
 }
 
 function Cargando() {
@@ -103,11 +108,13 @@ export default function App() {
 
       <Route element={<Privado />}>
         <Route element={<Layout />}>
-          {/* Comunes a todos los roles */}
-          <Route index element={diferida(FeedPage)} />
+          {/* Comunes a todos los roles. El inicio lleva a la vista principal de cada
+              rol: el feed quedó fuera de esta versión (tarea 1.7) */}
+          <Route index element={<Inicio />} />
           <Route path="vacantes" element={diferida(OfertasPage)} />
           <Route path="vacantes/:id" element={diferida(OfertaDetallePage)} />
-          <Route path="mensajes" element={diferida(MensajesPage)} />
+          {/* Fuera de esta versión (decisión 0.10): sin menú y con un aviso por la URL */}
+          <Route path="mensajes" element={diferida(NoDisponiblePage)} />
           {/* RF-01 · RNF-05 · Ajustes de cuenta, comunes a los cuatro roles */}
           <Route path="cuenta" element={diferida(CuentaPage)} />
 
@@ -143,10 +150,9 @@ export default function App() {
             />
           </Route>
 
-          {/* Area de administracion */}
-          <Route element={<Privado roles={AREAS.admin} />}>
-            <Route path="admin" element={diferida(AdminPage)} />
-          </Route>
+          {/* El panel de administración tampoco está en esta versión: el aviso es el
+              mismo para cualquier rol, porque no hay nada que proteger */}
+          <Route path="admin" element={diferida(NoDisponiblePage)} />
         </Route>
       </Route>
 

@@ -5,6 +5,15 @@ import type { Rol } from '@proplay/shared'
  * declara una sola vez con una ruta de layout por area y el menu lateral se
  * arma con estas mismas listas: ninguna vista repite la comprobacion.
  */
+/**
+ * Página de inicio de cada rol (tarea 1.7): el feed quedó fuera de esta
+ * versión, así que `/` lleva al jugador a Explorar oportunidades y al equipo,
+ * al scout y al administrador, a la analítica.
+ */
+export function inicioDe(rol: Rol): string {
+  return rol === 'JUGADOR' ? '/vacantes' : '/dashboard'
+}
+
 export const AREAS = {
   jugador: ['JUGADOR'],
   equipo: ['EQUIPO', 'SCOUT', 'ADMIN'],

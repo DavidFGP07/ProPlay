@@ -15,7 +15,7 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
 
 ### Funciona de verdad
 
-- **Sprint 1 (fundación y acceso), cerrado salvo 1.6 y 1.7.** Autenticación completa con
+- **Sprint 1 (fundación y acceso), cerrado salvo 1.6.** Autenticación completa con
   la aceptación del aviso de privacidad y la mayoría de edad, `/cuenta`, perfiles de jugador
   y de equipo con ubicación, perfil público sin sesión y alta del primer administrador por
   script.
@@ -41,8 +41,8 @@ pruebas propia (`proplay_test`).
   clave de producción de Riot (0.1).
 - **Soporte:** habilidades y endorsements (2.2), ajustes de privacidad y el sustituto de la
   mensajería (3.18).
-- **Vistas simuladas en el menú** (1.7): Feed, Mensajes y Admin; y las secciones simuladas de
-  Mi perfil.
+- **Secciones simuladas de Mi perfil** (cuentas, habilidades, portafolio, privacidad y
+  laterales), que desaparecen con `VITE_DEMO_DATA=false`.
 - **Validación** (4.13 a 4.16): depende del despliegue, del reclutamiento y de la línea base,
   que no constan en el repositorio.
 
@@ -86,7 +86,7 @@ repartir.
 | 1.4 | Documentar el alta del primer administrador<br>**Hecha:** #25 (`npm run admin:promover -w api`, `docs/operacion.md`) | Para el piloto hace falta un admin real en producción. Hoy sólo hay un comentario que dice «se asigna a mano» | Media |
 | 1.5 | Decidir e implementar dónde se captura la región del jugador<br>**Hecha:** #13 (modelo por país y departamento), #14 y #15 (API) y #16 (tarjeta «Ubicación» en Mi perfil) | El registro dejó de pedirla y no hay onboarding. Es insumo de la dimensión geográfica del matching, que se necesita en S3 | Alta |
 | 1.6 | Deuda técnica diferida: partir `ui.tsx` en un archivo por componente, extraer los textos a `i18n/es.ts`, implementar los cuatro estados transversales, sembrar los comentarios `// RF-xx` en las vistas<br>**Pendiente en parte.** Los cuatro estados ya tienen componentes compartidos y los usan las vistas conectadas; `ui.tsx` sigue sin partir y las vistas heredadas del prototipo conservan textos en el JSX (`docs/decisiones.md`, «Deuda conocida»). | No bloquea, pero cuanto más se posponga más cuesta | Baja |
-| 1.7 | **Retirar del menú de la versión del piloto las vistas simuladas fuera de alcance** (Feed, Mensajes, Dashboard simulado y Admin), conservando su código como prototipo. La página de inicio redirige a Explorar oportunidades (jugador) o a Analítica (equipo y scout). Decisión 0.10<br>**Pendiente.** Feed, Mensajes y Admin siguen en el enrutador y en el menú (`components/Layout.tsx`); el Dashboard ya es la analítica real (#54). | Un participante del piloto no debe encontrar vistas que la tesis no sostiene: verían datos simulados como si fueran reales | Media |
+| 1.7 | **Retirar del menú de la versión del piloto las vistas simuladas fuera de alcance** (Feed, Mensajes, Dashboard simulado y Admin), conservando su código como prototipo. La página de inicio redirige a Explorar oportunidades (jugador) o a Analítica (equipo y scout). Decisión 0.10<br>**Hecha (#58).** Feed, Mensajes y Auditoría salen del menú; `/` redirige a la vista principal del rol y `/mensajes` y `/admin` muestran «Función no disponible en esta versión». El Dashboard ya era la analítica real (#54). | Un participante del piloto no debe encontrar vistas que la tesis no sostiene: verían datos simulados como si fueran reales | Media |
 
 ---
 
@@ -330,8 +330,7 @@ Actualizado el 2026-11-17. Lo que queda, en el orden en que más incertidumbre r
 
 1. **Despliegue (2.13)**, con el cliente público: desbloquea la solicitud de la clave de
    producción de Riot (0.1) y es donde hay que repetir RNF-01.
-2. **Retirar del menú las vistas simuladas (1.7)**, para que un participante del piloto no
-   vea datos simulados como reales.
+2. ~~**Retirar del menú las vistas simuladas (1.7)**~~: hecha (#58).
 3. **Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**, con degradación al desglose.
 4. **Soporte mínimo:** habilidades y endorsements (2.2), ajustes de privacidad y sustituto de
    la mensajería (3.18).
