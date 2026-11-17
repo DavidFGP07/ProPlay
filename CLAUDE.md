@@ -235,7 +235,7 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Panel del equipo (datos de la organización y «Tus ofertas» reales; indicadores y recomendaciones, simulados) | `/panel-equipo` | RF-13, RF-07 | Núcleo: se fusiona con Analítica en una sola vista |
+| Panel del equipo (datos de la organización, «Tus ofertas» y «Mejores candidatos» de cada oferta abierta, reales; indicadores, simulados) | `/panel-equipo` | RF-13, RF-07, RF-09 | Núcleo: se fusiona con Analítica en una sola vista |
 | Buscador de talento (datos reales; posición y rango sólo de cuentas de Riot verificadas) | `/explorar` | RF-08 | Soporte: filtros por posición, rango mínimo y departamento |
 | Crear oferta, **con ajuste de los pesos de las dimensiones** (también su edición; en el piloto sólo se ven las tres con datos, `DIMENSIONES_SIN_DATOS_PILOTO` oculta experiencia y habilidades blandas) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
 | **Ranking de candidatos con desglose por dimensión** (barra con el aporte de cada dimensión, filtro de postulados, orden y «Recalcular») | `/vacantes/:id/ranking`; se entra desde el detalle de la oferta | RF-09 | Núcleo |
@@ -354,10 +354,10 @@ recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), e
 (`/explorar`), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y
 desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
-`/panel-equipo` las tarjetas «Datos de la organización», con la sede, y «Tus ofertas» (sólo
-el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
-habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (indicadores y
-recomendaciones) sigue simulado, con `MarcaDatosDemo` en cada sección.
+`/panel-equipo` las tarjetas «Datos de la organización», con la sede, «Tus ofertas» y «Mejores
+candidatos» (los tres primeros del ranking de cada oferta abierta; sólo el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
+habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (los indicadores)
+sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
 las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo

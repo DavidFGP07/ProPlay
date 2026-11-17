@@ -397,4 +397,166 @@ describe('Panel del equipo: «Tus ofertas»', () => {
       '/vacantes/oferta-2',
     )
   })
+
+  it('cada oferta lleva a su ranking de candidatos', async () => {
+    sesionDe('EQUIPO')
+    rutas({
+      '/perfiles/me': PERFIL_EQUIPO,
+      '/ofertas/me': {
+        data: [{ ...oferta({ estado: 'CERRADA' }), totalPostulaciones: 1 }],
+        meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
+      },
+    })
+    renderRuta('/panel-equipo')
+
+    expect(
+      await screen.findByRole('link', { name: 'Ranking: MID para la academia' }, ESPERA),
+    ).toHaveAttribute('href', '/vacantes/oferta-1/ranking')
+  })
+})
+
+describe('Panel del equipo: «Mejores candidatos»', () => {
+  const PESOS = { tecnica: 0.5, experiencia: 0, habilidadesBlandas: 0, geografica: 0.25, disponibilidad: 0.25 }
+
+  function candidato(puesto: number, nombre: string, tecnica: number, verificado = true) {
+    const desglose = { tecnica, experiencia: 0, habilidadesBlandas: 0, geografica: 1, disponibilidad: 0.8 }
+    return {
+      puesto,
+      jugador: {
+        id: `jugador-${puesto}`,
+        nombre,
+        avatarUrl: null,
+        pais: 'CO',
+        departamento: 'ATLANTICO',
+        disponibilidadHoras: 20,
+        dispuestoRelocalizar: false,
+        verificacion: verificado ? { plataforma: 'RIOT', verificadaEn: '2026-10-01T12:00:00.000Z' } : null,
+        posicion: verificado ? 'MID' : null,
+        rango: verificado ? 'DIAMANTE_II' : null,
+        datosDel: verificado ? '2026-11-02T12:00:00.000Z' : null,
+      },
+      puntaje: 0.5 * tecnica + 0.25 * 1 + 0.25 * 0.8,
+      desglose,
+      explicacion: {
+        pesos: PESOS,
+        dimensiones: {
+          tecnica: {
+            faltanDatos: !verificado,
+            motivo: verificado ? null : 'SIN_CUENTA_VERIFICADA',
+            posicionPedida: 'MID',
+            posicionPrincipal: verificado ? 'MID' : null,
+            fraccionEnPosicion: verificado ? 0.8 : null,
+            rango: verificado ? 'DIAMANTE_II' : null,
+            rangoMinimo: null,
+            partidasAnalizadas: verificado ? 20 : null,
+            datosDel: verificado ? '2026-11-02T12:00:00.000Z' : null,
+            componentes: verificado ? { posicion: 1, rango: 0.9, rendimiento: 0.6 } : null,
+            metricas: [],
+          },
+          experiencia: { faltanDatos: true, motivo: 'SIN_DATOS_PILOTO' },
+          habilidadesBlandas: { faltanDatos: true, motivo: 'SIN_ENDORSEMENTS', endorsementsDeEquipos: 0 },
+          geografica: { faltanDatos: false, motivo: null, modalidad: 'PRESENCIAL', cercania: 'MISMO_DEPARTAMENTO', relocalizacionAplicada: false },
+          disponibilidad: { faltanDatos: false, motivo: null, horasJugador: 20, horasOferta: 25 },
+        },
+      },
+      similitud: 0.9,
+      postulacion: null,
+    }
+  }
+
+  const RANKING = {
+    data: [
+      candidato(1, 'Andrés Molina', 0.84),
+      candidato(2, 'Mariana Pardo', 0.47),
+      candidato(3, 'Emilio Vargas', 0, false),
+      candidato(4, 'Camilo Ospina', 0),
+    ],
+    meta: { page: 1, pageSize: 20, total: 4, totalPages: 1 },
+    oferta: { id: 'oferta-1', titulo: 'MID para la academia', estado: 'ABIERTA', rol: 'MID', pesos: PESOS },
+    calculadoEn: '2026-11-10T18:14:00.000Z',
+    versionFormulas: 2,
+    modo: 'CONTENIDO',
+    pesoColaborativo: 0,
+  }
+
+  const MIS_OFERTAS = {
+    data: [
+      { ...oferta(), totalPostulaciones: 4 },
+      { ...oferta({ id: 'oferta-2', titulo: 'Top para la clausura', rol: 'TOP', estado: 'BORRADOR', publicadaEn: null }), totalPostulaciones: 0 },
+    ],
+    meta: { page: 1, pageSize: 100, total: 2, totalPages: 1 },
+  }
+
+  it('muestra los tres primeros del ranking real de cada oferta abierta, con su desglose', async () => {
+    sesionDe('EQUIPO')
+    rutas({
+      '/perfiles/me': PERFIL_EQUIPO,
+      '/ofertas/me': MIS_OFERTAS,
+      '/matching/ofertas/oferta-1/ranking': RANKING,
+    })
+    renderRuta('/panel-equipo')
+
+    const primero = await screen.findByRole('article', { name: 'Puesto 1: Andrés Molina' }, ESPERA)
+    // 0,5 × 0,84 + 0,25 × 1 + 0,25 × 0,8 = 0,87: los aportes suman el puntaje.
+    expect(within(primero).getByText('87 %')).toBeInTheDocument()
+    const aportes = within(within(primero).getByRole('list', { name: 'Aporte de cada dimensión al puntaje' }))
+      .getAllByRole('listitem')
+      .map((li) => li.textContent)
+    expect(aportes).toEqual(['Técnica 42 puntos', 'Geográfica 25 puntos', 'Disponibilidad 20 puntos'])
+    expect(within(primero).getByRole('link', { name: 'Ver el detalle de Andrés Molina' })).toHaveAttribute(
+      'href',
+      '/vacantes/oferta-1/ranking/jugador-1',
+    )
+    expect(within(primero).getByText(/Mid · Diamante II/)).toBeInTheDocument()
+
+    // Sólo tres, y el que no tiene cuenta verificada va marcado.
+    expect(screen.getByRole('article', { name: 'Puesto 2: Mariana Pardo' })).toBeInTheDocument()
+    const tercero = screen.getByRole('article', { name: 'Puesto 3: Emilio Vargas' })
+    expect(within(tercero).getByText('Sin cuenta verificada')).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: /Camilo Ospina/ })).toBeNull()
+
+    expect(
+      screen.getByRole('link', { name: 'Ver el ranking completo de MID para la academia' }),
+    ).toHaveAttribute('href', '/vacantes/oferta-1/ranking')
+    // El borrador no tiene ranking en el panel: ni se pide.
+    expect(doble.get).not.toHaveBeenCalledWith('/matching/ofertas/oferta-2/ranking', expect.anything())
+    expect(doble.get).toHaveBeenCalledWith('/matching/ofertas/oferta-1/ranking', {
+      params: { page: 1, soloPostulados: false, orden: 'puntaje' },
+    })
+    // Ya no hay recomendaciones simuladas: sólo los indicadores llevan la marca de demostración.
+    expect(screen.queryByText(/Recomendaciones del motor/)).toBeNull()
+    expect(screen.getAllByText(/Datos de demostraci/i)).toHaveLength(1)
+  })
+
+  it('sin ofertas abiertas invita a publicar una', async () => {
+    sesionDe('EQUIPO')
+    rutas({
+      '/perfiles/me': PERFIL_EQUIPO,
+      '/ofertas/me': { data: [MIS_OFERTAS.data[1]], meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 } },
+    })
+    renderRuta('/panel-equipo')
+
+    expect(await screen.findByText('No tienes ofertas abiertas', {}, ESPERA)).toBeInTheDocument()
+    expect(doble.get).not.toHaveBeenCalledWith(expect.stringContaining('/matching/'), expect.anything())
+  })
+
+  it('si el ranking de una oferta falla, ofrece reintentar sin romper el panel', async () => {
+    sesionDe('EQUIPO')
+    rutas({ '/perfiles/me': PERFIL_EQUIPO, '/ofertas/me': MIS_OFERTAS })
+    renderRuta('/panel-equipo')
+
+    expect(await screen.findByText('No pudimos cargar el ranking de esta oferta.', {}, ESPERA)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Top para la clausura' })).toBeInTheDocument()
+  })
+
+  it('el scout no tiene el bloque: consulta los rankings desde cada oferta', async () => {
+    sesionDe('SCOUT')
+    rutas({})
+    renderRuta('/panel-equipo')
+
+    expect(await screen.findByRole('heading', { name: 'Panel de scouting' }, ESPERA)).toBeInTheDocument()
+    expect(screen.queryByText('Mejores candidatos de tus ofertas abiertas')).toBeNull()
+    expect(screen.queryByText(/Recomendaciones del motor/)).toBeNull()
+    expect(doble.get).not.toHaveBeenCalledWith(expect.stringContaining('/matching/'), expect.anything())
+  })
 })

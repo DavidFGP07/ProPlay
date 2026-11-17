@@ -1,36 +1,36 @@
 import { Link } from 'react-router-dom'
 import {
+  BadgeCheck,
   Briefcase,
   Clock,
   Plus,
   ShieldCheck,
-  Sparkles,
   Target,
   TrendingUp,
+  Trophy,
   UserPlus,
 } from 'lucide-react'
-import type { OfertaPropia } from '@proplay/shared'
+import type { CandidatoRanking, OfertaPropia, PosicionLol } from '@proplay/shared'
 import {
   Avatar,
   Badge,
-  Button,
   Card,
   CardHeader,
   EmptyState,
   EstadoError,
-  ScoreRing,
   SectionTitle,
   Stat,
 } from '@/components/ui'
 import { es } from '@/i18n/es'
 import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
+import { BarraAportes } from '@/components/BarraAportes'
 import { DatosOrganizacion } from '@/components/DatosOrganizacion'
 import { useAuth } from '@/context/AuthContext'
 import { useIdentidad } from '@/api/identidad'
-import { useCandidatos, useJugadores } from '@/api/matching'
+import { useRankingOferta, type FiltrosRanking } from '@/api/matching'
 import { useMisOfertas, usePostulaciones, useVacantes } from '@/api/ofertas'
 import { useEquipos, usePerfilPropio } from '@/api/perfiles'
-import { PESOS_POR_DEFECTO } from '@/lib/matching'
+import { calcularAportes } from '@/lib/aportes'
 import { lugarOferta } from '@/lib/ubicacion'
 
 const t = es.panelEquipo
@@ -47,15 +47,23 @@ const TONO_ESTADO_OFERTA = {
 const claseBoton =
   'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
 
-// RF-13 · RF-07 · Panel del equipo. Reales: «Datos de la organización» y «Tus
-// ofertas» (GET /api/v1/ofertas/me), con el acceso a publicar una oferta. Los
-// indicadores y las recomendaciones del motor siguen simulados, cada sección
-// con su marca, hasta la analítica y el motor de matching.
+/** Ofertas abiertas que caben en «Mejores candidatos» y candidatos de cada una. */
+const MAX_OFERTAS_CON_CANDIDATOS = 3
+const MEJORES_CANDIDATOS = 3
+
+/** Primera página del ranking por puntaje: la misma consulta que abre la vista del ranking. */
+const PRIMEROS_DEL_RANKING: FiltrosRanking = { page: 1, soloPostulados: false, orden: 'puntaje' }
+
+// RF-13 · RF-07 · RF-09 · Panel del equipo. Reales: «Datos de la organización»,
+// «Tus ofertas» (GET /api/v1/ofertas/me), con el acceso a publicar una oferta,
+// y «Mejores candidatos» (los primeros del ranking de cada oferta abierta, del
+// motor de matching). Los indicadores siguen simulados, con su marca, hasta la
+// analítica. El scout no tiene ofertas propias: consulta los rankings desde el
+// detalle de cada oferta.
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
   const { data: ofertas = [] } = useVacantes()
   const { data: postulaciones = [] } = usePostulaciones()
-  const { data: jugadores = [] } = useJugadores()
   const { data: perfilesEquipo = [] } = useEquipos()
   const { data: identidad } = useIdentidad()
 
@@ -66,7 +74,7 @@ export default function PanelEquipoPage() {
   const { data: propio } = usePerfilPropio(esEquipo)
   const nombreOrg = propio?.tipo === 'EQUIPO' ? propio.perfil.nombreOrg : null
 
-  // Datos de la simulación para los indicadores y las recomendaciones.
+  // Datos de la simulación para los indicadores.
   const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
   const misOfertas = miEquipo
     ? ofertas.filter((o) => o.equipoId === miEquipo.id)
@@ -74,11 +82,6 @@ export default function PanelEquipoPage() {
   const postulacionesDeMisOfertas = postulaciones.filter((p) =>
     misOfertas.some((o) => o.id === p.ofertaId),
   )
-  const abiertaPrincipal = misOfertas.find((o) => o.estado === 'ABIERTA')
-  const ranking = useCandidatos(abiertaPrincipal?.id, PESOS_POR_DEFECTO)
-  const resultadosRanking = abiertaPrincipal ? ranking.data?.resultados : []
-  const trazaRanking = abiertaPrincipal ? ranking.data?.traza : null
-  const jugadorDe = (id: string) => jugadores.find((j) => j.id === id)
 
   return (
     <div className="space-y-6">
@@ -153,77 +156,7 @@ export default function PanelEquipoPage() {
         </div>
       </div>
 
-      {/* --------------------------- Recomendado --------------------------- */}
-      <Card>
-        <CardHeader
-          title="Recomendaciones del motor para tus vacantes"
-          subtitle="Los candidatos mejor posicionados por el algoritmo hibrido, con su desglose por dimension."
-          icon={<TrendingUp size={16} />}
-          action={
-            <Link to={`/vacantes/${abiertaPrincipal?.id ?? ''}`}>
-              <Button variante="fantasma" tamano="sm">
-                <Sparkles size={13} />
-                Ranking completo
-              </Button>
-            </Link>
-          }
-        />
-        <MarcaDatosDemo className="mx-5 mt-4" />
-        {!abiertaPrincipal ? (
-          <EmptyState
-            icono={<Briefcase size={22} />}
-            titulo="Sin vacantes abiertas"
-            descripcion="Publica una oportunidad para que el motor calcule el ranking de candidatos."
-          />
-        ) : (
-          <div className="p-5">
-            <p className="mb-3 text-[11px] text-slate-500">
-              Para <span className="text-slate-300">{abiertaPrincipal.rol} · {abiertaPrincipal.juego}</span> ·
-              modo {trazaRanking?.modo === 'hibrido' ? 'hibrido' : 'contenido puro'}
-            </p>
-            <ul className="space-y-2">
-              {(resultadosRanking ?? []).slice(0, 5).map((r, i) => {
-                const jugador = jugadorDe(r.perfilId)
-                const tecnica = r.desglose.find((d) => d.key === 'tecnica')
-                return (
-                  <li key={r.perfilId}>
-                    <Link
-                      to={`/jugador/${r.perfilId}`}
-                      className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 p-3 transition hover:border-brand-500/40 hover:bg-white/6"
-                    >
-                      <span className="w-5 shrink-0 text-center font-mono text-xs text-slate-500">
-                        {i + 1}
-                      </span>
-                      {jugador && <Avatar nombre={jugador.nombre} size="sm" />}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-100">
-                          {jugador?.nombre ?? r.perfilId}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                          {jugador?.region} · {jugador?.rolesPreferidos[0]}
-                          {tecnica && ` · tecnica ${Math.round(tecnica.valor * 100)}%`}
-                        </p>
-                      </div>
-                      {r.modo === 'hibrido' && (
-                        <Badge tono="cian" className="!py-0 !text-[10px]">
-                          Hibrido
-                        </Badge>
-                      )}
-                      <ScoreRing valor={r.puntaje} tamano={44} grosor={4} />
-                    </Link>
-                  </li>
-                )
-              })}
-              {(resultadosRanking ?? []).length === 0 && (
-                <li className="py-6 text-center text-xs text-slate-500">
-                  El motor aun no tiene candidatos que recuperar para esta vacante.
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-      </Card>
-
+      {esEquipo && <MejoresCandidatos />}
     </div>
   )
 }
@@ -285,13 +218,23 @@ function MisOfertas() {
                     </span>
                   </p>
                 </div>
-                <Link
-                  to={`/vacantes/${oferta.id}`}
-                  aria-label={`${t.gestionar}: ${oferta.titulo}`}
-                  className={`${claseBoton} justify-center border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50`}
-                >
-                  {t.gestionar}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    to={`/vacantes/${oferta.id}/ranking`}
+                    aria-label={`${t.ranking}: ${oferta.titulo}`}
+                    className={`${claseBoton} flex-1 justify-center border border-brand-500/40 bg-brand-500/10 text-brand-200 hover:bg-brand-500/20 sm:flex-none`}
+                  >
+                    <Trophy size={13} aria-hidden />
+                    {t.ranking}
+                  </Link>
+                  <Link
+                    to={`/vacantes/${oferta.id}`}
+                    aria-label={`${t.gestionar}: ${oferta.titulo}`}
+                    className={`${claseBoton} flex-1 justify-center border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50 sm:flex-none`}
+                  >
+                    {t.gestionar}
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
@@ -300,3 +243,152 @@ function MisOfertas() {
     </Card>
   )
 }
+
+// RF-09 · Los primeros del ranking de cada oferta abierta del equipo, con el
+// aporte de cada dimensión a su puntaje. Datos reales del motor de matching
+// (GET /api/v1/matching/ofertas/:id/ranking), los mismos que la vista del ranking.
+function MejoresCandidatos() {
+  const consulta = useMisOfertas()
+  const abiertas = consulta.data?.data.filter((oferta) => oferta.estado === 'ABIERTA') ?? []
+  const visibles = abiertas.slice(0, MAX_OFERTAS_CON_CANDIDATOS)
+
+  return (
+    <Card>
+      <CardHeader title={t.candidatos} subtitle={t.candidatosSubtitulo} icon={<TrendingUp size={16} />} />
+      <div className="p-5">
+        {consulta.isPending ? (
+          <div aria-busy="true" aria-label={t.cargandoCandidatos} className="space-y-3">
+            <div className="skeleton h-40 rounded-xl" />
+          </div>
+        ) : consulta.isError ? (
+          <EstadoError titulo={t.error} onReintentar={() => void consulta.refetch()} />
+        ) : visibles.length === 0 ? (
+          <EmptyState
+            icono={<Briefcase size={22} />}
+            titulo={t.sinAbiertas}
+            descripcion={t.sinAbiertasDetalle}
+            action={
+              <Link
+                to="/panel-equipo/ofertas/nueva"
+                className={`${claseBoton} border border-white/12 bg-white/5 text-slate-200 hover:border-brand-500/50`}
+              >
+                <Plus size={14} aria-hidden />
+                {t.publicar}
+              </Link>
+            }
+          />
+        ) : (
+          <div className="space-y-5">
+            {visibles.map((oferta) => (
+              <MejoresDeOferta key={oferta.id} oferta={oferta} />
+            ))}
+            {abiertas.length > visibles.length && (
+              <p className="text-[11px] text-slate-400">{t.masAbiertas(visibles.length)}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function MejoresDeOferta({ oferta }: { oferta: OfertaPropia }) {
+  const ranking = useRankingOferta(oferta.id, PRIMEROS_DEL_RANKING)
+  const idTitulo = `mejores-${oferta.id}`
+
+  return (
+    <section aria-labelledby={idTitulo}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 id={idTitulo} className="min-w-0 text-sm font-medium break-words text-slate-100">
+          {oferta.titulo}{' '}
+          <span className="font-normal text-slate-400">· {es.posicionLol[oferta.rol]}</span>
+        </h4>
+        <Link
+          to={`/vacantes/${oferta.id}/ranking`}
+          aria-label={t.verRankingDe(oferta.titulo)}
+          className="text-xs font-medium text-brand-300 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+        >
+          {t.verRanking}
+        </Link>
+      </div>
+
+      {ranking.isPending ? (
+        <div aria-busy="true" aria-label={t.cargandoCandidatos} className="mt-3 space-y-2">
+          {Array.from({ length: MEJORES_CANDIDATOS }).map((_, i) => (
+            <div key={i} className="skeleton h-16 rounded-xl" />
+          ))}
+        </div>
+      ) : ranking.isError ? (
+        <EstadoError titulo={t.errorCandidatos} onReintentar={() => void ranking.refetch()} />
+      ) : ranking.data.data.length === 0 ? (
+        <p className="mt-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3 text-xs text-slate-400">
+          {t.sinCandidatos}
+        </p>
+      ) : (
+        <ol className="mt-3 space-y-2">
+          {ranking.data.data.slice(0, MEJORES_CANDIDATOS).map((candidato) => (
+            <li key={candidato.jugador.id}>
+              <CandidatoDestacado candidato={candidato} ofertaId={oferta.id} />
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
+function CandidatoDestacado({ candidato, ofertaId }: { candidato: CandidatoRanking; ofertaId: string }) {
+  const { jugador } = candidato
+  const desglose = calcularAportes(candidato)
+
+  return (
+    <article
+      aria-label={`${es.ranking.puesto(candidato.puesto)}: ${jugador.nombre}`}
+      className="grid gap-3 rounded-xl border border-white/8 bg-white/3 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-center"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="w-5 shrink-0 text-center font-mono text-xs text-slate-400" aria-hidden>
+          {candidato.puesto}
+        </span>
+        {jugador.avatarUrl ? (
+          <img src={jugador.avatarUrl} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+        ) : (
+          <Avatar nombre={jugador.nombre} size="sm" />
+        )}
+        <div className="min-w-0">
+          <Link
+            to={`/vacantes/${ofertaId}/ranking/${jugador.id}`}
+            aria-label={es.ranking.verDetalleDe(jugador.nombre)}
+            className="block truncate text-sm font-medium text-slate-100 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+          >
+            {jugador.nombre}
+          </Link>
+          <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-400">
+            {jugador.verificacion ? (
+              <>
+                <BadgeCheck size={12} className="shrink-0 text-emerald-400" aria-hidden />
+                <span className="truncate">
+                  {jugador.posicion
+                    ? (es.posicionLol[jugador.posicion as PosicionLol] ?? jugador.posicion)
+                    : es.ranking.verificado}
+                  {' · '}
+                  {jugador.rango ? es.rangoLol[jugador.rango] : es.ranking.sinRango}
+                </span>
+              </>
+            ) : (
+              <Badge tono="ambar" className="!px-1.5 !py-0 !text-[10px]">
+                {es.ranking.sinCuenta}
+              </Badge>
+            )}
+          </p>
+        </div>
+      </div>
+      <BarraAportes desglose={desglose} />
+      <p className="text-right text-lg font-bold tabular-nums text-slate-50">
+        <span className="sr-only">{es.ranking.compatibilidad}: </span>
+        {es.ranking.porcentaje(desglose.total)}
+      </p>
+    </article>
+  )
+}
+

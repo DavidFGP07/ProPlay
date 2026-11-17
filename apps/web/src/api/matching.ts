@@ -7,8 +7,8 @@ import {
 } from '@proplay/shared'
 import { api } from '@/api/client'
 import { simulado } from '@/api/demo'
-import { listarJugadores, obtenerRanking, obtenerRecomendaciones } from '@/mocks/api'
-import type { FiltrosBusqueda, Pesos } from '@/mocks/modelos'
+import { obtenerRecomendaciones } from '@/mocks/api'
+import type { Pesos } from '@/mocks/modelos'
 
 /*
  * Ranking de candidatos y detalle del candidato: API real, sin puente de
@@ -72,30 +72,9 @@ export function useRecalcularRanking(ofertaId: string | undefined, filtros: Filt
 }
 
 /*
- * Recomendaciones del panel del equipo y del feed: siguen simuladas.
+ * Recomendaciones del feed del jugador: siguen simuladas (la vista es de
+ * trabajo futuro y GET /matching/jugador/me responde 501).
  */
-
-// RF-13 · Jugadores de la simulacion, para las recomendaciones del panel del
-// equipo. El buscador real es useBuscarJugadores (api/scouting.ts).
-export function useJugadores(filtros: FiltrosBusqueda = {}) {
-  return useQuery({
-    queryKey: ['scouting', 'demo', filtros],
-    // TODO: S3 — sustituir por el ranking del motor de matching
-    queryFn: () => simulado(() => listarJugadores(filtros), []),
-    placeholderData: keepPreviousData,
-  })
-}
-
-// RF-09 · Ranking simulado, para las recomendaciones del panel del equipo
-export function useCandidatos(ofertaId: string | undefined, pesos: Pesos) {
-  return useQuery({
-    queryKey: ['matching', 'demo', 'oferta', ofertaId, pesos],
-    enabled: Boolean(ofertaId),
-    // TODO: S3 — sustituir por los primeros de useRankingOferta en el panel
-    queryFn: () => simulado(() => obtenerRanking(ofertaId!, { pesos }), null),
-    placeholderData: keepPreviousData,
-  })
-}
 
 // RF-09 · Ofertas recomendadas para el jugador en sesion
 export function useRecomendaciones(perfilId: string | undefined, pesos: Pesos) {

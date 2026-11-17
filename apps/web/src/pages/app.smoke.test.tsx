@@ -175,16 +175,15 @@ describe('Aplicacion', () => {
     ).toHaveAttribute('href', '/panel-equipo/ofertas/nueva')
   })
 
-  it('el panel de equipo muestra los candidatos recomendados por el motor', async () => {
+  it('el panel de equipo ya no muestra recomendaciones simuladas: los candidatos salen del ranking real', async () => {
     sesionDe('EQUIPO')
     render(renderApp('/panel-equipo'))
     expect(
-      await screen.findByText(/Recomendaciones del motor para tus vacantes/i, {}, { timeout: 8000 }),
+      await screen.findByText(/Mejores candidatos de tus ofertas abiertas/i, {}, { timeout: 8000 }),
     ).toBeInTheDocument()
-    // El ranking se calcula sobre la vacante abierta y lista candidatos reales.
-    expect(
-      await screen.findAllByText(/Daniel Ocoro|Sara Pelaez|Vanesa Ospina|Kevin Barrios/, {}, { timeout: 8000 }),
-    ).not.toHaveLength(0)
+    expect(screen.queryByText(/Recomendaciones del motor para tus vacantes/i)).toBeNull()
+    // Sin servidor no hay candidatos, y los de la simulación no se cuelan.
+    expect(screen.queryByText(/Daniel Ocoro|Sara Pelaez|Vanesa Ospina|Kevin Barrios/)).toBeNull()
   })
 
   it('el jugador no puede entrar al panel de equipo (RNF-04)', async () => {

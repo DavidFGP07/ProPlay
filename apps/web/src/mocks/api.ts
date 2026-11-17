@@ -18,7 +18,6 @@ import {
   type MatchingContexto,
   type OpcionesRanking,
 } from '@/services/matching'
-import { calculoExactoSandbox, generarExplicacion } from '@/services/llm'
 import { esCaribe } from '@/lib/matching'
 import { es } from '@/i18n/es'
 import type {
@@ -28,7 +27,6 @@ import type {
   CuentaGaming,
   Endorsement,
   Estadistica,
-  ExplicacionMatching,
   FiltrosBusqueda,
   Habilidad,
   HabilidadJugador,
@@ -41,7 +39,6 @@ import type {
   Postulacion,
   RecomendacionOferta,
   Region,
-  ResultadoMatching,
   TipoNotificacion,
   Usuario,
 } from '@/mocks/modelos'
@@ -636,23 +633,6 @@ export function obtenerEquipoDeOferta(ofertaId: string): PerfilEquipo | undefine
 
 /* -------------------------------- Matching -------------------------------- */
 
-export async function obtenerRanking(
-  ofertaId: string,
-  opciones: OpcionesRanking,
-): Promise<{
-  resultados: ResultadoMatching[]
-  traza: ReturnType<typeof calcularRanking>['traza']
-  oferta: Oferta
-}> {
-  await jitter(180, 220)
-  const oferta = ofertas.find((o) => o.id === ofertaId)
-  if (!oferta) throw new Error('Oferta no encontrada')
-  // Se reevalua el contexto porque las postulaciones pueden haber cambiado.
-  sincronizarContexto()
-  const { resultados, traza } = calcularRanking(contexto, oferta, opciones)
-  return { resultados: calculoExactoSandbox(resultados), traza, oferta }
-}
-
 /**
  * Ranking de vacantes para un jugador: el motor se ejecuta por cada oferta
  * abierta y se devuelve el mejor puntaje alcanzado por el jugador.
@@ -676,50 +656,6 @@ export async function obtenerRecomendaciones(
   return salida.sort((a, b) => b.resultado.puntaje - a.resultado.puntaje)
 }
 
-export async function explicarMatching(
-  ofertaId: string,
-  perfilId: string,
-  resultados?: ResultadoMatching[],
-): Promise<ExplicacionMatching> {
-  const t0 = performance.now()
-  await jitter(900, 900)
-  const oferta = ofertas.find((o) => o.id === ofertaId)
-  const jugador = perfilesJugador.find((p) => p.id === perfilId)
-  const equipo = obtenerEquipoDeOferta(ofertaId)
-  if (!oferta || !jugador || !equipo) throw new Error('No se pudo generar la explicacion')
-
-  sincronizarContexto()
-  const resultado =
-    resultados?.find((r) => r.perfilId === perfilId) ??
-    calcularRanking(contexto, oferta, opcionesDefault()).resultados.find(
-      (r) => r.perfilId === perfilId,
-    )
-  if (!resultado) throw new Error('No hay resultado de matching para este jugador')
-
-  const stats = estadisticasVivas.filter((s) => s.perfilId === perfilId)
-  const cuenta = cuentasVivas.find((c) => c.perfilId === perfilId)
-  const explicacion = generarExplicacion(
-    resultado,
-    oferta,
-    jugador,
-    equipo,
-    stats,
-    cuenta ? es.plataforma[cuenta.plataforma] : 'la API oficial',
-  )
-  return { ...explicacion, latenciaMs: Math.round(performance.now() - t0) }
-}
-
-function opcionesDefault(): OpcionesRanking {
-  return {
-    pesos: {
-      tecnica: 0.35,
-      experiencia: 0.2,
-      blandas: 0.15,
-      geografica: 0.15,
-      disponibilidad: 0.15,
-    },
-  }
-}
 
 /* ------------------------------ Postulaciones ----------------------------- */
 
