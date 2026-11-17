@@ -1,9 +1,16 @@
 import {
   DIMENSIONES_MATCHING,
-  DIMENSIONES_SIN_DATOS_PILOTO,
+  DIMENSIONES_VISIBLES,
   type DimensionMatching,
   type PesosMatching,
 } from '@proplay/shared'
+
+/**
+ * Dimensiones que ve el usuario, en el orden de la ecuación (1). Se definen en
+ * `@proplay/shared` (también las usa la analítica de la API) y se reexportan
+ * aquí para las vistas que ya las importaban de este módulo.
+ */
+export { DIMENSIONES_VISIBLES }
 
 /**
  * Pesos de la oferta en porcentajes (0..100) que suman 100. El estado de los
@@ -18,17 +25,6 @@ import {
 export type Porcentajes = Record<DimensionMatching, number>
 
 const TOTAL = 100
-
-const SIN_DATOS: readonly DimensionMatching[] = DIMENSIONES_SIN_DATOS_PILOTO
-
-/**
- * Dimensiones que ve el usuario, en el orden de la ecuación (1). Las vistas
- * (deslizadores, pesos de la oferta, desglose del ranking) iteran sobre esta
- * lista, nunca sobre una fija.
- */
-export const DIMENSIONES_VISIBLES: readonly DimensionMatching[] = DIMENSIONES_MATCHING.filter(
-  (d) => !SIN_DATOS.includes(d),
-)
 
 /** Reparte `total` en proporción a `bases`; si todas son 0, por igual. */
 function proporcional(bases: number[], total: number): number[] {

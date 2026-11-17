@@ -6,6 +6,7 @@ export * from "./cuentaGaming";
 export * from "./estadistica";
 export * from "./oferta";
 export * from "./matching";
+export * from "./analitica";
 export * from "./scouting";
 export * from "./mensajeria";
 export * from "./notificacion";

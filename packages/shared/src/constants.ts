@@ -82,6 +82,16 @@ export const DIMENSIONES_SIN_DATOS_PILOTO = [
 ] as const satisfies readonly DimensionMatching[];
 
 /**
+ * Dimensiones que ve el usuario, en el orden de la ecuación (1): las cinco
+ * menos `DIMENSIONES_SIN_DATOS_PILOTO`. Los deslizadores de pesos, el desglose
+ * del ranking y la analítica («qué dimensión decide el ranking») iteran sobre
+ * esta lista, nunca sobre una fija.
+ */
+export const DIMENSIONES_VISIBLES: readonly DimensionMatching[] = DIMENSIONES_MATCHING.filter(
+  (d) => !(DIMENSIONES_SIN_DATOS_PILOTO as readonly DimensionMatching[]).includes(d),
+);
+
+/**
  * Versión de las fórmulas de las cinco dimensiones. Se guarda en cada
  * `Matching`: al cambiar una fórmula, una escala o un subpeso se sube, y los
  * rankings calculados con la anterior se recalculan al leerlos.
@@ -398,3 +408,104 @@ export const MAX_COMPROBACIONES_DESAFIO = 40;
  */
 export const ICONO_VERIFICACION_MIN = 0;
 export const ICONO_VERIFICACION_MAX = 28;
+
+// ----------------------------- Analítica (RF-13) ----------------------------
+//
+// Definiciones completas en docs/arquitectura.md, «Analítica»: el documento del
+// proyecto las cita, así que cambiar una constante de aquí exige actualizarlas.
+
+/**
+ * Zona horaria en que se cuentan los días naturales de la analítica (tiempo
+ * hasta cubrir la vacante, hasta el primer tryout y días que lleva abierta una
+ * oferta). Las fechas se guardan en UTC; un día natural es una fecha del
+ * calendario en Colombia, que no tiene horario de verano (UTC−5 todo el año).
+ */
+export const ZONA_HORARIA_PILOTO = "America/Bogota";
+
+/**
+ * Etapas del embudo de la vacante, en orden. Son los estados no finales de la
+ * postulación más `ACEPTADA`; `RECHAZADA` no es una etapa sino una salida desde
+ * cualquiera de ellas. Como la máquina de estados no admite saltos, alcanzar
+ * una etapa equivale a tener su fecha (`FECHA_POR_ESTADO_POSTULACION`).
+ */
+export const ETAPAS_EMBUDO = [
+  "ENVIADA",
+  "EN_REVISION",
+  "ENTREVISTA",
+  "ACEPTADA",
+] as const satisfies readonly EstadoPostulacion[];
+export type EtapaEmbudo = (typeof ETAPAS_EMBUDO)[number];
+
+/**
+ * Mínimo de jugadores que puede mostrar una celda del mapa del talento. Una
+ * celda con menos se oculta y, si en su fila queda una sola oculta, se oculta
+ * también la siguiente más pequeña (supresión secundaria), para que no se
+ * deduzca restando del total. Rige igual en la API y en el CSV del piloto.
+ */
+export const UMBRAL_PRIVACIDAD_ANALITICA = 3;
+
+/**
+ * «Qué dimensión decide el ranking» compara los primeros candidatos de una
+ * oferta con el resto: la ventaja media de cada dimensión, en aporte (wₖ·dₖ).
+ */
+export const TOP_DIMENSION_DECISIVA = 5;
+/** Candidatos necesarios para calcularla: el top más un resto de al menos el umbral de privacidad. */
+export const MIN_CANDIDATOS_DIMENSION_DECISIVA =
+  TOP_DIMENSION_DECISIVA + UMBRAL_PRIVACIDAD_ANALITICA;
+
+/**
+ * Bandas de rango del mapa del talento. Agrupan las ligas para que haya menos
+ * celdas pequeñas que ocultar; el rango exacto lo da el perfil de cada jugador.
+ * `bandaDeRango` (en `riot.ts`) traduce un rango del catálogo.
+ */
+export const BANDAS_RANGO = [
+  "HIERRO_PLATA",
+  "ORO_PLATINO",
+  "ESMERALDA_DIAMANTE",
+  "MAESTRO_O_SUPERIOR",
+] as const;
+export type BandaRango = (typeof BANDAS_RANGO)[number];
+
+/**
+ * Grupos de la comparación del mapa: el Caribe colombiano (la macrorregión del
+ * piloto) frente al resto del país. Los jugadores de fuera de Colombia o sin
+ * ubicación sólo cuentan como total aparte.
+ */
+export const GRUPOS_TALENTO = ["CARIBE", "RESTO_COLOMBIA"] as const;
+export type GrupoTalento = (typeof GRUPOS_TALENTO)[number];
+
+/** Mediana, media y tamaño de muestra de una serie de días. */
+export interface ResumenDias {
+  mediana: number;
+  media: number;
+  n: number;
+}
+
+/**
+ * Línea base del scouting manual (tarea 0.2): cuánto tardan hoy los equipos,
+ * sin ProPlay, medido igual que en la plataforma (docs/arquitectura.md,
+ * «Analítica»): días naturales desde que el equipo abre la búsqueda hasta que
+ * acepta al jugador, y hasta el primer tryout.
+ */
+export interface LineaBaseScouting {
+  /** Fecha de la medición (AAAA-MM-DD). */
+  medidaEn: string;
+  /** Documento del repositorio con los datos crudos de la medición. */
+  fuente: string;
+  /** Equipos entrevistados. */
+  equipos: number;
+  /** Vacantes reportadas por esos equipos. */
+  vacantes: number;
+  diasHastaCubrir: ResumenDias;
+  /** Nulo si los equipos no supieron decir cuándo hicieron el primer tryout. */
+  diasHastaPrimerTryout: ResumenDias | null;
+}
+
+/**
+ * Línea base medida en el trabajo de campo, o `null` mientras no exista. Es
+ * una constante versionada y no una variable de entorno: es un dato del
+ * estudio que debe ser igual en todos los entornos, pasar por revisión en un
+ * PR y quedar citable en el historial. Con `null`, la analítica no muestra la
+ * comparación y el CSV del piloto la marca como pendiente.
+ */
+export const LINEA_BASE_SCOUTING_MANUAL: LineaBaseScouting | null = null;
