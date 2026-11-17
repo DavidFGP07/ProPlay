@@ -207,10 +207,10 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 
 | # | Tarea |
 |---|---|
-| 4.13 | Ejecutar las pruebas piloto con los equipos y jugadores reclutados<br>**Pendiente** (depende del despliegue y de 0.1, 0.2, 0.7, 0.8 y 0.9). |
-| 4.14 | Aplicar los instrumentos de medición y recoger las métricas de la plataforma<br>**Pendiente.** La parte de la plataforma está lista: `npm run metricas:piloto -w api` (#53, #55). |
-| 4.15 | Redactar el informe de validación<br>**Pendiente.** |
-| 4.16 | Incorporar los resultados al documento y contrastar las hipótesis H1 y H2 contra la línea base del punto 0.2<br>**Pendiente.** |
+| 4.13 | Ejecutar las pruebas piloto con los equipos y jugadores reclutados<br>**Fuera de la tesis:** no hubo piloto con usuarios; queda diseñada en `docs/protocolo-validacion.md`. |
+| 4.14 | Aplicar los instrumentos de medición y recoger las métricas de la plataforma<br>**Fuera de la tesis:** no hubo piloto con usuarios; queda diseñada en `docs/protocolo-validacion.md`. |
+| 4.15 | Redactar el informe de validación<br>**Fuera de la tesis:** no hubo piloto con usuarios; queda diseñada en `docs/protocolo-validacion.md`. |
+| 4.16 | Incorporar los resultados al documento y contrastar las hipótesis H1 y H2 contra la línea base del punto 0.2<br>**Fuera de la tesis:** no hubo piloto con usuarios; queda diseñada en `docs/protocolo-validacion.md`. |
 
 ---
 
