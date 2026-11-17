@@ -432,6 +432,11 @@ comparación no vale:
 - los **días naturales hasta el primer tryout** (equivale a `publicadaEn` → primera
   `entrevistaEn`).
 
+Por coherencia con la plataforma, que cuenta el primer tryout en cualquier oferta
+publicada, el tiempo hasta el primer tryout de la línea base debe incluir **también las
+búsquedas que llegaron a un tryout y no se cubrieron**, no sólo las que terminaron en una
+contratación.
+
 En las dos se registran la mediana, la media y n, además de los equipos entrevistados y
 las vacantes reportadas. El resultado se guarda en `LINEA_BASE_SCOUTING_MANUAL`
 (`@proplay/shared`), con la fecha de la medición y el documento con los datos crudos. Es
