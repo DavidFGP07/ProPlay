@@ -16,9 +16,6 @@ import {
   type ListarOfertasQuery,
 } from '@proplay/shared'
 import { api } from '@/api/client'
-import { listarOfertas, listarPostulaciones } from '@/mocks/api'
-import { simulado } from '@/api/demo'
-import type { Oferta } from '@/mocks/modelos'
 
 /*
  * Ofertas y postulaciones: API real, sin puente de demostracion. Las respuestas se leen con los esquemas de @proplay/shared,
@@ -89,8 +86,9 @@ const postulacionesRecibidasSchema = z.array(postulacionRecibidaSchema)
 
 /**
  * Tras un cambio de ofertas o postulaciones, se refresca todo lo de ese
- * recurso y el ranking de candidatos, que depende de los dos (los pesos de la
- * oferta y el estado de cada postulación).
+ * recurso, el ranking de candidatos, que depende de los dos (los pesos de la
+ * oferta y el estado de cada postulación), y la analítica (el embudo y la
+ * dimensión decisiva).
  */
 function useInvalidarOfertas() {
   const cliente = useQueryClient()
@@ -99,6 +97,7 @@ function useInvalidarOfertas() {
       cliente.invalidateQueries({ queryKey: ['ofertas'] }),
       cliente.invalidateQueries({ queryKey: ['postulaciones'] }),
       cliente.invalidateQueries({ queryKey: ['matching'] }),
+      cliente.invalidateQueries({ queryKey: ['analitica'] }),
     ])
 }
 
@@ -171,28 +170,5 @@ export function useCambiarEstadoPostulacion() {
       return postulacionSchema.parse(data)
     },
     onSuccess: invalidar,
-  })
-}
-
-/*
- * Indicadores y recomendaciones del panel del equipo: siguen simulados hasta
- * la analitica y el motor de matching.
- */
-
-// RF-13 · Vacantes de la simulacion, para los indicadores del panel
-export function useVacantes(estado?: Oferta['estado']) {
-  return useQuery({
-    queryKey: ['ofertas', 'demo', { estado }],
-    // TODO: S4 — sustituir por los datos de la analitica (tarea 4.10)
-    queryFn: () => simulado(() => listarOfertas(estado), []),
-  })
-}
-
-// RF-13 · Postulaciones de la simulacion, para los indicadores del panel
-export function usePostulaciones() {
-  return useQuery({
-    queryKey: ['postulaciones', 'demo'],
-    // TODO: S4 — sustituir por los datos de la analitica (tarea 4.10)
-    queryFn: () => simulado(() => listarPostulaciones(), []),
   })
 }

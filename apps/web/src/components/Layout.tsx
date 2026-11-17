@@ -53,7 +53,7 @@ const NAVEGACION: ItemNav[] = [
   { to: '/explorar', label: 'Explorar talento', icono: Search, roles: AREAS.equipo },
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
   { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: AREAS.equipo },
-  { to: '/dashboard', label: 'Dashboard', icono: ChartNoAxesColumn, roles: AREAS.equipo },
+  { to: '/dashboard', label: es.analitica.menu, icono: ChartNoAxesColumn, roles: AREAS.equipo },
   { to: '/mensajes', label: 'Mensajes', icono: MessageSquare },
   { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: AREAS.admin },
   // Sin roles: la vista de cuenta es comun a los cuatro.

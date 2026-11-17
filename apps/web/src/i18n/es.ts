@@ -1,9 +1,11 @@
 import type {
+  BandaRango,
   CercaniaGeografica,
   Departamento,
   DimensionMatching,
   EstadoOferta,
   EstadoPostulacion,
+  GrupoTalento,
   LigaLol,
   Macrorregion,
   MetricaTecnicaLol,
@@ -17,6 +19,20 @@ import type {
   ServidorLol,
 } from '@proplay/shared'
 import type { PlataformaJuego } from '@/mocks/modelos'
+
+/** Cifras con un decimal como mucho, en formato de Colombia (coma decimal). */
+const formatoNumero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
+/** Siempre con un decimal: «0,0», «21,7». */
+const formatoUnDecimal = new Intl.NumberFormat('es-CO', {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 1,
+})
+/** Puntos de compatibilidad con signo: «+32,4», «−0,3». */
+const formatoPuntos = new Intl.NumberFormat('es-CO', {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 1,
+  signDisplay: 'exceptZero',
+})
 
 /**
  * Textos visibles de la interfaz (CLAUDE.md §6). Las vistas heredadas del
@@ -642,6 +658,152 @@ export const es = {
     verRanking: 'Ver ranking completo',
     verRankingDe: (titulo: string) => `Ver el ranking completo de ${titulo}`,
     masAbiertas: (n: number) => `Se muestran tus ${n} ofertas abiertas más recientes.`,
+    // Resumen de la analítica (RF-13) en lugar de los indicadores simulados
+    resumen: 'Resumen de la analítica',
+    cargandoResumen: 'Cargando el resumen de la analítica',
+    errorResumen: 'No pudimos cargar el resumen de la analítica.',
+    abiertas: 'Ofertas abiertas',
+    enCurso: 'Postulaciones en curso',
+    enCursoDetalle: 'Sin decisión todavía, en cualquier etapa',
+    hastaCubrir: 'Días hasta cubrir',
+    coincidencias: 'Coincidencias exitosas',
+    coincidenciasDetalle: 'Postulaciones aceptadas',
+    verAnalitica: 'Ver la analítica',
+    verificados: 'Jugadores verificados',
+    proporcionVerificados: 'Perfiles verificados',
+    delCaribe: 'Del Caribe colombiano',
+  },
+  // RF-13 · Analítica (/dashboard), fusionada con el panel del equipo
+  analitica: {
+    menu: 'Analítica',
+    titulo: 'Analítica',
+    subtitulo: 'Cómo avanzan tus vacantes, qué decide tus rankings y dónde está el talento verificado.',
+    subtituloScout: 'Dónde está el talento verificado: el Caribe colombiano frente al resto del país.',
+    tendencia:
+      'El cuarto indicador, la tendencia del rendimiento, lo ve cada jugador en «Mis estadísticas».',
+    // Tiempos (H1)
+    vacantes: 'Tus vacantes',
+    vacantesSubtitulo: 'Días naturales desde que publicas una oferta. Mediana, con la media y el número de ofertas.',
+    hastaCubrir: 'Hasta cubrirla',
+    hastaCubrirDetalle: 'De la publicación a la primera postulación aceptada',
+    hastaTryout: 'Hasta el primer tryout',
+    hastaTryoutDetalle: 'De la publicación a la primera entrevista',
+    cobertura: 'Vacantes cubiertas',
+    coberturaDetalle: (cubiertas: number, terminadas: number) =>
+      `${cubiertas} de ${terminadas} terminadas`,
+    sinTerminadas: 'Ninguna terminada todavía',
+    dias: (n: number) => (n === 1 ? '1 día' : `${formatoNumero.format(n)} días`),
+    detalleSerie: (media: number, n: number) =>
+      `Media ${formatoNumero.format(media)} · ${n === 1 ? '1 oferta' : `${n} ofertas`}`,
+    sinCubiertas: 'Aún no hay ofertas cubiertas',
+    sinCubiertasDetalle:
+      'El tiempo hasta cubrir aparece cuando aceptas a un jugador en una oferta y la marcas como cubierta.',
+    sinTryouts: 'Aún no hay tryouts',
+    lineaBase: (dias: string, equipos: number) =>
+      `Scouting manual (línea base): ${dias}, con ${equipos} equipos entrevistados.`,
+    descriptiva: 'Son datos descriptivos de pocas vacantes: léelos con su número de ofertas.',
+    graficoCubrir: 'Días hasta cubrir cada oferta, con la mediana',
+    graficoCubrirResumen: (detalle: string) => `Días hasta cubrir: ${detalle}.`,
+    mediana: 'Mediana',
+    // Tabla de ofertas
+    tusOfertas: 'Ofertas publicadas',
+    columnaOferta: 'Oferta',
+    columnaEstado: 'Estado',
+    columnaCubrir: 'Hasta cubrir',
+    columnaTryout: 'Primer tryout',
+    columnaPostulaciones: 'Postulaciones',
+    abiertaHace: (n: number) => (n === 1 ? 'Abierta hace 1 día' : `Abierta hace ${n} días`),
+    sinDato: '—',
+    // Embudo
+    embudo: 'Embudo de tus vacantes',
+    embudoSubtitulo: 'Cuántas postulaciones llegan a cada etapa, de todas tus ofertas publicadas.',
+    embudoOferta: 'Embudo de la oferta',
+    graficoEmbudo: 'Postulaciones que llegan a cada etapa',
+    graficoEmbudoResumen: (detalle: string) => `Embudo: ${detalle}.`,
+    columnaEtapa: 'Etapa',
+    columnaAlcanzaron: 'Llegaron',
+    columnaConversion: 'Desde la anterior',
+    columnaSiguen: 'Siguen en ella',
+    columnaRechazadas: 'Rechazadas',
+    columnaAlCerrar: 'Al cerrar la oferta',
+    columnaDias: 'Días en la etapa',
+    notaEmbudo:
+      '«Desde la anterior» baja mientras haya postulaciones en curso. Los rechazos al cerrar la oferta son automáticos: no son una decisión sobre el candidato. Los días en la etapa son tiempo transcurrido (mediana).',
+    sinPostulaciones: 'Aún no hay postulaciones',
+    sinPostulacionesDetalle: 'El embudo se llena cuando los jugadores se postulan a tus ofertas.',
+    // Por oferta
+    porOferta: 'Por oferta',
+    porOfertaSubtitulo: 'El embudo de una oferta y la dimensión que decide su ranking.',
+    elegirOferta: 'Oferta',
+    sinOfertas: 'Todavía no has publicado ofertas',
+    sinOfertasDetalle: 'Publica una oferta para ver su embudo y su ranking.',
+    publicar: 'Publicar oferta',
+    // Dimensión decisiva
+    decisiva: 'Qué decide el ranking',
+    decisivaSubtitulo: (top: number) =>
+      `Ventaja media de tus ${top} primeros candidatos sobre el resto, en puntos de compatibilidad.`,
+    decisivaFrase: (dimension: string, top: number, puntos: string, total: string) =>
+      `Lo que más separa a tus ${top} primeros del resto es la ${dimension.toLowerCase()}: ${puntos} puntos de ventaja de media, sobre una diferencia total de ${total} puntos.`,
+    empate: 'Tus primeros candidatos y el resto están igualados: ninguna dimensión los separa.',
+    pocosCandidatos: (minimo: number, hay: number) =>
+      `Hacen falta al menos ${minimo} candidatos en el ranking para saber qué lo decide (ahora hay ${hay}).`,
+    otras: 'Otras dimensiones',
+    graficoDecisiva: 'Ventaja de cada dimensión, en puntos',
+    graficoDecisivaResumen: (detalle: string) => `Ventaja de los primeros: ${detalle}.`,
+    columnaDimension: 'Dimensión',
+    columnaPeso: 'Peso',
+    columnaTop: (top: number) => `Aporte medio de los ${top} primeros`,
+    columnaResto: 'Aporte medio del resto',
+    columnaVentaja: 'Ventaja',
+    enContra: 'juega en contra de los primeros',
+    // Espacio no separable: la etiqueta de una gráfica no se parte en dos líneas.
+    puntos: (n: number) => `${formatoPuntos.format(n)}\u00a0pts`,
+    puntosAporte: (n: number) => `${formatoUnDecimal.format(n)}\u00a0pts`,
+    verRanking: 'Ver el ranking',
+    // Mapa del talento
+    talento: 'Talento verificado',
+    talentoSubtitulo:
+      'Jugadores con cuenta de Riot verificada. Posición y rango de su última captura.',
+    registrados: 'Jugadores registrados',
+    verificados: 'Verificados',
+    proporcion: 'Con perfil verificado',
+    comparacion: 'El Caribe frente al resto de Colombia',
+    porPosicion: 'Por posición',
+    porBanda: 'Por rango',
+    graficoPosicion: 'Porcentaje de verificados de cada grupo por posición',
+    graficoBanda: 'Porcentaje de verificados de cada grupo por rango',
+    graficoComparacionResumen: (detalle: string) => `Caribe frente al resto: ${detalle}.`,
+    columnaCategoria: 'Categoría',
+    porcentaje: (n: number) => `${formatoNumero.format(n)}\u00a0%`,
+    oculto: 'Oculto',
+    notaPrivacidad: (umbral: number) =>
+      `Para que nadie sea identificable, una cifra de menos de ${umbral} jugadores se oculta, y también otra de su fila si con ella se pudiera deducir. Las ocultas no cuentan en los porcentajes.`,
+    porRegion: 'Por macrorregión',
+    columnaRegion: 'Macrorregión',
+    columnaJugadores: 'Jugadores',
+    columnaDepartamentos: 'Departamentos',
+    otrosDepartamentos: 'Otros departamentos',
+    fueraDeColombia: 'Fuera de Colombia',
+    sinUbicacion: 'Sin ubicación',
+    sinVerificados: 'Aún no hay jugadores verificados',
+    sinVerificadosDetalle: 'El mapa se llena cuando los jugadores vinculan su cuenta de Riot.',
+    // Estados
+    cargando: 'Cargando la analítica',
+    error: 'No pudimos cargar la analítica.',
+    errorTalento: 'No pudimos cargar el talento verificado.',
+    errorOferta: 'No pudimos cargar los datos de esta oferta.',
+    sinPermiso: 'La analítica de las vacantes la ve la organización que las publicó.',
+    grupo: {
+      CARIBE: 'Caribe',
+      RESTO_COLOMBIA: 'Resto de Colombia',
+    } satisfies Record<GrupoTalento, string>,
+    banda: {
+      HIERRO_PLATA: 'Hierro a Plata',
+      ORO_PLATINO: 'Oro y Platino',
+      ESMERALDA_DIAMANTE: 'Esmeralda y Diamante',
+      MAESTRO_O_SUPERIOR: 'Maestro o superior',
+      SIN_RANGO: 'Sin rango',
+    } satisfies Record<BandaRango | 'SIN_RANGO', string>,
   },
   // RF-09 · Ranking de candidatos de una oferta (/vacantes/:id/ranking)
   ranking: {

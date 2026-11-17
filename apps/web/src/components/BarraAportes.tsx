@@ -19,6 +19,20 @@ export const COLOR_DIMENSION = {
   otras: 'bg-surface-500',
 } as const satisfies Record<ClaveAporte, string>
 
+/**
+ * Los mismos colores como variables CSS del tema, para las gráficas de
+ * Recharts (que no usan clases): la analítica pinta cada dimensión igual que
+ * la barra de aportes.
+ */
+export const RELLENO_DIMENSION = {
+  tecnica: 'var(--color-brand-500)',
+  experiencia: 'var(--color-brand-800)',
+  habilidadesBlandas: 'var(--color-accent-600)',
+  geografica: 'var(--color-accent-400)',
+  disponibilidad: 'var(--color-brand-200)',
+  otras: 'var(--color-surface-500)',
+} as const satisfies Record<ClaveAporte, string>
+
 export function nombreAporte(clave: ClaveAporte): string {
   return clave === 'otras' ? t.otras : es.dimension[clave as DimensionMatching]
 }

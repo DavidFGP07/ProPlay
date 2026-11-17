@@ -523,9 +523,9 @@ describe('Panel del equipo: «Mejores candidatos»', () => {
     expect(doble.get).toHaveBeenCalledWith('/matching/ofertas/oferta-1/ranking', {
       params: { page: 1, soloPostulados: false, orden: 'puntaje' },
     })
-    // Ya no hay recomendaciones simuladas: sólo los indicadores llevan la marca de demostración.
+    // Ya no hay recomendaciones ni indicadores simulados: el panel no lleva marcas de demostración.
     expect(screen.queryByText(/Recomendaciones del motor/)).toBeNull()
-    expect(screen.getAllByText(/Datos de demostraci/i)).toHaveLength(1)
+    expect(screen.queryByText(/Datos de demostraci/i)).toBeNull()
   })
 
   it('sin ofertas abiertas invita a publicar una', async () => {
