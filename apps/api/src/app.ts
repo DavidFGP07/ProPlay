@@ -19,6 +19,7 @@ import { ofertasRouter } from "./modules/ofertas/ofertas.routes";
 import { mensajeriaRouter } from "./modules/mensajeria/mensajeria.routes";
 import { notificacionesRouter } from "./modules/notificaciones/notificaciones.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
+import { analiticaRouter } from "./modules/analitica/analitica.routes";
 
 /**
  * Construye la aplicación Express: middlewares de transporte, routers de los
@@ -94,6 +95,7 @@ function crearRouterApi(): Router {
   api.use("/mensajeria", mensajeriaRouter);
   api.use("/notificaciones", notificacionesRouter);
   api.use("/admin", adminRouter);
+  api.use("/analitica", analiticaRouter);
 
   return api;
 }

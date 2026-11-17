@@ -3,7 +3,7 @@
 ## Vista general
 
 Monolito modular en el servidor con cliente desacoplado. Una sola aplicación
-Express contiene los nueve módulos de negocio, separados por carpetas y no por
+Express contiene los diez módulos de negocio, separados por carpetas y no por
 servicios; el contrato de la API vive en un paquete compartido que consumen
 tanto el backend como el frontend.
 
@@ -67,7 +67,7 @@ flowchart LR
     RP -- error --> EH
 ```
 
-## Los nueve módulos
+## Los diez módulos
 
 ```mermaid
 flowchart TB
@@ -81,6 +81,7 @@ flowchart TB
     API --> MS["mensajeria"]
     API --> N["notificaciones"]
     API --> AD["admin"]
+    API --> AN["analitica"]
 
     U -.->|identidad| P
     P -.->|habilidades y cuentas| E
@@ -91,6 +92,7 @@ flowchart TB
     O -.->|postulaciones| N
     MS -.->|mensajes| N
     U -.->|auditoría| AD
+    M -.->|ranking al día| AN
 ```
 
 | Módulo | Responsabilidad | Estado |
@@ -104,6 +106,7 @@ flowchart TB
 | `mensajeria` | Conversaciones y mensajes 1:1 y de equipo | Andamiaje (501) |
 | `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |
 | `admin` | Métricas de la plataforma, moderación de cuentas y consulta del `AuditLog` | Andamiaje (501) |
+| `analitica` | Indicadores de la analítica (RF-13): embudo de la vacante con el tiempo hasta cubrirla, dimensión decisiva del ranking y mapa del talento verificado. Sólo lee | **Implementado** (`GET /embudo`, `/ofertas/:id/embudo`, `/ofertas/:id/dimension-decisiva`, `/talento`) |
 
 ## Modelo de datos
 
@@ -418,6 +421,23 @@ jugadores:
 2. Toda celda con 1 o 2 jugadores se oculta.
 3. **Supresión secundaria**: si en una fila queda oculta una sola celda, se oculta
    también la siguiente más pequeña, para que no se deduzca restando del total.
+
+Cómo se aplica fila a fila (`suprimirFila` y `construirTalento`, en
+`analitica.service.ts`):
+
+- **Fila de ubicación**: Caribe, resto de Colombia, fuera de Colombia y sin ubicación,
+  contra el total de verificados. Si hace falta la supresión secundaria, se ocultan
+  antes «fuera de Colombia» o «sin ubicación» que un grupo.
+- **Si el total de un grupo queda oculto, también todo su desglose**: sus celdas
+  sumarían el total.
+- **Posición**: las cinco posiciones más una celda implícita «sin captura» (verificados
+  que aún no tienen captura), que no se devuelve pero cuenta para la supresión. Las
+  bandas de rango suman el total exacto porque «sin rango» incluye a quien no tiene
+  captura.
+- **Macrorregiones**: las del resto de Colombia, contra el total del resto. El Caribe es
+  el propio grupo. En cada macrorregión, los departamentos se agrupan antes de
+  suprimir.
+- Las celdas con 0 se muestran: no identifican a nadie.
 
 Las celdas ocultas no entran en ningún porcentaje. La regla es la misma en la API y en el
 CSV del piloto.

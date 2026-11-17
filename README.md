@@ -17,7 +17,7 @@ Proyecto de grado — Universidad del Norte.
 
 ## Arquitectura en una frase
 
-Monolito modular en el servidor (Express + Prisma, nueve módulos separados por
+Monolito modular en el servidor (Express + Prisma, diez módulos separados por
 carpetas), cliente desacoplado (React + Vite), contrato compartido en un
 paquete propio, todo en un monorepo con **npm workspaces**.
 
@@ -246,7 +246,7 @@ Todas usan la contraseña `ProPlay123`:
 | `admin@proplay.gg` | ADMIN |
 | `scout@proplay.gg` | SCOUT |
 | `equipo@caribeesports.gg` | EQUIPO |
-| `jugador1@proplay.gg` … `jugador15@proplay.gg` | JUGADOR |
+| `jugador1@proplay.gg` … `jugador21@proplay.gg` | JUGADOR |
 
 ### Alternativa sin Docker (macOS con Homebrew)
 
