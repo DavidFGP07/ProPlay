@@ -114,6 +114,20 @@ export function construirEmbudo(filas: readonly repositorio.EtapaEmbudoDb[]): Em
   };
 }
 
+/** Ofertas abiertas, cubiertas y cerradas sin cubrir, y la tasa de cobertura. */
+function cobertura(ofertas: readonly repositorio.OfertaTiemposDb[]): EmbudoEquipo["cobertura"] {
+  const cuenta = (estado: string) => ofertas.filter((o) => o.estado === estado).length;
+  const cubiertas = cuenta("CUBIERTA");
+  const cerradasSinCubrir = cuenta("CERRADA");
+  const terminadas = cubiertas + cerradasSinCubrir;
+  return {
+    abiertas: cuenta("ABIERTA"),
+    cubiertas,
+    cerradasSinCubrir,
+    tasa: terminadas === 0 ? null : cubiertas / terminadas,
+  };
+}
+
 function aOfertaAnalitica(o: repositorio.OfertaTiemposDb): OfertaAnalitica {
   return {
     id: o.id,
@@ -140,20 +154,11 @@ export async function embudoEquipo(actor: Actor, ahora = new Date()): Promise<Em
     repositorio.resumenTiempos(filtro, ahora),
     repositorio.ofertasConTiempos(filtro, ahora),
   ]);
-  const cuenta = (estado: string) => ofertas.filter((o) => o.estado === estado).length;
-  const cubiertas = cuenta("CUBIERTA");
-  const cerradasSinCubrir = cuenta("CERRADA");
-  const terminadas = cubiertas + cerradasSinCubrir;
   return {
     embudo: construirEmbudo(filas),
     diasHastaCubrir: resumenDias(tiempos.hastaCubrir),
     diasHastaPrimerTryout: resumenDias(tiempos.hastaPrimerTryout),
-    cobertura: {
-      abiertas: cuenta("ABIERTA"),
-      cubiertas,
-      cerradasSinCubrir,
-      tasa: terminadas === 0 ? null : cubiertas / terminadas,
-    },
+    cobertura: cobertura(ofertas),
     ofertas: ofertas.map(aOfertaAnalitica),
     calculadoEn: ahora,
   };
@@ -456,11 +461,98 @@ export function construirTalento(
   };
 }
 
-/** RF-13 · Mapa del talento verificado, con el umbral de privacidad aplicado. */
-export async function talento(ahora = new Date()): Promise<TalentoVerificado> {
+/**
+ * RF-13 · Mapa del talento verificado, con el umbral de privacidad aplicado.
+ * `excluirPrueba` deja fuera las cuentas del seed (script del piloto).
+ */
+export async function talento(ahora = new Date(), excluirPrueba = false): Promise<TalentoVerificado> {
   const [filas, registrados] = await Promise.all([
-    repositorio.talentoVerificado(),
-    repositorio.jugadoresRegistrados(),
+    repositorio.talentoVerificado(excluirPrueba),
+    repositorio.jugadoresRegistrados(excluirPrueba),
   ]);
   return construirTalento(filas, registrados, ahora);
+}
+
+// ------------------------------------------------------ métricas del piloto
+
+export interface OpcionesPiloto {
+  /** Primer día de publicación de las ofertas (AAAA-MM-DD, en la zona del piloto). */
+  desde?: string;
+  /** Último día de publicación de las ofertas (AAAA-MM-DD). */
+  hasta?: string;
+  /** Deja fuera las cuentas del seed (`utils/datosDePrueba.ts`). */
+  excluirPrueba: boolean;
+}
+
+export interface OfertaPiloto extends OfertaAnalitica {
+  equipo: string;
+  embudo: Embudo;
+  dimensionDecisiva: DimensionDecisiva;
+}
+
+export interface MetricasPiloto {
+  opciones: OpcionesPiloto;
+  generadoEn: Date;
+  ofertas: OfertaPiloto[];
+  embudo: Embudo;
+  diasHastaCubrir: ResumenDiasRespuesta;
+  diasHastaPrimerTryout: ResumenDiasRespuesta;
+  cobertura: EmbudoEquipo["cobertura"];
+  talento: TalentoVerificado;
+  registros: Partial<Record<Rol, number>>;
+}
+
+/**
+ * Métricas de todo el piloto, para el informe de la tesis (script
+ * `npm run metricas:piloto -w api`): las mismas definiciones que la API, sobre
+ * todas las ofertas publicadas en la ventana, de cualquier equipo. No tiene
+ * ruta: el panel de administración quedó fuera del alcance (decisión 0.10).
+ * Pone al día el ranking de cada oferta antes de su dimensión decisiva (las
+ * cubiertas o cerradas conservan su instantánea).
+ */
+export async function metricasPiloto(
+  opciones: OpcionesPiloto,
+  ahora = new Date(),
+): Promise<MetricasPiloto> {
+  const filtro: repositorio.FiltroOfertas = {
+    desde: opciones.desde,
+    hasta: opciones.hasta,
+    excluirPrueba: opciones.excluirPrueba,
+  };
+  const [filas, tiempos, ofertas, mapa, registros] = await Promise.all([
+    repositorio.etapasEmbudo(filtro),
+    repositorio.resumenTiempos(filtro, ahora),
+    repositorio.ofertasConTiempos(filtro, ahora),
+    talento(ahora, opciones.excluirPrueba),
+    repositorio.registrosPorRol(opciones.excluirPrueba),
+  ]);
+
+  const porOferta: OfertaPiloto[] = [];
+  for (const oferta of ofertas) {
+    const embudo = construirEmbudo(await repositorio.etapasEmbudo({ ...filtro, ofertaId: oferta.id }));
+    await rankingAlDia(oferta.id);
+    const grupos = await repositorio.gruposDelRanking(
+      oferta.id,
+      TOP_DIMENSION_DECISIVA,
+      opciones.excluirPrueba,
+    );
+    porOferta.push({
+      ...aOfertaAnalitica(oferta),
+      equipo: oferta.equipo,
+      embudo,
+      dimensionDecisiva: construirDecisiva(oferta.id, grupos, ahora),
+    });
+  }
+
+  return {
+    opciones,
+    generadoEn: ahora,
+    ofertas: porOferta,
+    embudo: construirEmbudo(filas),
+    diasHastaCubrir: resumenDias(tiempos.hastaCubrir),
+    diasHastaPrimerTryout: resumenDias(tiempos.hastaPrimerTryout),
+    cobertura: cobertura(ofertas),
+    talento: mapa,
+    registros: Object.fromEntries(registros.map((r) => [r.rol, r.total])),
+  };
 }

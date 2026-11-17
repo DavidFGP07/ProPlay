@@ -3,6 +3,13 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { desconectarPrisma } from "../src/config/prisma";
 import { revectorizarTodos } from "../src/modules/matching/matching.service";
 import {
+  CORREO_ADMIN_SEED,
+  CORREO_SCOUT_SEED,
+  CORREOS_EQUIPOS_SEED,
+  PREFIJO_PUUID_SEED,
+  correoJugadorSeed,
+} from "../src/utils/datosDePrueba";
+import {
   COLA_SOLO_DUO,
   PARTIDAS_POR_SINCRONIZACION,
   POSICIONES_LOL,
@@ -152,7 +159,7 @@ const EQUIPOS: {
   departamento: Departamento;
 }[] = [
   {
-    email: "equipo@caribeesports.gg",
+    email: CORREOS_EQUIPOS_SEED[0],
     nombre: "Caribe eSports",
     nombreOrg: "Caribe eSports",
     descripcion: "Organización de la costa Caribe con divisiones de LoL y VALORANT.",
@@ -161,7 +168,7 @@ const EQUIPOS: {
     departamento: "ATLANTICO",
   },
   {
-    email: "equipo@andesgaming.co",
+    email: CORREOS_EQUIPOS_SEED[1],
     nombre: "Andes Gaming",
     nombreOrg: "Andes Gaming",
     descripcion: "Academia de desarrollo de talento para escenas emergentes.",
@@ -170,7 +177,7 @@ const EQUIPOS: {
     departamento: "BOGOTA_DC",
   },
   {
-    email: "equipo@uninortelegends.edu.co",
+    email: CORREOS_EQUIPOS_SEED[2],
     nombre: "Uninorte Legends",
     nombreOrg: "Uninorte Legends",
     descripcion: "Equipo universitario de la Universidad del Norte.",
@@ -534,10 +541,10 @@ async function main() {
 
   // ------------------------------------------------------- admin y scout demo
   await prisma.usuario.upsert({
-    where: { email: "admin@proplay.gg" },
+    where: { email: CORREO_ADMIN_SEED },
     update: {},
     create: {
-      email: "admin@proplay.gg",
+      email: CORREO_ADMIN_SEED,
       passwordHash,
       nombre: "Administración ProPlay",
       rol: "ADMIN",
@@ -546,10 +553,10 @@ async function main() {
   });
 
   await prisma.usuario.upsert({
-    where: { email: "scout@proplay.gg" },
+    where: { email: CORREO_SCOUT_SEED },
     update: {},
     create: {
-      email: "scout@proplay.gg",
+      email: CORREO_SCOUT_SEED,
       passwordHash,
       nombre: "Marcela Guzmán",
       rol: "SCOUT",
@@ -595,7 +602,7 @@ async function main() {
   let postulacionesCreadas = 0;
   const perfilesJugador: { id: string }[] = [];
   for (const [indice, nombre] of NOMBRES_JUGADORES.entries()) {
-    const email = `jugador${indice + 1}@proplay.gg`;
+    const email = correoJugadorSeed(indice + 1);
     const riot = DATOS_RIOT[indice]!;
 
     const usuario = await prisma.usuario.upsert({
@@ -666,11 +673,11 @@ async function main() {
       const verificadaEn = haceDias(60 - indice);
       const cuenta = await prisma.cuentaGaming.upsert({
         where: { jugadorId_plataforma: { jugadorId: jugador.id, plataforma: "RIOT" } },
-        update: { externalId: `seed-puuid-${indice + 1}`, handle, servidor: "LA1", verificadaEn },
+        update: { externalId: `${PREFIJO_PUUID_SEED}puuid-${indice + 1}`, handle, servidor: "LA1", verificadaEn },
         create: {
           jugadorId: jugador.id,
           plataforma: "RIOT",
-          externalId: `seed-puuid-${indice + 1}`,
+          externalId: `${PREFIJO_PUUID_SEED}puuid-${indice + 1}`,
           handle,
           servidor: "LA1",
           verificadaEn,

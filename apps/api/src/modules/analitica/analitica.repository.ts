@@ -7,8 +7,14 @@ import {
   type EstadoOferta,
   type PosicionLol,
   type RangoLol,
+  type Rol,
 } from "@proplay/shared";
 import { prisma } from "../../config/prisma";
+import {
+  CORREOS_FIJOS_SEED,
+  PATRON_CORREO_JUGADOR_SEED,
+  PREFIJO_PUUID_SEED,
+} from "../../utils/datosDePrueba";
 
 /**
  * Acceso a datos del módulo `analitica` (RF-13): el ÚNICO archivo del módulo
@@ -27,6 +33,15 @@ export interface FiltroOfertas {
   /** `PerfilEquipo.id` del equipo dueño. */
   equipoId?: string;
   ofertaId?: string;
+  /** Primer día de publicación incluido (AAAA-MM-DD, en la zona del piloto). */
+  desde?: string;
+  /** Último día de publicación incluido (AAAA-MM-DD, en la zona del piloto). */
+  hasta?: string;
+  /**
+   * Deja fuera las cuentas del seed (`utils/datosDePrueba.ts`): las ofertas de
+   * sus equipos y las postulaciones de sus jugadores. Lo usa el script del piloto.
+   */
+  excluirPrueba?: boolean;
 }
 
 const zona = Prisma.sql`${ZONA_HORARIA_PILOTO}::text`;
@@ -41,11 +56,43 @@ function diaDe(instante: Date): Prisma.Sql {
   return Prisma.sql`((${instante.toISOString()}::timestamptz) AT TIME ZONE ${zona})::date`;
 }
 
+/** Condición de que el usuario (alias `u`) es una cuenta del seed por su correo. */
+function correoDePrueba(u: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`(${u}.email = ANY(${[...CORREOS_FIJOS_SEED]}::text[]) OR ${u}.email ~ ${PATRON_CORREO_JUGADOR_SEED})`;
+}
+
+/** Condición de que el jugador (`PerfilJugador.id`) es del seed: por su correo o por su `puuid`. */
+function jugadorDePrueba(jugadorId: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`(
+    EXISTS (SELECT 1 FROM "PerfilJugador" pjp JOIN "Usuario" up ON up.id = pjp."usuarioId"
+             WHERE pjp.id = ${jugadorId} AND ${correoDePrueba(Prisma.sql`up`)})
+    OR EXISTS (SELECT 1 FROM "CuentaGaming" cgp
+                WHERE cgp."jugadorId" = ${jugadorId} AND cgp."externalId" LIKE ${`${PREFIJO_PUUID_SEED}%`})
+  )`;
+}
+
 function filtroOfertas(filtro: FiltroOfertas): Prisma.Sql {
   const condiciones = [Prisma.sql`o."publicadaEn" IS NOT NULL`];
   if (filtro.equipoId) condiciones.push(Prisma.sql`o."equipoId" = ${filtro.equipoId}`);
   if (filtro.ofertaId) condiciones.push(Prisma.sql`o.id = ${filtro.ofertaId}`);
+  if (filtro.desde) {
+    condiciones.push(Prisma.sql`${dia(Prisma.sql`o."publicadaEn"`)} >= ${filtro.desde}::date`);
+  }
+  if (filtro.hasta) {
+    condiciones.push(Prisma.sql`${dia(Prisma.sql`o."publicadaEn"`)} <= ${filtro.hasta}::date`);
+  }
+  if (filtro.excluirPrueba) {
+    condiciones.push(Prisma.sql`NOT EXISTS (
+      SELECT 1 FROM "PerfilEquipo" peq JOIN "Usuario" ueq ON ueq.id = peq."usuarioId"
+       WHERE peq.id = o."equipoId" AND ${correoDePrueba(Prisma.sql`ueq`)}
+    )`);
+  }
   return Prisma.join(condiciones, " AND ");
+}
+
+/** Postulaciones (alias `p`) que cuentan: con `excluirPrueba`, sin las de jugadores del seed. */
+function filtroPostulaciones(filtro: FiltroOfertas): Prisma.Sql {
+  return filtro.excluirPrueba ? Prisma.sql`NOT ${jugadorDePrueba(Prisma.sql`p."jugadorId"`)}` : Prisma.sql`TRUE`;
 }
 
 // ------------------------------------------------------------------ ofertas
@@ -71,6 +118,8 @@ export async function buscarOferta(id: string): Promise<OfertaPermisosDb | null>
 export interface OfertaTiemposDb {
   id: string;
   titulo: string;
+  /** Nombre de la organización (lo usa el CSV del piloto; la API no lo devuelve). */
+  equipo: string;
   rol: PosicionLol;
   estado: Exclude<EstadoOferta, "BORRADOR">;
   publicadaEn: Date;
@@ -88,7 +137,7 @@ export interface OfertaTiemposDb {
  */
 function tiemposPorOferta(filtro: FiltroOfertas, ahora: Date): Prisma.Sql {
   return Prisma.sql`
-    SELECT o.id, o.titulo, o.rol::text AS rol, o.estado::text AS estado,
+    SELECT o.id, o.titulo, pe."nombreOrg" AS equipo, o.rol::text AS rol, o.estado::text AS estado,
            o."publicadaEn", o."cerradaEn",
            count(p.id)::int AS postulaciones,
            CASE WHEN o.estado = 'CUBIERTA' AND min(p."aceptadaEn") IS NOT NULL
@@ -101,9 +150,10 @@ function tiemposPorOferta(filtro: FiltroOfertas, ahora: Date): Prisma.Sql {
                 THEN (${diaDe(ahora)} - ${dia(Prisma.sql`o."publicadaEn"`)})::int
            END AS "diasAbierta"
       FROM "Oferta" o
-      LEFT JOIN "Postulacion" p ON p."ofertaId" = o.id
+      JOIN "PerfilEquipo" pe ON pe.id = o."equipoId"
+      LEFT JOIN "Postulacion" p ON p."ofertaId" = o.id AND ${filtroPostulaciones(filtro)}
      WHERE ${filtroOfertas(filtro)}
-     GROUP BY o.id
+     GROUP BY o.id, pe.id
   `;
 }
 
@@ -190,7 +240,7 @@ export async function etapasEmbudo(filtro: FiltroOfertas): Promise<EtapaEmbudoDb
              (p."rechazadaEn" IS NOT NULL AND p."rechazadaEn" = o."cerradaEn") AS "alCerrar"
         FROM "Postulacion" p
         JOIN "Oferta" o ON o.id = p."ofertaId"
-       WHERE ${filtroOfertas(filtro)}
+       WHERE ${filtroOfertas(filtro)} AND ${filtroPostulaciones(filtro)}
     ),
     etapas AS (
       SELECT e.etapa, e.entrada, e.siguiente, p.estado, p."rechazadaEn", p."alCerrar",
@@ -245,7 +295,14 @@ export interface GrupoRankingDb {
  * activos). El aporte usa los pesos que aplicó el motor (`explicacion.pesos`),
  * y cada dimensión viaja como parámetro (`desglose->>$n`), nunca como SQL.
  */
-export async function gruposDelRanking(ofertaId: string, top: number): Promise<GrupoRankingDb[]> {
+export async function gruposDelRanking(
+  ofertaId: string,
+  top: number,
+  excluirPrueba = false,
+): Promise<GrupoRankingDb[]> {
+  const sinPrueba = excluirPrueba
+    ? Prisma.sql`AND NOT ${jugadorDePrueba(Prisma.sql`m."jugadorId"`)}`
+    : Prisma.empty;
   const aportes = Prisma.join(
     DIMENSIONES_MATCHING.map(
       (d) =>
@@ -267,7 +324,7 @@ export async function gruposDelRanking(ofertaId: string, top: number): Promise<G
         FROM "Matching" m
         JOIN "PerfilJugador" pj ON pj.id = m."jugadorId"
         JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
-       WHERE m."ofertaId" = ${ofertaId}
+       WHERE m."ofertaId" = ${ofertaId} ${sinPrueba}
     )
     SELECT (r.puesto <= ${top}) AS top,
            count(*)::int AS n,
@@ -297,7 +354,8 @@ export interface TalentoDb {
  * buscador y el matching). Sólo conteos: ninguna fila identifica a nadie
  * hasta que el servicio aplica el umbral.
  */
-export async function talentoVerificado(): Promise<TalentoDb[]> {
+export async function talentoVerificado(excluirPrueba = false): Promise<TalentoDb[]> {
+  const sinPrueba = excluirPrueba ? Prisma.sql`WHERE NOT ${jugadorDePrueba(Prisma.sql`pj.id`)}` : Prisma.empty;
   return prisma.$queryRaw<TalentoDb[]>`
     SELECT pj.pais::text AS pais,
            pj.departamento::text AS departamento,
@@ -317,11 +375,37 @@ export async function talentoVerificado(): Promise<TalentoDb[]> {
          ORDER BY e."capturadaEn" DESC, e.id DESC
          LIMIT 1
       ) ultima ON TRUE
+     ${sinPrueba}
      GROUP BY 1, 2, 3, 4
   `;
 }
 
 /** Jugadores activos registrados (denominador de la proporción de verificados). */
-export async function jugadoresRegistrados(): Promise<number> {
-  return prisma.perfilJugador.count({ where: { usuario: { activo: true } } });
+export async function jugadoresRegistrados(excluirPrueba = false): Promise<number> {
+  const sinPrueba = excluirPrueba ? Prisma.sql`AND NOT ${jugadorDePrueba(Prisma.sql`pj.id`)}` : Prisma.empty;
+  const [fila] = await prisma.$queryRaw<{ total: number }[]>`
+    SELECT count(*)::int AS total
+      FROM "PerfilJugador" pj
+      JOIN "Usuario" u ON u.id = pj."usuarioId" AND u.activo
+     WHERE TRUE ${sinPrueba}
+  `;
+  return fila!.total;
+}
+
+/**
+ * Cuentas activas por rol (adopción, Cuadro VII). Con `excluirPrueba`, sin las
+ * cuentas del seed: por correo, o jugadores con un `puuid` del seed.
+ */
+export async function registrosPorRol(excluirPrueba = false): Promise<{ rol: Rol; total: number }[]> {
+  const sinPrueba = excluirPrueba
+    ? Prisma.sql`AND NOT ${correoDePrueba(Prisma.sql`u`)}
+                 AND NOT EXISTS (SELECT 1 FROM "PerfilJugador" pj
+                                  WHERE pj."usuarioId" = u.id AND ${jugadorDePrueba(Prisma.sql`pj.id`)})`
+    : Prisma.empty;
+  return prisma.$queryRaw<{ rol: Rol; total: number }[]>`
+    SELECT u.rol::text AS rol, count(*)::int AS total
+      FROM "Usuario" u
+     WHERE u.activo ${sinPrueba}
+     GROUP BY u.rol
+  `;
 }
