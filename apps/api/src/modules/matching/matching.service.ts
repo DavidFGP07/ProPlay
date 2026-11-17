@@ -253,6 +253,18 @@ async function asegurarRanking(oferta: repositorio.OfertaDb): Promise<void> {
 }
 
 /**
+ * RF-13 · Deja al día el ranking guardado de una oferta, con la misma regla
+ * que al leerlo. No comprueba permisos: lo usa el módulo `analitica` (que ya
+ * comprobó que la oferta es del equipo) para calcular la dimensión decisiva
+ * sobre el ranking vigente. 404 si la oferta no existe.
+ */
+export async function rankingAlDia(ofertaId: string): Promise<void> {
+  const oferta = await repositorio.buscarOferta(ofertaId);
+  if (!oferta) throw new NotFoundError("Oferta no encontrada");
+  await asegurarRanking(oferta);
+}
+
+/**
  * RF-09 · Ranking de candidatos de una oferta, paginado, con el filtro de
  * postulados y el orden pedidos. Se recalcula al leerlo si quedó obsoleto.
  */
