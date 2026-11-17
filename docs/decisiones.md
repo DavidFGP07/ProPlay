@@ -600,3 +600,10 @@ decisión.
 6. **El documento pide OAuth 2.0** para vincular las cuentas (`CLAUDE.md` §1) y el piloto usa
    el desafío de icono. Es una divergencia ya registrada («Vinculación con Riot»); se cita
    aquí porque `CLAUDE.md` §1 la presentaba como hecha.
+
+## Cierre de la tesis sin piloto (2026-11-17)
+
+| Decisión | Justificación |
+| --- | --- |
+| **No hay piloto con usuarios en la tesis.** La sustentación es el 2026-11-27; el código queda cerrado el 2026-11-20 y congelado desde el final del 2026-11-19 (después, sólo correcciones de errores). H1 y H2 se presentan como diseño de validación listo para ejecutarse (`docs/protocolo-validacion.md`), y las tareas 4.13 a 4.16 pasan a trabajo futuro | No da tiempo a desplegar, reclutar y sostener un periodo de uso que cubra vacantes reales. La evidencia disponible es RNF-01, las pruebas automáticas y la demostración (`docs/para-el-informe.md`). |
+| El manual de pruebas piloto del prototipo se sustituye por un **protocolo de validación propuesto**, breve, sin fechas ni duración del periodo de uso, y el manual queda como histórico con un aviso | El manual medía H1 con un cronómetro y pedía funciones que no existen (contradicción 3 de «Sincronización de la documentación», que esto resuelve). El protocolo usa las métricas que ya calcula la plataforma y el script `metricas:piloto`. |

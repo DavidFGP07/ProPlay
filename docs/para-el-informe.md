@@ -1,7 +1,12 @@
 # Guía para redactar el informe
 
 Qué dice hoy el documento del proyecto (`docs/ProPlay.pdf`, versión 5), qué hay construido
-de verdad y qué hay que cambiar en el documento, **sección por sección**. Estado al
+de verdad y qué hay que cambiar en el documento, **sección por sección**.
+
+> **No hubo piloto con usuarios.** El código se cierra el 2026-11-20 y la sustentación es el
+> 2026-11-27. H1 y H2 se presentan como un **diseño de validación listo para ejecutarse**
+> ([`docs/protocolo-validacion.md`](protocolo-validacion.md)); la evidencia disponible es
+> RNF-01 (`docs/rnf-01.md`), las pruebas automáticas (`npm run verify`) y la demostración. Estado al
 2026-11-17, con `main` en el PR #55. Todo lo que se afirma aquí sobre la aplicación se
 comprobó en el código; lo que no se puede comprobar desde el repositorio va marcado
 «sin verificar desde el código».
@@ -36,7 +41,8 @@ puntúa cinco dimensiones y explica el ranking.
   (arranque en frío) y el modelo Transformer todavía no está integrado (ver «Riesgos del
   título»).
 
-**Qué falta.** La explicación con modelo de lenguaje (Sprint 4) y el piloto.
+**Qué falta.** La explicación con modelo de lenguaje (Sprint 4). La validación con usuarios
+queda diseñada y no se ejecuta en la tesis.
 
 ## II. Descripción del problema
 
@@ -77,8 +83,10 @@ en el Sprint 4.
 - **OE3.** Hecho en lo que no depende del Sprint 4. Divergen OAuth (icono), Steam (sólo Riot),
   el modo híbrido (colaborativo con peso 0) y Transformer y sandbox (pendientes, tareas 4.1 y
   4.2).
-- **OE4.** Pendiente: depende del despliegue (2.13), del reclutamiento (0.7) y de la línea
-  base (0.2).
+- **OE4.** **No se ejecuta en la tesis:** queda como protocolo de validación propuesto
+  (`docs/protocolo-validacion.md`), con las métricas que ya calcula la plataforma y el script
+  `metricas:piloto`. Ejecutarlo depende del despliegue (2.13), del reclutamiento (0.7) y de la
+  línea base (0.2).
 
 **Divergencias que hay que reflejar.** OE3 tal como está redactado no se cumple entero. O se
 termina la explicación con modelo de lenguaje, o se ajusta la redacción (ver «Riesgos del
@@ -116,6 +124,16 @@ calculan (`arquitectura.md`, «Analítica»):
 | **H1, coincidencias exitosas y tasa de conversión** | Postulaciones aceptadas y su proporción |
 | **H2, proporción de perfiles verificados** | Verificados sobre jugadores registrados |
 | **Factores contextuales, región de origen** | Mapa del talento, el Caribe frente al resto |
+
+**Cómo presentar H1 y H2.** Como **diseño de validación listo para ejecutarse**, no como
+resultados. El diseño está en `docs/protocolo-validacion.md`: fases, métricas, instrumentos y
+exportación con el script. Las métricas de la tabla anterior ya funcionan en la aplicación y
+se pueden enseñar en la demostración con los datos del seed. La evidencia empírica disponible
+en la tesis es:
+- **RNF-01** (`docs/rnf-01.md`);
+- **las pruebas automáticas** (`npm run verify`), incluidas las de las fórmulas del motor y de
+  las métricas con cifras exactas;
+- **la demostración.**
 
 **Divergencias que hay que reflejar** (`decisiones.md`, «Analítica» → «Cambios para el
 documento del proyecto»):
@@ -309,7 +327,10 @@ en S3.
 | NPS | Encuesta externa (tarea 0.8) |
 | Tiempo de respuesta | RNF-01 en local (`docs/rnf-01.md`); falta medirlo en el despliegue |
 
-**Qué falta.** Todos los resultados dependen del piloto (4.13 a 4.16).
+**Qué falta.** Los resultados de los indicadores dependen de una validación con usuarios que
+no se ejecuta en la tesis: la Sección XIV debe presentarlos como **metas del diseño de
+validación** (`docs/protocolo-validacion.md`), no como resultados. Lo único medido es el
+tiempo de respuesta (RNF-01, en local).
 
 ## XV. Análisis de viabilidad y gestión de riesgos
 
@@ -335,8 +356,10 @@ plan de contingencia».
 
 Para la sección de limitaciones del informe:
 
-1. **Muestra pequeña y evidencia descriptiva.** Con 3 equipos y unas pocas vacantes, los
-   tiempos de H1 se presentan con su n y no permiten un contraste estadístico.
+1. **Sin validación con usuarios.** H1 y H2 no se contrastan en la tesis: quedan como un
+   diseño de validación listo para ejecutarse. Si se ejecuta, la muestra prevista (3 equipos
+   y unas pocas vacantes) sólo permite evidencia descriptiva con su n, no un contraste
+   estadístico.
 2. **Clave de desarrollo de Riot.**
    - Caduca cada 24 horas.
    - Tiene una cuota de 100 peticiones cada 2 minutos para toda la aplicación, lo que obliga a
@@ -377,7 +400,7 @@ Para la sección de limitaciones del informe:
 | Rutas de la API y matriz de requisitos | **Existe**: README, «Rutas de la API», y `CLAUDE.md` §5 (la matriz de `docs/prototipo/trazabilidad.md` es la del prototipo) |
 | Guion de la demostración | **Falta en el repositorio** |
 | Manual de usuario | **Falta** |
-| Protocolo de las pruebas piloto | **Existe pero desactualizado**: `docs/prototipo/pruebas-piloto.md` contradice la medición de H1 decidida (`decisiones.md`, «Sincronización de la documentación») |
+| Protocolo de validación | **Existe**: `docs/protocolo-validacion.md` (el manual del prototipo queda como histórico) |
 | Línea base del scouting manual | **Falta**: `LINEA_BASE_SCOUTING_MANUAL` es `null`; lo que debe medir está en `arquitectura.md`, «Línea base» |
 
 ## Riesgos del título frente a lo construido
