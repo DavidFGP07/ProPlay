@@ -9,6 +9,8 @@ import {
   PESOS_MATCHING,
   candidatoOfertaSchema,
   candidatoRankingSchema,
+  ofertasCompatiblesQuerySchema,
+  ofertasCompatiblesSchema,
   pesosMatchingSchema,
   rankingOfertaQuerySchema,
   rankingOfertaSchema,
@@ -216,5 +218,70 @@ describe("candidatoOfertaSchema", () => {
   it("exige los datos del cálculo", () => {
     const { modo: _modo, ...sinModo } = detalle;
     expect(candidatoOfertaSchema.safeParse(sinModo).success).toBe(false);
+  });
+});
+
+describe("ofertasCompatiblesQuerySchema", () => {
+  it("por defecto: primera página y sin filtros", () => {
+    expect(ofertasCompatiblesQuerySchema.parse({})).toEqual({ page: 1, pageSize: 20 });
+  });
+
+  it("admite los mismos filtros que GET /ofertas", () => {
+    expect(
+      ofertasCompatiblesQuerySchema.parse({ rol: "MID", departamento: "ATLANTICO", modalidad: "REMOTA", page: "2" }),
+    ).toEqual({ rol: "MID", departamento: "ATLANTICO", modalidad: "REMOTA", page: 2, pageSize: 20 });
+  });
+
+  it("rechaza una posición que no existe", () => {
+    expect(ofertasCompatiblesQuerySchema.safeParse({ rol: "CAPITAN" }).success).toBe(false);
+  });
+});
+
+describe("ofertasCompatiblesSchema", () => {
+  const oferta = {
+    id: "oferta-1",
+    equipoId: "equipo-1",
+    titulo: "Mid laner",
+    juego: "League of Legends",
+    rol: "MID",
+    rangoMinimo: "PLATA_I",
+    modalidad: "REMOTA",
+    pais: null,
+    departamento: null,
+    horasSemana: 15,
+    descripcion: "Buscamos mid",
+    pesos: PESOS_MATCHING,
+    estado: "ABIERTA",
+    publicadaEn: "2026-11-01T00:00:00.000Z",
+    cerradaEn: null,
+    creadoEn: "2026-11-01T00:00:00.000Z",
+    actualizadoEn: "2026-11-01T00:00:00.000Z",
+    equipo: { id: "equipo-1", nombreOrg: "Caribe eSports", logoUrl: null },
+  };
+  const respuesta = {
+    data: [{ oferta, puntaje: candidato.puntaje, desglose: candidato.desglose, explicacion }],
+    meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    verificado: true,
+    calculadoEn: "2026-11-17T12:00:00.000Z",
+    versionFormulas: 1,
+    modo: "CONTENIDO",
+    pesoColaborativo: 0,
+  };
+
+  it("acepta la lista con puntaje, desglose y pesos, y convierte las fechas", () => {
+    const resultado = ofertasCompatiblesSchema.parse(JSON.parse(JSON.stringify(respuesta)));
+    expect(resultado.calculadoEn).toBeInstanceOf(Date);
+    expect(resultado.data[0]!.oferta.publicadaEn).toBeInstanceOf(Date);
+    expect(resultado.data[0]!.explicacion.pesos).toEqual(PESOS_MATCHING);
+  });
+
+  it("exige saber si el jugador está verificado", () => {
+    const { verificado: _verificado, ...sinVerificado } = respuesta;
+    expect(ofertasCompatiblesSchema.safeParse(sinVerificado).success).toBe(false);
+  });
+
+  it("rechaza un puntaje fuera de [0, 1]", () => {
+    const fuera = { ...respuesta, data: [{ ...respuesta.data[0]!, puntaje: 1.2 }] };
+    expect(ofertasCompatiblesSchema.safeParse(fuera).success).toBe(false);
   });
 });

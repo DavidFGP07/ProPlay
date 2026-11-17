@@ -14,7 +14,7 @@ import {
   ORDENES_RANKING,
 } from "../constants";
 import { idSchema, paginacionQuerySchema, paginadoSchema } from "./common";
-import { pesosMatchingSchema } from "./oferta";
+import { listarOfertasQuerySchema, ofertaSchema, pesosMatchingSchema } from "./oferta";
 import { jugadorEncontradoSchema } from "./scouting";
 
 /**
@@ -221,6 +221,47 @@ export const candidatoOfertaSchema = z.object({
   ...calculoRanking,
 });
 
+// ----------------------------------------------- ofertas del jugador
+
+/**
+ * Query de `GET /matching/jugador/me` (RF-09): los mismos filtros que
+ * `GET /ofertas` (posición, departamento y modalidad) y la paginación común.
+ */
+export const ofertasCompatiblesQuerySchema = paginacionQuerySchema.merge(listarOfertasQuerySchema);
+
+/**
+ * Una oferta abierta con la compatibilidad del jugador en sesión. El puntaje,
+ * el desglose y la explicación salen del mismo motor que el ranking de la
+ * oferta (`puntuar`), así que coinciden con los que vería el equipo; la
+ * explicación lleva los pesos aplicados, que es lo que necesita la barra de
+ * aportes del cliente.
+ */
+export const ofertaCompatibleSchema = z.object({
+  oferta: ofertaSchema,
+  puntaje: valorDimension,
+  desglose: desgloseMatchingSchema,
+  explicacion: explicacionMatchingSchema,
+});
+
+/**
+ * Ofertas abiertas ordenadas por compatibilidad con el jugador: puntaje de
+ * mayor a menor; a igualdad, por técnica y por la publicación más reciente.
+ * Se calcula al pedirlo y no se guarda en `Matching`, que es la instantánea
+ * del ranking de cada oferta.
+ */
+export const ofertasCompatiblesSchema = paginadoSchema(ofertaCompatibleSchema).extend({
+  /**
+   * El jugador tiene cuenta de Riot verificada. Si no, la técnica vale 0 en
+   * todas las ofertas y el cliente le sugiere vincularla.
+   */
+  verificado: z.boolean(),
+  calculadoEn: z.coerce.date(),
+  versionFormulas: z.number().int().positive(),
+  modo: z.enum(MODOS_MATCHING),
+  /** Peso del componente colaborativo: 0 en arranque en frío. */
+  pesoColaborativo: valorDimension,
+});
+
 // ----------------------------------------------------------- andamiaje
 
 /** Fila de `Matching`. */
@@ -248,3 +289,8 @@ export type CandidatoOferta = z.infer<typeof candidatoOfertaSchema>;
 export type CandidatoRanking = z.infer<typeof candidatoRankingSchema>;
 export type RankingOferta = z.infer<typeof rankingOfertaSchema>;
 export type Matching = z.infer<typeof matchingSchema>;
+export type OfertasCompatiblesQuery = z.infer<typeof ofertasCompatiblesQuerySchema>;
+/** Lo que se envía (todo opcional, sin defaults aplicados). */
+export type OfertasCompatiblesQueryInput = z.input<typeof ofertasCompatiblesQuerySchema>;
+export type OfertaCompatible = z.infer<typeof ofertaCompatibleSchema>;
+export type OfertasCompatibles = z.infer<typeof ofertasCompatiblesSchema>;
