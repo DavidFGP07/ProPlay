@@ -17,7 +17,11 @@ import { estadoClaveRiot, obtenerProveedor, obtenerProveedorRiot } from "../src/
 import { CuotaRiotRedis } from "../src/integrations/riot/cuotaRiot";
 import { EstadoClaveRiotRedis } from "../src/integrations/riot/estadoClave";
 import type { EstadisticasExternas } from "../src/integrations/GameStatsProvider";
-import { sincronizarCuenta } from "../src/modules/estadisticas/estadisticas.service";
+import {
+  jugadoresPendientesDeSincronizar,
+  sincronizarCuenta,
+} from "../src/modules/estadisticas/estadisticas.service";
+import { PREFIJO_PUUID_SEED } from "../src/utils/datosDePrueba";
 import { CuotaRiotAgotadaError, IntegracionRiotNoDisponibleError } from "../src/utils/errors";
 import {
   CONSENTIMIENTO,
@@ -447,5 +451,84 @@ describe("POST /estadisticas/sincronizar", () => {
     expect(respuesta.status).toBe(503);
     expect(respuesta.body.error.code).toBe("RIOT_NO_DISPONIBLE");
     expect(respuesta.body.error.message).toMatch(/inténtalo más tarde/);
+  });
+});
+
+describe("cuentas del seed en la ingesta", () => {
+  /** Jugador con cuenta de Riot verificada; del seed si su puuid lleva su prefijo. */
+  async function jugadorConCuenta(etiqueta: string, deSeed: boolean, sincronizadaEn: Date | null = null) {
+    const jugador = await registrar(etiqueta);
+    await prisma.cuentaGaming.create({
+      data: {
+        jugadorId: jugador.perfilId,
+        plataforma: "RIOT",
+        externalId: `${deSeed ? PREFIJO_PUUID_SEED : ""}puuid-${jugador.perfilId}`,
+        servidor: "LA1",
+        verificadaEn: new Date(),
+        sincronizadaEn,
+      },
+    });
+    return jugador;
+  }
+
+  it("el planificador encola la cuenta real y nunca la del seed", async () => {
+    const seed = await jugadorConCuenta("seed-periodica", true);
+    const real = await jugadorConCuenta("real-periodica", false);
+
+    const pendientes = await jugadoresPendientesDeSincronizar();
+    expect(pendientes).toContain(real.perfilId);
+    expect(pendientes).not.toContain(seed.perfilId);
+
+    const cola = colaDePrueba();
+    colasAbiertas.push(cola);
+    const sincronizados: string[] = [];
+    const ingesta = await arrancarIngesta({
+      cola,
+      planificar: false,
+      deps: {
+        pendientes: jugadoresPendientesDeSincronizar,
+        sincronizar: async (jugadorId) => {
+          sincronizados.push(jugadorId);
+          return "SIN_CAMBIOS";
+        },
+        clave: new EstadoClaveRiotRedis(clienteRedis, `proplay-test:clave:${randomUUID()}`),
+        apiKey: "RGAPI-prueba",
+      },
+    });
+    ingestasAbiertas.push(ingesta);
+    await cola.cola.add("planificar", { jugadorId: "", origen: "PERIODICA" });
+    await hasta(async () => sincronizados.includes(real.perfilId));
+    expect(sincronizados).not.toContain(seed.perfilId);
+    expect(await cola.cola.getJob(idTrabajoSincronizacion(seed.perfilId))).toBeUndefined();
+  });
+
+  it("la manual de una cuenta del seed no encola ni consulta a Riot y conserva su fecha", async () => {
+    const clave = vi.spyOn(estadoClaveRiot, "estado").mockResolvedValue("clave-caducada");
+    const sincronizadaEn = new Date("2026-11-10T15:00:00Z");
+    const jugador = await jugadorConCuenta("seed-manual", true, sincronizadaEn);
+    const auth = { Authorization: `Bearer ${jugador.token}` };
+
+    const respuesta = await request(app).post(`${API_PREFIX}/estadisticas/sincronizar`).set(auth).send({});
+    expect(respuesta.status).toBe(202);
+    const estado = estadoSincronizacionSchema.parse(respuesta.body);
+    expect(estado).toMatchObject({ estado: "INACTIVA", sincronizadaEn });
+    expect(clave).not.toHaveBeenCalled();
+
+    const consulta = await request(app).get(`${API_PREFIX}/estadisticas/sincronizacion`).set(auth);
+    expect(estadoSincronizacionSchema.parse(consulta.body)).toMatchObject({ estado: "INACTIVA", sincronizadaEn });
+
+    const { colaIngesta } = await import("../src/ingesta/cola");
+    expect(await colaIngesta().cola.getJob(idTrabajoSincronizacion(jugador.perfilId))).toBeUndefined();
+  });
+
+  it("si queda un trabajo viejo de una cuenta del seed, el worker lo omite sin llamar a Riot", async () => {
+    const jugador = await jugadorConCuenta("seed-worker", true);
+    const obtener = vi.spyOn(obtenerProveedor("RIOT"), "obtenerEstadisticas");
+    const novedades = vi.spyOn(obtenerProveedorRiot(), "novedades");
+
+    expect(await sincronizarCuenta(jugador.perfilId, "MANUAL")).toBe("OMITIDA");
+    expect(await sincronizarCuenta(jugador.perfilId, "PERIODICA")).toBe("OMITIDA");
+    expect(obtener).not.toHaveBeenCalled();
+    expect(novedades).not.toHaveBeenCalled();
   });
 });

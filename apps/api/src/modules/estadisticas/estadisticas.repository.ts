@@ -1,5 +1,6 @@
 import type { Plataforma, Prisma, RangoLol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { PREFIJO_PUUID_SEED } from "../../utils/datosDePrueba";
 
 /**
  * Acceso a datos del módulo `estadisticas`. Único archivo del módulo que
@@ -85,7 +86,8 @@ export async function reservarIntentoSincronizacion(
 /**
  * Jugadores con cuenta verificada en la plataforma cuyo último intento de
  * sincronización es anterior a `antesDe` (o que nunca se sincronizaron), de
- * cuentas activas. Los más atrasados primero.
+ * cuentas activas. Los más atrasados primero. Las cuentas del seed no entran
+ * (`utils/datosDePrueba.ts`): su `puuid` es inventado.
  */
 export async function jugadoresParaSincronizar(
   plataforma: Plataforma,
@@ -95,6 +97,7 @@ export async function jugadoresParaSincronizar(
     where: {
       plataforma,
       verificadaEn: { not: null },
+      NOT: { externalId: { startsWith: PREFIJO_PUUID_SEED } },
       jugador: { usuario: { activo: true } },
       OR: [{ intentoSincronizacionEn: null }, { intentoSincronizacionEn: { lt: antesDe } }],
     },

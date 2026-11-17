@@ -616,3 +616,10 @@ decisión.
 | --- | --- |
 | **No hay piloto con usuarios en la tesis.** La sustentación es el 2026-11-27; el código queda cerrado el 2026-11-20 y congelado desde el final del 2026-11-19 (después, sólo correcciones de errores). H1 y H2 se presentan como diseño de validación listo para ejecutarse (`docs/protocolo-validacion.md`), y las tareas 4.13 a 4.16 pasan a trabajo futuro | No da tiempo a desplegar, reclutar y sostener un periodo de uso que cubra vacantes reales. La evidencia disponible es RNF-01, las pruebas automáticas y la demostración (`docs/para-el-informe.md`). |
 | El manual de pruebas piloto del prototipo se sustituye por un **protocolo de validación propuesto**, breve, sin fechas ni duración del periodo de uso, y el manual queda como histórico con un aviso | El manual medía H1 con un cronómetro y pedía funciones que no existen (contradicción 3 de «Sincronización de la documentación», que esto resuelve). El protocolo usa las métricas que ya calcula la plataforma y el script `metricas:piloto`. |
+
+## Cuentas del seed fuera de la ingesta (2026-11-17)
+
+| Decisión | Justificación |
+| --- | --- |
+| **La ingesta ignora las cuentas de Riot del seed** (`puuid` con el prefijo `seed-`, `esPuuidSeed` en `src/utils/datosDePrueba.ts`). El planificador no las encola; `POST /estadisticas/sincronizar` responde 202 con el estado `INACTIVA` sin encolar ni mirar la clave; `GET /estadisticas/sincronizacion` devuelve `INACTIVA` aunque quede un trabajo suyo de antes, y el worker lo termina como `OMITIDA` sin llamar a Riot | Su `puuid` es inventado: Riot lo rechazaría, y mientras tanto la demostración mostraba «Sincronizando… En cola» en Mis estadísticas. Basta con el prefijo, el mismo criterio que ya usa `--excluir-prueba`, y una cuenta real vinculada durante la demostración sigue su camino normal. |
+| **El seed fija `sincronizadaEn`** (y `intentoSincronizacionEn`) de cada cuenta verificada en la fecha de su captura más reciente | Sin fecha, Cuentas vinculadas decía «Todavía no se ha sincronizado» aunque la cuenta tuviera capturas. Como la ingesta ya no las toca, la fecha queda fija y coincide con la tendencia de Mis estadísticas. |

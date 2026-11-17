@@ -93,6 +93,11 @@ estadísticas de los jugadores con cuenta de Riot verificada, y atiende las sinc
 Redis (BullMQ) y por la cuota de Riot, que es de toda la aplicación. El porqué está en
 `docs/decisiones.md`, «Cuota de Riot e ingesta».
 
+Las cuentas del seed (`puuid` `seed-…`) quedan fuera: ni el planificador ni el botón
+«Sincronizar» las encolan, y no se pide nada a Riot por ellas. Muestran la fecha de
+sincronización que les puso el seed (la de su última captura). Una cuenta real vinculada
+durante la demostración se sincroniza con normalidad.
+
 ### Dónde corre
 
 - **En local**: `npm run dev` levanta la API y, dentro de ella, el worker y el planificador.
