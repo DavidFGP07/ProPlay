@@ -236,7 +236,7 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Panel del equipo (datos de la organización, «Tus ofertas» y «Mejores candidatos» de cada oferta abierta, reales; indicadores, simulados) | `/panel-equipo` | RF-13, RF-07, RF-09 | Núcleo: se fusiona con Analítica en una sola vista |
+| Panel del equipo (todo real: datos de la organización, «Tus ofertas», el resumen de la analítica y «Mejores candidatos» de cada oferta abierta; el scout, el resumen del talento verificado) | `/panel-equipo` | RF-13, RF-07, RF-09 | Núcleo: se fusiona con Analítica en una sola vista |
 | Buscador de talento (datos reales; posición y rango sólo de cuentas de Riot verificadas) | `/explorar` | RF-08 | Soporte: filtros por posición, rango mínimo y departamento |
 | Crear oferta, **con ajuste de los pesos de las dimensiones** (también su edición; en el piloto sólo se ven las tres con datos, `DIMENSIONES_SIN_DATOS_PILOTO` oculta experiencia y habilidades blandas) | `/panel-equipo/ofertas/nueva` (editar: `/panel-equipo/ofertas/:id/editar`); sólo el rol `EQUIPO` | RF-07, RF-09 | Núcleo |
 | **Ranking de candidatos con desglose por dimensión** (barra con el aporte de cada dimensión, filtro de postulados, orden y «Recalcular») | `/vacantes/:id/ranking`; se entra desde el detalle de la oferta | RF-09 | Núcleo |
@@ -244,7 +244,7 @@ dentro de cada vista.
 | Comparador de candidatos | — | RF-09 | Futuro (descartada) |
 | Postulaciones recibidas | dentro de `/vacantes/:id` | RF-10 | Soporte: dentro del detalle de la oferta, sin vista propia |
 | Lista de seguimiento | — | RF-08 | Futuro (descartada) |
-| Analítica (`/dashboard` es hoy la versión simulada) | `/dashboard` | RF-13 | Núcleo, fusionada con el panel del equipo. Indicadores: embudo de la vacante con tiempo hasta cubrirla (mide H1), dimensión que decide el ranking y mapa del talento verificado por macrorregión, rol y rango (el Caribe frente al resto); el cuarto, la tendencia del jugador, vive en Mis estadísticas |
+| Analítica (real: el equipo ve los tiempos de sus vacantes, el embudo y, por oferta, la dimensión decisiva; equipo, scout y administrador, el mapa del talento) | `/dashboard` | RF-13 | Núcleo, fusionada con el panel del equipo. Indicadores: embudo de la vacante con tiempo hasta cubrirla (mide H1), dimensión que decide el ranking y mapa del talento verificado por macrorregión, rol y rango (el Caribe frente al resto); el cuarto, la tendencia del jugador, vive en Mis estadísticas |
 
 ### Administrador
 
@@ -355,10 +355,9 @@ recibidas), crear y editar oferta con sus pesos (`/panel-equipo/ofertas/...`), e
 (`/explorar`), `/cuentas-vinculadas` (vinculación con Riot por icono, sincronizar y
 desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
-`/panel-equipo` las tarjetas «Datos de la organización», con la sede, «Tus ofertas» y «Mejores
-candidatos» (los tres primeros del ranking de cada oferta abierta; sólo el rol `EQUIPO`); `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
-habilidades, portafolio, privacidad y laterales) y de `/panel-equipo` (los indicadores)
-sigue simulado, con `MarcaDatosDemo` en cada sección.
+`/panel-equipo` todo: «Datos de la organización», con la sede, «Tus ofertas», el resumen de la analítica y «Mejores
+candidatos» (los tres primeros del ranking de cada oferta abierta; sólo el rol `EQUIPO`; el scout ve el resumen del talento verificado), y la analítica `/dashboard` (RF-13: tiempos de las vacantes, embudo, dimensión decisiva por oferta y mapa del talento). `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
+habilidades, portafolio, privacidad y laterales) sigue simulado, con `MarcaDatosDemo` en cada sección.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
 las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo

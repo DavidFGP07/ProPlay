@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import {
   BadgeCheck,
+  BarChart3,
   Briefcase,
+  CheckCircle2,
   Clock,
+  MapPin,
   Plus,
   ShieldCheck,
   Target,
@@ -22,14 +25,14 @@ import {
   Stat,
 } from '@/components/ui'
 import { es } from '@/i18n/es'
-import { MarcaDatosDemo } from '@/components/AvisoDatosDemo'
 import { BarraAportes } from '@/components/BarraAportes'
 import { DatosOrganizacion } from '@/components/DatosOrganizacion'
+import { textoMediana } from '@/components/IndicadoresAnalitica'
 import { useAuth } from '@/context/AuthContext'
-import { useIdentidad } from '@/api/identidad'
+import { useEmbudoEquipo, useTalento } from '@/api/analitica'
 import { useRankingOferta, type FiltrosRanking } from '@/api/matching'
-import { useMisOfertas, usePostulaciones, useVacantes } from '@/api/ofertas'
-import { useEquipos, usePerfilPropio } from '@/api/perfiles'
+import { useMisOfertas } from '@/api/ofertas'
+import { usePerfilPropio } from '@/api/perfiles'
 import { calcularAportes } from '@/lib/aportes'
 import { lugarOferta } from '@/lib/ubicacion'
 
@@ -54,18 +57,14 @@ const MEJORES_CANDIDATOS = 3
 /** Primera página del ranking por puntaje: la misma consulta que abre la vista del ranking. */
 const PRIMEROS_DEL_RANKING: FiltrosRanking = { page: 1, soloPostulados: false, orden: 'puntaje' }
 
-// RF-13 · RF-07 · RF-09 · Panel del equipo. Reales: «Datos de la organización»,
-// «Tus ofertas» (GET /api/v1/ofertas/me), con el acceso a publicar una oferta,
-// y «Mejores candidatos» (los primeros del ranking de cada oferta abierta, del
-// motor de matching). Los indicadores siguen simulados, con su marca, hasta la
-// analítica. El scout no tiene ofertas propias: consulta los rankings desde el
-// detalle de cada oferta.
+// RF-13 · RF-07 · RF-09 · Panel del equipo, todo real: «Datos de la
+// organización», «Tus ofertas» (GET /api/v1/ofertas/me), con el acceso a
+// publicar una oferta, el resumen de la analítica (GET /api/v1/analitica/embudo)
+// y «Mejores candidatos» (los primeros del ranking de cada oferta abierta). El
+// scout no tiene ofertas propias: ve el resumen del talento verificado y
+// consulta los rankings desde el detalle de cada oferta.
 export default function PanelEquipoPage() {
   const { usuario } = useAuth()
-  const { data: ofertas = [] } = useVacantes()
-  const { data: postulaciones = [] } = usePostulaciones()
-  const { data: perfilesEquipo = [] } = useEquipos()
-  const { data: identidad } = useIdentidad()
 
   // El scout consulta pero no contrata: sólo el equipo publica y gestiona.
   const esScout = usuario?.rol === 'SCOUT'
@@ -73,15 +72,6 @@ export default function PanelEquipoPage() {
   // Nombre real de la organizacion para el subtitulo; solo el equipo tiene perfil.
   const { data: propio } = usePerfilPropio(esEquipo)
   const nombreOrg = propio?.tipo === 'EQUIPO' ? propio.perfil.nombreOrg : null
-
-  // Datos de la simulación para los indicadores.
-  const miEquipo = perfilesEquipo.find((e) => e.id === identidad?.perfilEquipoId)
-  const misOfertas = miEquipo
-    ? ofertas.filter((o) => o.equipoId === miEquipo.id)
-    : ofertas
-  const postulacionesDeMisOfertas = postulaciones.filter((p) =>
-    misOfertas.some((o) => o.id === p.ofertaId),
-  )
 
   return (
     <div className="space-y-6">
@@ -120,41 +110,7 @@ export default function PanelEquipoPage() {
 
       {esEquipo && <MisOfertas />}
 
-      <div>
-        <MarcaDatosDemo />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
-            label="Vacantes abiertas"
-            value={misOfertas.filter((o) => o.estado === 'ABIERTA').length}
-            icono={<Briefcase size={16} />}
-            acento="violeta"
-          />
-          <Stat
-            label="Postulaciones"
-            value={postulacionesDeMisOfertas.length}
-            icono={<UserPlus size={16} />}
-            acento="cian"
-          />
-          <Stat
-            label="En proceso"
-            value={
-              postulacionesDeMisOfertas.filter(
-                (p) => p.estado === 'EN_REVISION' || p.estado === 'ENTREVISTA',
-              ).length
-            }
-            icono={<Clock size={16} />}
-            acento="ambar"
-          />
-          <Stat
-            label="Coincidencias exitosas"
-            value={
-              postulacionesDeMisOfertas.filter((p) => p.estado === 'ACEPTADA').length
-            }
-            icono={<Target size={16} />}
-            acento="verde"
-          />
-        </div>
-      </div>
+      {esEquipo ? <ResumenVacantes /> : <ResumenTalento />}
 
       {esEquipo && <MejoresCandidatos />}
     </div>
@@ -162,6 +118,113 @@ export default function PanelEquipoPage() {
 }
 
 // RF-07 · Ofertas del equipo, en cualquier estado, con sus postulaciones.
+/** Enlace a la analítica completa, al pie de los resúmenes. */
+function EnlaceAnalitica() {
+  return (
+    <Link
+      to="/dashboard"
+      className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-300 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+    >
+      <BarChart3 size={13} aria-hidden />
+      {t.verAnalitica}
+    </Link>
+  )
+}
+
+function EsqueletoResumen() {
+  return (
+    <div aria-busy="true" aria-label={t.cargandoResumen} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="skeleton h-24 rounded-2xl" />
+      ))}
+    </div>
+  )
+}
+
+// RF-13 · Resumen de la analítica del equipo: lo mismo que /dashboard, en cuatro cifras
+function ResumenVacantes() {
+  const consulta = useEmbudoEquipo()
+  if (consulta.isPending) return <EsqueletoResumen />
+  if (consulta.isError) {
+    return (
+      <Card>
+        <EstadoError titulo={t.errorResumen} onReintentar={() => void consulta.refetch()} />
+      </Card>
+    )
+  }
+  const { embudo, cobertura, diasHastaCubrir } = consulta.data
+  const enCurso = embudo.etapas.reduce((suma, e) => suma + e.siguen, 0)
+  return (
+    <section aria-label={t.resumen} className="space-y-2">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label={t.abiertas} value={cobertura.abiertas} icono={<Briefcase size={16} />} acento="violeta" />
+        <Stat
+          label={t.enCurso}
+          value={enCurso}
+          hint={t.enCursoDetalle}
+          icono={<UserPlus size={16} />}
+          acento="cian"
+        />
+        <Stat
+          label={t.hastaCubrir}
+          value={textoMediana(diasHastaCubrir)}
+          hint={
+            diasHastaCubrir.media === null
+              ? es.analitica.sinCubiertas
+              : es.analitica.detalleSerie(diasHastaCubrir.media, diasHastaCubrir.n)
+          }
+          icono={<Clock size={16} />}
+          acento="ambar"
+        />
+        <Stat
+          label={t.coincidencias}
+          value={embudo.coincidenciasExitosas}
+          hint={t.coincidenciasDetalle}
+          icono={<Target size={16} />}
+          acento="verde"
+        />
+      </div>
+      <EnlaceAnalitica />
+    </section>
+  )
+}
+
+// RF-13 · Resumen del talento verificado para el scout y el administrador
+function ResumenTalento() {
+  const consulta = useTalento()
+  if (consulta.isPending) return <EsqueletoResumen />
+  if (consulta.isError) {
+    return (
+      <Card>
+        <EstadoError titulo={es.analitica.errorTalento} onReintentar={() => void consulta.refetch()} />
+      </Card>
+    )
+  }
+  const datos = consulta.data
+  const caribe = datos.grupos.find((g) => g.grupo === 'CARIBE')?.total ?? null
+  const formato = new Intl.NumberFormat('es-CO', { style: 'percent', maximumFractionDigits: 0 })
+  return (
+    <section aria-label={t.resumen} className="space-y-2">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Stat label={t.verificados} value={datos.verificados} icono={<CheckCircle2 size={16} />} acento="verde" />
+        <Stat
+          label={t.proporcionVerificados}
+          value={datos.proporcionVerificados === null ? es.analitica.sinDato : formato.format(datos.proporcionVerificados)}
+          icono={<Trophy size={16} />}
+          acento="cian"
+        />
+        <Stat
+          label={t.delCaribe}
+          value={caribe === null ? es.analitica.oculto : caribe}
+          icono={<MapPin size={16} />}
+          acento="violeta"
+        />
+      </div>
+      <EnlaceAnalitica />
+    </section>
+  )
+}
+
 function MisOfertas() {
   const consulta = useMisOfertas()
 

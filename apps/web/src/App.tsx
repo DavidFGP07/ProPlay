@@ -25,7 +25,7 @@ const OfertaFormularioPage = lazy(() => import('@/pages/OfertaFormularioPage'))
 const PanelEquipoPage = lazy(() => import('@/pages/PanelEquipoPage'))
 const PerfilJugadorPage = lazy(() => import('@/pages/PerfilJugadorPage'))
 const MiPerfilPage = lazy(() => import('@/pages/MiPerfilPage'))
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const AnaliticaPage = lazy(() => import('@/pages/AnaliticaPage'))
 const MensajesPage = lazy(() => import('@/pages/MensajesPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
 const CuentaPage = lazy(() => import('@/pages/CuentaPage'))
@@ -124,7 +124,7 @@ export default function App() {
           <Route element={<Privado roles={AREAS.equipo} />}>
             <Route path="explorar" element={diferida(ScoutingPage)} />
             <Route path="panel-equipo" element={diferida(PanelEquipoPage)} />
-            <Route path="dashboard" element={diferida(DashboardPage)} />
+            <Route path="dashboard" element={diferida(AnaliticaPage)} />
             {/* RF-09 · Ranking de candidatos de una oferta con el desglose por dimension */}
             <Route path="vacantes/:id/ranking" element={diferida(RankingOfertaPage)} />
             {/* RF-09 · RF-11 · Detalle del candidato con la explicacion del puntaje */}

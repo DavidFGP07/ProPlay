@@ -194,15 +194,14 @@ describe('Aplicacion', () => {
     ).toBeInTheDocument()
   })
 
-  it('el dashboard de analitica muestra los indicadores de exito', async () => {
+  it('la analitica del administrador muestra el talento verificado, sin el embudo de un equipo', async () => {
     sesionDe('ADMIN')
     render(renderApp('/dashboard'))
     expect(
-      await screen.findByRole('heading', { name: /Dashboard de analitica/i }, { timeout: 8000 }),
+      await screen.findByRole('heading', { name: 'Analítica' }, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByText('Cumplimiento de los indicadores de exito', {}, { timeout: 8000 }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Talento verificado' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tus vacantes' })).toBeNull()
   })
 
   it('la bandeja de notificaciones lista los eventos del usuario', async () => {

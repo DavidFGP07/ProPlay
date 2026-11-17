@@ -34,4 +34,5 @@ export const RUTAS_SIN_DATOS_DEMO: readonly string[] = [
   '/explorar',
   '/cuentas-vinculadas',
   '/mis-estadisticas',
+  '/dashboard',
 ]

@@ -66,6 +66,8 @@ export function useRecalcularRanking(ofertaId: string | undefined, filtros: Filt
       // Lo demas del matching queda obsoleto sin volver a pedirlo ahora; la
       // pagina que se esta viendo se actualiza con la respuesta.
       await cliente.invalidateQueries({ queryKey: ['matching'], refetchType: 'none' })
+      // La dimensión decisiva sale del mismo ranking.
+      await cliente.invalidateQueries({ queryKey: ['analitica', 'oferta', ofertaId] })
       cliente.setQueryData(claveRanking(ofertaId, filtros), ranking)
     },
   })

@@ -41,14 +41,38 @@ vi.mock('@/api/auth', () => ({
   },
 }))
 
-// «Tus ofertas» también es real: aquí responde sin ofertas, para que el doble
-// de GET sólo hable del perfil.
+// «Tus ofertas» y el resumen de la analítica también son reales: aquí
+// responden vacíos, para que el doble de GET sólo hable del perfil.
+const sinDatos = { n: 0, mediana: null, media: null }
+const EMBUDO_VACIO = {
+  embudo: {
+    postulaciones: 0,
+    etapas: ['ENVIADA', 'EN_REVISION', 'ENTREVISTA', 'ACEPTADA'].map((etapa) => ({
+      etapa,
+      alcanzaron: 0,
+      conversion: null,
+      siguen: 0,
+      rechazadas: 0,
+      rechazadasAlCerrar: 0,
+      diasEnEtapa: sinDatos,
+    })),
+    coincidenciasExitosas: 0,
+  },
+  diasHastaCubrir: sinDatos,
+  diasHastaPrimerTryout: sinDatos,
+  cobertura: { abiertas: 0, cubiertas: 0, cerradasSinCubrir: 0, tasa: null },
+  ofertas: [],
+  calculadoEn: '2026-11-17T12:00:00.000Z',
+}
+
 vi.mock('@/api/client', async (original) => {
   const real = await original<typeof import('@/api/client')>()
   const get = (ruta: string, ...resto: unknown[]) =>
     ruta === '/ofertas/me'
       ? Promise.resolve({ data: { data: [], meta: { page: 1, pageSize: 100, total: 0, totalPages: 1 } } })
-      : doble.get(ruta, ...resto)
+      : ruta === '/analitica/embudo'
+        ? Promise.resolve({ data: EMBUDO_VACIO })
+        : doble.get(ruta, ...resto)
   return { ...real, api: { get, patch: doble.patch } }
 })
 
@@ -140,9 +164,8 @@ describe('Datos de la organización en el panel de equipo', () => {
     expect(await t.findByLabelText(/^Nombre de la organización/)).toHaveValue('Lobos del Caribe')
     expect(screen.getByText('Lobos del Caribe', { selector: 'p' })).toBeInTheDocument()
     expect(doble.get).toHaveBeenCalledWith('/perfiles/me')
-    // Sin aviso de página: la única sección simulada (los indicadores) lleva su marca y la tarjeta no.
-    expect(t.queryByText('Datos de demostracion')).toBeNull()
-    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(1)
+    // El panel ya es todo real: ni aviso de página ni marcas de demostración.
+    expect(screen.queryByText('Datos de demostracion')).toBeNull()
     expect(screen.queryByText(/Lo que ves en esta seccion/)).toBeNull()
   })
 
