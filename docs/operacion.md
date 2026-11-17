@@ -154,3 +154,56 @@ vectorizador), para que la primera consulta de ranking no pague el recálculo de
 - **Servidor**: `node apps/api/dist/cli/revectorizar.js`
 
 Escribe cuántos vectores recalculó y en cuánto tiempo. Se puede repetir sin riesgo.
+
+## Métricas del piloto (informe de la tesis)
+
+Las métricas de todo el piloto no tienen vista: el panel de administración quedó fuera
+del alcance (decisión 0.10). Salen de un script que escribe seis CSV con **las mismas
+definiciones que la analítica de la aplicación** (`docs/arquitectura.md`, «Analítica»).
+Es RF-13 y las tareas 4.14 y 4.16 del plan.
+
+### En local
+
+```bash
+npm run metricas:piloto -w api -- --desde 2026-11-20 --hasta 2026-12-20 --salida ./metricas
+```
+
+### En el servidor desplegado
+
+Desde una consola del servicio de la API, que ya tiene `DATABASE_URL`:
+
+```bash
+node apps/api/dist/cli/metricasPiloto.js --desde 2026-11-20 --hasta 2026-12-20 --salida /tmp/metricas
+```
+
+### Opciones
+
+| Opción | Qué hace |
+| --- | --- |
+| `--desde AAAA-MM-DD` | Primer día de publicación de las ofertas, incluido, en la fecha de Colombia |
+| `--hasta AAAA-MM-DD` | Último día de publicación, incluido |
+| `--salida <carpeta>` | Dónde escribir los CSV. Por defecto, `./metricas-piloto` |
+| `--excluir-prueba` | **Activa por defecto.** Deja fuera las cuentas del seed: sus correos fijos, los `jugadorN@proplay.gg` y las cuentas de Riot con `puuid` `seed-…` (`apps/api/src/utils/datosDePrueba.ts`). Quita sus ofertas, sus postulaciones, sus filas de los rankings y sus registros |
+| `--no-excluir-prueba` | Las incluye (o `--excluir-prueba=false`) |
+
+La ventana de fechas filtra las **ofertas**. El mapa del talento y los registros por rol
+son de toda la base, porque no dependen de cuándo se publicó una oferta.
+
+### Qué escribe
+
+| Archivo | Contenido |
+| --- | --- |
+| `resumen_h1.csv` | Tiempo hasta cubrir y hasta el primer tryout (mediana, media y n) frente a la línea base, que sale como `pendiente` mientras no exista. También: coincidencias exitosas, conversión, cobertura, registros por rol, proporción de verificados y los parámetros con que se generó |
+| `tiempo_hasta_cubrir.csv` | Una fila por oferta: equipo, estado, fechas en Colombia, postulaciones y sus tiempos |
+| `embudo_por_oferta.csv` | Por etapa: alcanzaron, conversión, siguen, rechazadas y rechazadas al cerrar. Una fila `TOTAL` por etapa y luego las de cada oferta |
+| `tiempos_por_etapa.csv` | Días transcurridos en cada etapa (n, mediana y media), en total y por oferta |
+| `dimension_decisiva.csv` | Por oferta: candidatos, dimensión decisiva y ventaja de cada dimensión. Pone al día el ranking de las ofertas abiertas; las cubiertas o cerradas conservan su instantánea |
+| `talento_verificado.csv` | El mapa del talento con el umbral de privacidad aplicado: una celda oculta dice `oculto` |
+
+Formato: CSV según RFC 4180, con coma como separador, punto decimal, UTF-8 y hasta 4
+decimales. Un dato que no existe (una oferta sin tiempo hasta cubrir, por ejemplo) es una
+celda vacía, no un 0.
+
+Las cifras son **evidencia descriptiva con su n**, no un contraste estadístico: con el
+tamaño del piloto no hay potencia para una prueba de hipótesis (`docs/decisiones.md`,
+«Analítica»).

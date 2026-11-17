@@ -20,3 +20,6 @@ npm-debug.log*
 apps/web/dist/
 apps/api/dist/
 packages/shared/dist/
+
+# Salida del script de métricas del piloto (datos del piloto: no se versionan)
+metricas-piloto/
