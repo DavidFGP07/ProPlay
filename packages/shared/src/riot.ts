@@ -6,6 +6,7 @@
  * docs/decisiones.md.
  */
 import { RANGOS_LOL, type PosicionLol, type RangoLol } from "./enums";
+import type { BandaRango } from "./constants";
 
 /** Cola de clasificatoria solo/dúo en match-v5 (`info.queueId`). */
 export const COLA_SOLO_DUO = 420;
@@ -63,4 +64,16 @@ export function rangoDesdeRiot(tier: string, rank: string): RangoLol | null {
 /** `true` si `rango` es igual o superior a `minimo`, en el orden de `RANGOS_LOL`. */
 export function rangoAlMenos(rango: RangoLol, minimo: RangoLol): boolean {
   return RANGOS_LOL.indexOf(rango) >= RANGOS_LOL.indexOf(minimo);
+}
+
+/**
+ * Banda del mapa del talento (`BANDAS_RANGO`) de un rango del catálogo:
+ * Hierro a Plata, Oro y Platino, Esmeralda y Diamante, y Maestro o superior.
+ */
+export function bandaDeRango(rango: RangoLol): BandaRango {
+  const i = RANGOS_LOL.indexOf(rango);
+  if (i < RANGOS_LOL.indexOf("ORO_IV")) return "HIERRO_PLATA";
+  if (i < RANGOS_LOL.indexOf("ESMERALDA_IV")) return "ORO_PLATINO";
+  if (i < RANGOS_LOL.indexOf("MAESTRO")) return "ESMERALDA_DIAMANTE";
+  return "MAESTRO_O_SUPERIOR";
 }

@@ -318,6 +318,131 @@ y el rendimiento (0,55) es lo que más se acerca a «cómo juega». Cualquier ca
 escala, de métrica de una posición, de subpeso o del umbral sube
 `VERSION_FORMULAS_MATCHING`.
 
+## Analítica
+
+RF-13. Son los cuatro indicadores de la analítica fusionada con el panel del equipo
+(decisión 0.10): embudo de la vacante con el tiempo hasta cubrirla, dimensión que decide
+el ranking, mapa del talento verificado y tendencia del rendimiento del jugador. Esta
+última vive en Mis estadísticas y no se repite aquí. Las definiciones de esta sección son
+las que cita el documento del proyecto y las que aplican la API, la vista y el script del
+piloto (`npm run metricas:piloto -w api`). El contrato está en
+`packages/shared/src/schemas/analitica.ts` y las constantes, en
+`packages/shared/src/constants.ts` («Analítica (RF-13)»). Cambiar una definición exige
+cambiar las tres cosas a la vez.
+
+### Unidades de tiempo
+
+Las fechas se guardan en UTC. Se usan dos medidas distintas:
+
+- **Días naturales** (un entero). Es la diferencia entre dos fechas del calendario en
+  `ZONA_HORARIA_PILOTO` (`America/Bogota`, UTC−5 todo el año). Por ejemplo, una
+  postulación guardada a las `03:00Z` del 10 de noviembre cuenta como del 9 de
+  noviembre. Se usan para el tiempo hasta cubrir, el tiempo hasta el primer tryout y los
+  días que lleva abierta una oferta: es como cuenta un equipo («publicada el 3, cubierta
+  el 10: 7 días») y como se mide la línea base.
+- **Días transcurridos** (con decimales). Es el tiempo exacto entre dos instantes, en
+  horas / 24. Se usan para el tiempo en cada etapa del embudo, que suele ser de horas:
+  en días naturales casi todo daría 0. La resta de dos instantes no depende de la zona
+  horaria.
+
+Cada serie de días se resume con **mediana, media y n**. La mediana es la cifra
+principal: con pocas vacantes, un caso extremo arrastra la media. La media se da también
+porque el documento (Cuadro II) habla de «tiempo promedio». Con `n = 0` las dos son
+nulas, que no es lo mismo que «0 días».
+
+### Embudo de la vacante (mide H1)
+
+Entran las postulaciones de las ofertas **publicadas** (`publicadaEn` no nulo), por
+oferta y agregadas por equipo. Las etapas son `ETAPAS_EMBUDO`: enviada, en revisión,
+entrevista (el tryout) y aceptada. `RECHAZADA` no es una etapa, sino una salida desde
+cualquiera de ellas.
+
+| Métrica | Definición | Unidad |
+| --- | --- | --- |
+| Alcanzaron la etapa | Postulaciones con la fecha de la etapa: todas para enviada (`creadoEn`), `revisadaEn`, `entrevistaEn` y `aceptadaEn` no nulos para las demás. La máquina de estados no admite saltos, así que cada etapa alcanzada tiene su fecha | postulaciones |
+| Conversión | Alcanzaron la etapa / alcanzaron la anterior. Nula en la primera etapa o si la anterior no tiene ninguna | fracción |
+| Siguen en la etapa | Postulaciones que están ahora en la etapa, sin decisión. Bajan la conversión mientras el proceso sigue abierto, así que se muestran junto a ella | postulaciones |
+| Rechazadas | Rechazadas por el equipo cuando estaban en la etapa, que es la última alcanzada antes de `rechazadaEn` | postulaciones |
+| Rechazadas al cerrar | Rechazos automáticos al cubrir o cerrar la oferta. Se reconocen porque su `rechazadaEn` es igual al `cerradaEn` de la oferta (misma transacción; ver «Ofertas y postulaciones» en `decisiones.md`). Van aparte porque no son una decisión sobre el candidato | postulaciones |
+| Tiempo en la etapa | Días transcurridos desde la fecha de la etapa hasta la de la etapa siguiente o el rechazo del equipo. No cuentan las que siguen en la etapa ni los rechazos automáticos | días transcurridos: mediana, media y n |
+| Coincidencias exitosas | Postulaciones aceptadas (Cuadro II y Cuadro VII) | postulaciones |
+| **Tiempo hasta cubrir** (H1) | Días naturales de `publicadaEn` a la **primera `aceptadaEn`** de la oferta, sólo en ofertas `CUBIERTA`. No se usa `cerradaEn` porque el equipo puede tardar en marcar la oferta como cubierta | días naturales: mediana, media y n |
+| Tiempo hasta el primer tryout | Días naturales de `publicadaEn` a la primera `entrevistaEn`, en cualquier oferta publicada que haya llegado a un tryout. Es el «tiempo para encontrar candidatos» del Cuadro II | días naturales: mediana, media y n |
+| Ofertas abiertas | No tienen tiempo hasta cubrir y se excluyen de él. Se listan aparte con los días naturales que llevan abiertas (de `publicadaEn` a hoy) | días naturales |
+| Tasa de cobertura | Cubiertas / (cubiertas + cerradas sin cubrir) | fracción |
+
+### Dimensión que decide el ranking
+
+Para una oferta, con su ranking vigente (se pone al día antes de calcular, con la misma
+regla que al leerlo) y los pesos de la oferta:
+
+- **Top**: los `TOP_DIMENSION_DECISIVA` (5) primeros, en el orden del ranking. **Resto**:
+  los demás.
+- **Ventaja de cada dimensión** k de `DIMENSIONES_VISIBLES`: media de wₖ·dₖ en el top
+  menos media de wₖ·dₖ en el resto.
+- **Dimensión decisiva**: la de mayor ventaja positiva.
+
+Como la ecuación (1) es lineal, **las ventajas suman exactamente la diferencia de puntaje
+medio entre el top y el resto**. Cada dimensión explica una parte medible de esa
+diferencia, y se lee con la misma barra de aportes del ranking. Si una dimensión sin datos
+del piloto tuviera peso, aparece como «otras» para que la suma cuadre. Una ventaja
+negativa significa que esa dimensión juega en contra de los primeros. Se necesitan al
+menos `MIN_CANDIDATOS_DIMENSION_DECISIVA` (8) candidatos, el top más un resto del tamaño
+del umbral de privacidad; con menos no se calcula.
+
+Se eligió esto y no la varianza de cada dimensión entre todos los candidatos porque la
+varianza también mide lo que varía en el fondo de la lista, que no le importa al equipo.
+La ventaja responde a su pregunta: qué separa a los primeros del resto.
+
+### Mapa del talento verificado
+
+Cuenta los jugadores con cuenta de Riot verificada (`CuentaGaming.verificadaEn` no nulo).
+La posición y el rango salen de su última captura verificada, con la misma regla que el
+buscador y el matching:
+
+- **Por macrorregión y departamento** (`MACROREGION_POR_DEPARTAMENTO`): sólo conteos, sin
+  cruzar con posición ni rango.
+- **Caribe frente al resto de Colombia** (`GRUPOS_TALENTO`), por posición y por banda de
+  rango (`BANDAS_RANGO`: Hierro a Plata, Oro y Platino, Esmeralda y Diamante, y Maestro
+  o superior, más «sin rango»). Las bandas agrupan las ligas para que haya menos celdas
+  pequeñas.
+- Los de fuera de Colombia y los que no tienen ubicación sólo cuentan como total.
+- **Proporción de perfiles verificados**: verificados / jugadores registrados (H2,
+  Cuadro II).
+
+**Privacidad.** Ninguna celda muestra menos de `UMBRAL_PRIVACIDAD_ANALITICA` (3)
+jugadores:
+
+1. Los departamentos por debajo del umbral se agrupan en «otros departamentos» de su
+   macrorregión.
+2. Toda celda con 1 o 2 jugadores se oculta.
+3. **Supresión secundaria**: si en una fila queda oculta una sola celda, se oculta
+   también la siguiente más pequeña, para que no se deduzca restando del total.
+
+Las celdas ocultas no entran en ningún porcentaje. La regla es la misma en la API y en el
+CSV del piloto.
+
+### Línea base (tarea 0.2)
+
+La línea base del scouting manual **debe medir lo mismo que la plataforma**, o la
+comparación no vale:
+
+- los **días naturales desde que el equipo abre la búsqueda** de un jugador **hasta que
+  acepta al jugador** (equivale a `publicadaEn` → primera `aceptadaEn`);
+- los **días naturales hasta el primer tryout** (equivale a `publicadaEn` → primera
+  `entrevistaEn`).
+
+En las dos se registran la mediana, la media y n, además de los equipos entrevistados y
+las vacantes reportadas. El resultado se guarda en `LINEA_BASE_SCOUTING_MANUAL`
+(`@proplay/shared`), con la fecha de la medición y el documento con los datos crudos. Es
+una constante versionada, no una variable de entorno: es un dato del estudio, tiene que
+ser igual en todos los entornos y quedar citable en el historial. Mientras valga `null`,
+la vista no muestra la comparación y el CSV la marca como pendiente.
+
+**Alcance de la conclusión.** Con el tamaño del piloto (3 equipos y unas pocas
+vacantes), la comparación con la línea base es **evidencia descriptiva**, siempre con su
+n, y no un contraste estadístico.
+
 ## Flujo de autenticación
 
 ```mermaid

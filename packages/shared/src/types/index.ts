@@ -87,6 +87,21 @@ export type {
   RankingOfertaQueryInput,
 } from "../schemas/matching";
 
+export type {
+  CeldaTalento,
+  DimensionDecisiva,
+  Embudo,
+  EmbudoEquipo,
+  EmbudoOferta,
+  EtapaEmbudoRespuesta,
+  GrupoTalentoRespuesta,
+  MacrorregionTalento,
+  OfertaAnalitica,
+  ResumenDiasRespuesta,
+  TalentoVerificado,
+  VentajaDimension,
+} from "../schemas/analitica";
+
 export type { BusquedaJugadores, JugadorEncontrado } from "../schemas/scouting";
 
 export type {
