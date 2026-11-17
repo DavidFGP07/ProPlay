@@ -1,5 +1,7 @@
 # Modelo de datos
 
+> **Documento del prototipo (rama `Fronted`), conservado como historia.** Describe el prototipo, no el código actual (`docs/decisiones.md`, «Integración del cliente de `Fronted`»). El modelo vigente es `apps/api/prisma/schema.prisma`, resumido en [`docs/arquitectura.md`](../arquitectura.md) («Modelo de datos») y en `CLAUDE.md` §4; las diferencias con la Sección IX del documento están en `docs/decisiones.md` y en [`docs/para-el-informe.md`](../para-el-informe.md).
+
 El modelo sigue el enfoque entidad-relación de Chen y se persiste en
 PostgreSQL. Por el enfoque monolítico modular, todas las funcionalidades
 comparten una misma capa de persistencia, lo que mantiene una fuente

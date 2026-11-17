@@ -44,7 +44,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | `GET /health` responde 200 si Postgres y Redis están arriba y 503 si alguno falla | Así lo puede usar directamente el health check de la plataforma de despliegue. |
 | El rate limiting se desactiva con `NODE_ENV=test` | Las pruebas de autenticación hacen más de diez peticiones seguidas al mismo endpoint. |
 | Los errores de dominio son clases en `utils/errors.ts` y un único `errorHandler` los traduce | Garantiza la misma forma de respuesta en toda la API y que el stack no salga nunca en producción. |
-| El módulo `perfiles` queda como andamiaje | La lista de criterios de aceptación no incluye ninguno de sus endpoints; implementarlo sería añadir funcionalidad no pedida. |
+| **Superada por «Perfil público y módulo `perfiles`».** El módulo `perfiles` queda como andamiaje | La lista de criterios de aceptación no incluye ninguno de sus endpoints; implementarlo sería añadir funcionalidad no pedida. |
 | Los stubs del andamiaje lanzan `NotImplementedError` desde el *repository*, no desde el controlador | Deja el camino controller → service → repository ya recorrido, que es la estructura que hay que respetar al implementar. |
 | `prisma` está en `dependencies` y no en `devDependencies` | El `CMD` del contenedor ejecuta `prisma migrate deploy`, así que el CLI tiene que existir en la imagen de producción. |
 
@@ -55,11 +55,11 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Entidades y campos del modelo en español | Están así en el documento del proyecto y el esquema hace de documentación. |
 | `PerfilVector` guarda el vector dos veces: `dimensiones Float[]` y `embedding vector(64)` | Prisma sabe leer y escribir el array; la columna nativa de pgvector es la que permite búsquedas de similitud. |
 | La columna `vector(64)` se declara como `Unsupported("vector(64)")` en el schema y se crea en una migración escrita a mano | Prisma no modela el tipo, pero declararlo evita que lo considere deriva del esquema en la siguiente migración. |
-| El índice ANN (`ivfflat`) queda como TODO en la migración | Un índice aproximado sobre una tabla vacía no aporta nada y sus parámetros dependen del volumen real. |
+| **Superada por «Correcciones»** (índice HNSW, #5). El índice ANN (`ivfflat`) queda como TODO en la migración | Un índice aproximado sobre una tabla vacía no aporta nada y sus parámetros dependen del volumen real. |
 | El seed es idempotente (`upsert`) e incluye además un ADMIN y un SCOUT | Se puede ejecutar varias veces sin ensuciar la base, y hacen falta cuentas de esos roles para probar `rbac`. |
 | Los datos sintéticos salen de un generador pseudoaleatorio con semilla fija | El seed produce siempre los mismos números, así las pruebas manuales son comparables entre máquinas. |
 | Las pruebas de integración corren contra una base real, no contra mocks | Lo que se quiere verificar es justo la integración: Zod, Prisma, middlewares y Express juntos. |
-| Las pruebas crean usuarios con correo aleatorio prefijado y los borran al terminar | Permite ejecutarlas contra la base de desarrollo sin arrastrar basura ni chocar entre ejecuciones. |
+| Las pruebas crean usuarios con correo aleatorio prefijado y los borran al terminar. **La parte de la base de desarrollo, superada por la entrada siguiente** (base propia `proplay_test`, #48) | Permite ejecutarlas contra la base de desarrollo sin arrastrar basura ni chocar entre ejecuciones. |
 | Las pruebas de integración de la API corren **siempre contra una base propia**, `proplay_test`: la de `DATABASE_URL` con el sufijo `_test`, en el mismo servidor. `vitest.config.ts` fija esa URL para las pruebas, un `globalSetup` la crea si no existe y le aplica las migraciones (`scripts/base-pruebas.ts`, también `npm run db:test -w api`) y un `setupFiles` detiene la ejecución si la base no termina en `_test`. En el CI, `DATABASE_URL` ya es `proplay_test` y no cambia nada | En local usaban la base de desarrollo. Borraban sus usuarios al terminar, pero dejaban las trazas de `AuditLog` (que no caen en cascada: unas 4.700 filas acumuladas) y recalculaban vectores y rankings sobre los datos del seed, de modo que una prueba podía cambiar lo que se ve en la demostración, y los datos de desarrollo podían hacer pasar o fallar una prueba. Con la misma base que el CI, lo que pasa en local es lo que pasa en el CI. |
 
 ## Frontend
@@ -84,7 +84,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | `trust proxy` sale de `TRUST_PROXY`, desactivado si no se fija y obligatorio en producción | Con un valor fijo y sin proxy delante, Express tomaría la IP de `X-Forwarded-For`, que el cliente puede escribir: bastaría cambiarla en cada petición para saltarse cualquier límite por IP. Sólo el despliegue sabe cuántos proxies hay; `true` se rechaza porque confía en cualquiera. |
 | `vercel.json` reescribe todas las rutas a `index.html` | Sin eso, recargar una URL profunda de React Router devuelve 404. |
 | El CI usa `prisma migrate deploy` sobre una base `proplay_test` | `migrate dev` es interactivo y pensado para desarrollo. |
-| Verificación local con Postgres 17 de Homebrew en lugar de Docker | En la máquina donde se construyó el esqueleto no había Docker; Homebrew compila pgvector contra 17, y `docker-compose.yml` sigue fijando 16 como dice la especificación. |
+| **Superada por «Sincronización de la documentación (2026-11-17)»** (un solo Postgres en local, el de Docker). Verificación local con Postgres 17 de Homebrew en lugar de Docker | En la máquina donde se construyó el esqueleto no había Docker; Homebrew compila pgvector contra 17, y `docker-compose.yml` sigue fijando 16 como dice la especificación. |
 
 ## Integración del cliente de `Fronted`
 
@@ -102,7 +102,7 @@ del proyecto se anotan igual, para que el registro esté completo.
 | Los componentes resuelven sus identificadores de dominio con `useIdentidad()` | Es el equivalente de `GET /perfiles/me`: dice de qué perfil de jugador u organización es dueño el usuario, sin que la vista toque el mock. |
 | Toda mutación invalida todas las consultas | La simulación tiene efectos cruzados (una postulación emite notificación y auditoría). Al conectar cada endpoint se acota la invalidación a sus claves. |
 | Al cerrar sesión se vacía la caché de TanStack Query | Ningún dato del usuario anterior debe quedar visible para el siguiente. |
-| `services/matching.ts` y `services/llm.ts` siguen en `services/` | Son el motor de matching y el explicador simulados; sólo los usa el mock. Se retiran cuando los módulos `matching` (S3) y la IA generativa (S4) vivan en el backend. |
+| **Superada por «Ranking de candidatos»** (siguen: alimentan el feed simulado y son referencia del explicador del S4). `services/matching.ts` y `services/llm.ts` siguen en `services/` | Son el motor de matching y el explicador simulados; sólo los usa el mock. Se retiran cuando los módulos `matching` (S3) y la IA generativa (S4) vivan en el backend. |
 | La autenticación del prototipo (sesión en `localStorage`, acceso sólo con correo) se sustituye por la de `main`: `api/client.ts` con su interceptor JWT y el `AuthContext` | La interfaz es la del prototipo; la lógica de sesión es la que ya funciona contra la API. Token en memoria, refresco con la cookie `httpOnly`. |
 | El login y el registro validan con `loginSchema` y `registerSchema` de `@proplay/shared` mediante `react-hook-form` | Mismo esquema en cliente y servidor (CLAUDE.md §3.1). `Input` y `Select` de `components/ui.tsx` reenvían el `ref` para poder registrarse. |
 | La aceptación del aviso de privacidad se valida en el cliente extendiendo `registerSchema`, pero no se persiste | Superada en la tarea 1.1: el contrato la exige y el registro la guarda (ver «Privacidad y piloto»). |
@@ -126,7 +126,7 @@ entrada dice en qué sprint se cierra; al resolverla, bórrala en el mismo commi
 
 | Pendiente | Por qué | Sprint |
 | --- | --- | --- |
-| Endpoint de cambio de rol | El alta del primer administrador ya se resolvió con un script de línea de comandos (ver «Cuenta y sesiones» y `docs/operacion.md`). Falta `POST /admin/usuarios/rol`, que hoy responde 501, para promover y degradar desde la aplicación con su traza `ROL_CAMBIADO` en `AuditLog`; hasta entonces, degradar exige un `UPDATE` manual. | S4 |
+| Endpoint de cambio de rol | El alta del primer administrador ya se resolvió con un script de línea de comandos (ver «Cuenta y sesiones» y `docs/operacion.md`). Falta `POST /admin/usuarios/rol`, que hoy responde 501, para promover y degradar desde la aplicación con su traza `ROL_CAMBIADO` en `AuditLog`; hasta entonces, degradar exige un `UPDATE` manual. | S4 · **Trabajo futuro** desde el recorte de alcance (decisión 0.10): el módulo `admin` queda en `501` |
 
 ## Deuda conocida
 
@@ -140,7 +140,8 @@ entrada dice en qué sprint se cierra; al resolverla, bórrala en el mismo commi
 ## Divergencias con `@proplay/shared`
 
 Lista de trabajo: cada entrada dice quién gana y en qué sprint se cierra. Al
-resolver una, bórrala de aquí en el mismo commit.
+resolver una, bórrala de aquí en el mismo commit. (Desde «Sincronización de la documentación (2026-11-17)» las resueltas
+no se borran: se marcan en su última columna, porque este archivo es de sólo añadir.)
 
 ### 1. Hueco en el diseño: gana el prototipo
 
@@ -149,9 +150,9 @@ día se añaden a `shared/enums.ts` y a `schema.prisma` en el mismo commit.
 
 | Divergencia | Propuesta | Sprint |
 | --- | --- | --- |
-| Notificación de sincronización de estadísticas (`ingesta`) | El worker de ingesta (RF-03) avisa al jugador de que sus datos cambiaron; no hay tipo equivalente en `TIPOS_NOTIFICACION`. | S2 |
-| Preferencias de privacidad (`ConfiguracionPrivacidad`: visibilidad del perfil y de sus secciones) | RNF-05 las exige y no hay esquema ni modelo que las guarde. | S2 |
-| `salario` y `requisitos[]` de la oferta | El prototipo los muestra en el detalle; el contrato no los recoge. | S3 |
+| Notificación de sincronización de estadísticas (`ingesta`) | El worker de ingesta (RF-03) avisa al jugador de que sus datos cambiaron; no hay tipo equivalente en `TIPOS_NOTIFICACION`. | S2 · **Fuera de alcance:** las notificaciones pasaron a trabajo futuro («Recorte de alcance») |
+| Preferencias de privacidad (`ConfiguracionPrivacidad`: visibilidad del perfil y de sus secciones) | RNF-05 las exige y no hay esquema ni modelo que las guarde. | S2 · **Sigue abierta:** los ajustes de privacidad (soporte) no se han construido |
+| `salario` y `requisitos[]` de la oferta | El prototipo los muestra en el detalle; el contrato no los recoge. | S3 · **Sigue abierta:** no entraron en el contrato de ofertas (#28) |
 
 ### 2. Simplificación del prototipo: gana `shared`
 
@@ -159,13 +160,13 @@ El modelo del backend es más completo; el cliente se adapta.
 
 | Divergencia | Adaptación del cliente | Sprint |
 | --- | --- | --- |
-| `Mensaje` emisor → receptor directo frente a `Conversacion` + `Mensaje` | El backend soporta hilos y chats de equipo, que el documento pide. La bandeja pasa a listar conversaciones. | S4 |
-| Campos del perfil del jugador: `biografia`, `horasDisponibles`, `dispuestoARelocalizarse`, `foto` | Se renombran a `bio`, `disponibilidadHoras`, `dispuestoRelocalizar`, `avatarUrl`. | S2 |
-| `region` del perfil del jugador como ciudad (`Barranquilla`, `Cartagena`…) | Pasa a `pais` (ISO 3166-1 alfa-2) + `departamento` (`ATLANTICO`, `BOLIVAR`…). Las 8 ciudades del prototipo caen en 8 departamentos distintos. | S2 |
+| `Mensaje` emisor → receptor directo frente a `Conversacion` + `Mensaje` | El backend soporta hilos y chats de equipo, que el documento pide. La bandeja pasa a listar conversaciones. | S4 · **Fuera de alcance:** la mensajería pasó a trabajo futuro |
+| Campos del perfil del jugador: `biografia`, `horasDisponibles`, `dispuestoARelocalizarse`, `foto` | Se renombran a `bio`, `disponibilidadHoras`, `dispuestoRelocalizar`, `avatarUrl`. | S2 · **Resuelta:** #14 y #19 |
+| `region` del perfil del jugador como ciudad (`Barranquilla`, `Cartagena`…) | Pasa a `pais` (ISO 3166-1 alfa-2) + `departamento` (`ATLANTICO`, `BOLIVAR`…). Las 8 ciudades del prototipo caen en 8 departamentos distintos. | S2 · **Resuelta:** #13 a #16 |
 | Vinculación de cuentas tecleando un identificador | Superada por «Vinculación con Riot»: el piloto sí teclea el Riot ID y el servidor, y verifica la propiedad con el icono de invocador; la redirección OAuth (RSO) queda como mejora futura. | S2 |
-| `Estadistica` con `perfilId`, `fuente: 'api-riot'…` y `ultimaSync` | Pasa a `jugadorId`, `fuente: Plataforma` y `capturadaEn`. | S2 |
-| `Oferta` sin `titulo` y con `experienciaMinima`, `regionPreferida`, `horasSemanales`, `publicadaEn` | Se añade `titulo`; `experienciaMinima` desaparece (ver «Ofertas y postulaciones»); `regionPreferida` pasa a `modalidad` + `pais` + `departamento`; `horasSemanales` se renombra a `horasSemana`; `publicadaEn` se conserva y se añaden `pesos` y `cerradaEn`. | S3 |
-| Desglose del matching como lista con la dimensión `blandas` | El contrato lo da como objeto con `habilidadesBlandas`. | S3 |
+| `Estadistica` con `perfilId`, `fuente: 'api-riot'…` y `ultimaSync` | Pasa a `jugadorId`, `fuente: Plataforma` y `capturadaEn`. | S2 · **Resuelta:** #38 |
+| `Oferta` sin `titulo` y con `experienciaMinima`, `regionPreferida`, `horasSemanales`, `publicadaEn` | Se añade `titulo`; `experienciaMinima` desaparece (ver «Ofertas y postulaciones»); `regionPreferida` pasa a `modalidad` + `pais` + `departamento`; `horasSemanales` se renombra a `horasSemana`; `publicadaEn` se conserva y se añaden `pesos` y `cerradaEn`. | S3 · **Resuelta:** #28 a #31 |
+| Desglose del matching como lista con la dimensión `blandas` | El contrato lo da como objeto con `habilidadesBlandas`. | S3 · **Resuelta:** #49 (el cliente lee el contrato) |
 | Estado de oferta `en-proceso` | No existe en el contrato (el proceso es de las postulaciones). **Resuelto en este cambio:** la insignia ámbar pasó a `BORRADOR`. | — |
 
 ### 3. Preocupación de presentación: no toca el modelo
@@ -176,13 +177,13 @@ esquemas de `shared`.
 
 | Divergencia | Se deriva de | Sprint |
 | --- | --- | --- |
-| `titulo`, `detalle` y `enlace` de `Notificacion` | `tipo` + `payload` | S4 |
-| `leida: boolean` de `Notificacion` | `leidaEn !== null` | S4 |
-| Tipos de notificación en minúscula del prototipo (`postulacion`, `endoso`…) | Correspondencia con `NUEVA_POSTULACION`, `ENDORSEMENT_RECIBIDO`… en el adaptador | S4 |
-| `emisorNombre` del mensaje | Participantes de la conversación | S4 |
-| `esCaribe` y `handle` del perfil | `MACROREGION_POR_DEPARTAMENTO[departamento] === "CARIBE"` y el nombre de usuario | S2 |
-| `tendencia` de la estadística (serie de la sparkline) | Histórico de capturas | S2 |
-| `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 |
+| `titulo`, `detalle` y `enlace` de `Notificacion` | `tipo` + `payload` | S4 · **Fuera de alcance:** notificaciones en trabajo futuro |
+| `leida: boolean` de `Notificacion` | `leidaEn !== null` | S4 · **Fuera de alcance** |
+| Tipos de notificación en minúscula del prototipo (`postulacion`, `endoso`…) | Correspondencia con `NUEVA_POSTULACION`, `ENDORSEMENT_RECIBIDO`… en el adaptador | S4 · **Fuera de alcance** |
+| `emisorNombre` del mensaje | Participantes de la conversación | S4 · **Fuera de alcance** |
+| `esCaribe` y `handle` del perfil | `MACROREGION_POR_DEPARTAMENTO[departamento] === "CARIBE"` y el nombre de usuario | S2 · **Resuelta** para `esCaribe` (#37, con `MACROREGION_POR_DEPARTAMENTO`) |
+| `tendencia` de la estadística (serie de la sparkline) | Histórico de capturas | S2 · **Resuelta:** #38 |
+| `detalle`, `peso` y `contribucion` de cada dimensión del matching | Desglose + `PESOS_MATCHING` | S3 · **Resuelta:** #49 (`lib/aportes.ts`) |
 | Etiquetas de enums («Abierta», «Riot Games») | `i18n/es.ts`. **Resuelto en este cambio.** | — |
 
 ## Correcciones
@@ -556,3 +557,45 @@ Para la próxima versión de `docs/ProPlay.pdf` (tarea 5.1):
 4. Cuadro VII: el NPS, el engagement y las coincidencias reportadas por encuesta no
    salen de la plataforma, sino de los instrumentos de la tarea 0.8. Las coincidencias que
    registra la plataforma (postulaciones aceptadas) complementan la encuesta.
+
+## Sincronización de la documentación (2026-11-17)
+
+Revisión de toda la documentación contra el código de `main` (PR #55). Sólo documenta
+lo que hay: no cambia decisiones ni alcance.
+
+| Decisión | Justificación |
+| --- | --- |
+| La lista de rutas de la API, con roles, RF y estado, vive en el README («Rutas de la API»), sacada de los routers; las variables de entorno, en «Variables de entorno». `CLAUDE.md` §9 y `docs/arquitectura.md` remiten a ellas | Había tres descripciones parciales y desfasadas (el README sólo listaba las de Riot y decía que el resto respondía `501`). Una tabla, en el sitio que se lee primero. |
+| El plan de implementación anota el estado de cada tarea con sus PR; lo que no se puede comprobar desde el repositorio (clave de producción de Riot, línea base, reclutamiento, instrumentos, comité de ética) va marcado «sin verificar desde el código» | El informe de la tesis se redactará a partir de estos documentos: no pueden afirmar lo que el código no muestra. |
+| Guía para el informe en `docs/para-el-informe.md`, por sección del PDF | Reúne lo implementado, las divergencias con su porqué, las limitaciones y los anexos, para no reconstruirlo al redactar. |
+| En local, **un solo Postgres y un solo Redis: los de Docker** (`docker-compose.yml`). El Postgres 17 y el Redis de Homebrew se detuvieron (`brew services stop`, que también los quita del arranque al iniciar sesión) sin borrar sus datos. El README avisa de no tener los dos a la vez | Los dos escuchaban en 5432 y 6379: `localhost` llegaba al de Homebrew y `docker exec` consultaba el del contenedor, que estaba desactualizado. Sustituye a «Verificación local con Postgres 17 de Homebrew». |
+| Los documentos de `docs/prototipo/` llevan un aviso con sus diferencias con la aplicación actual y no se reescriben | Son la historia del prototipo (ver «Integración del cliente de `Fronted`»). El de pruebas piloto queda señalado porque contradice la medición de H1 decidida (lista siguiente). |
+| Las divergencias resueltas de «Divergencias con `@proplay/shared`» se marcan en su última columna en lugar de borrarse | Este archivo es de sólo añadir; la regla antigua de borrarlas contradecía esa convención. |
+| `docs/espiga-riot.md` no existe en el repositorio | La espiga de Riot (`chore/espiga-riot`) nunca se fusionó; sus conclusiones están en «Vinculación con Riot» e «Integración con Riot». |
+
+### Contradicciones entre el código y las decisiones
+
+Encontradas al sincronizar. **No se resuelven aquí**: cada una necesita su propia tarea o
+decisión.
+
+1. **Vistas descartadas o de trabajo futuro en el menú.** Feed (`/`), Mensajes (`/mensajes`) y
+   el panel de administración (`/admin`) siguen en el enrutador y en el menú
+   (`components/Layout.tsx`), con datos simulados, aunque la decisión 0.10 los deja fuera.
+   Es la tarea 1.7, pendiente.
+2. **Tres tablas fuera de las 15 entidades del documento.** `schema.prisma` tiene
+   `Publicacion`, `Conversacion` y `ParticipanteConversacion`. La mensajería con hilos está
+   justificada en «Divergencias» (y es trabajo futuro); `Publicacion` (el feed, descartado)
+   no tiene decisión que la sostenga.
+3. **Medición de H1 en el manual de pruebas piloto.** `docs/prototipo/pruebas-piloto.md` mide
+   el tiempo con un cronómetro desde que se abre el ranking y pide funciones que no existen
+   (filtros por juego y región, orden por similitud vectorial, registro de habilidades); lo
+   decidido es publicación → primera aceptación y primer tryout («Analítica»).
+4. **Colores hexadecimales en el JSX**, contra `CLAUDE.md` §6: `accent-[#7c4df5]` en
+   `LoginPage.tsx` y `MiPerfilPage.tsx`, `shadow-[…#7c4df5]` en `Layout.tsx`, `#7c4df5` en
+   `components/ui.tsx` y `#64748b` en la gráfica de `MisEstadisticasPage.tsx`.
+5. **Explorar oportunidades** figura en el inventario con RF-09, pero `/vacantes` ordena por
+   fecha de publicación: el orden por compatibilidad para el jugador depende de
+   `GET /matching/jugador/me`, que responde `501`.
+6. **El documento pide OAuth 2.0** para vincular las cuentas (`CLAUDE.md` §1) y el piloto usa
+   el desafío de icono. Es una divergencia ya registrada («Vinculación con Riot»); se cita
+   aquí porque `CLAUDE.md` §1 la presentaba como hecha.

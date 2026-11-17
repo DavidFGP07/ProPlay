@@ -14,7 +14,10 @@ jugadores con estadísticas autodeclaradas que nadie verifica.
 Dos decisiones definen el producto y no se negocian:
 
 1. **Verificabilidad.** El perfil de un jugador no se construye con lo que declara, sino
-   con datos traídos de la API del juego tras vincular su cuenta por OAuth 2.0.
+   con datos traídos de la API del juego tras vincular su cuenta. El documento pide
+   OAuth 2.0; en el piloto la propiedad de la cuenta de Riot se demuestra con un
+   desafío de icono hasta tener Riot Sign On (`docs/decisiones.md`, «Vinculación con
+   Riot»).
 2. **Matching algorítmico.** La plataforma calcula un puntaje de compatibilidad sobre cinco
    dimensiones y devuelve un ranking explicable, no un tablón que el equipo filtra a mano.
 
@@ -151,6 +154,11 @@ No es decoración: es con lo que se verifica qué parte del diseño está implem
 `PerfilVector` · `Habilidad` · `HabilidadJugador` · `Endorsement` · `Oferta` ·
 `Postulacion` · `Matching` · `Mensaje` · `Notificacion` · `AuditLog`
 
+Son las 15 del documento. `schema.prisma` tiene además tres tablas heredadas del
+prototipo: `Publicacion` (el feed, vista descartada) y `Conversacion` y
+`ParticipanteConversacion` (la mensajería con hilos, ver «Divergencias con
+`@proplay/shared`» en `docs/decisiones.md`). Ningún endpoint implementado las usa.
+
 Tres puntos que es fácil romper:
 
 1. **`PerfilVector` es una entidad propia**, 1:1 con `PerfilJugador`, con
@@ -216,16 +224,16 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Feed | `/` | RF-08 | Futuro (descartada) |
-| Mi perfil (cabecera y datos profesionales reales; el resto, simulado) | `/mi-perfil` | RF-05 | Núcleo |
+| Feed (simulado; sigue en el enrutador y en el menú hasta la tarea 1.7) | `/` | RF-08 | Futuro (descartada) |
+| Mi perfil (cabecera, datos profesionales, ubicación y pestaña de postulaciones reales; cuentas, habilidades, portafolio, privacidad y laterales, simulados) | `/mi-perfil` | RF-05 | Núcleo |
 | Cuentas vinculadas (estado, última sincronización) | `/cuentas-vinculadas` | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
 | Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | `/mis-estadisticas` | RF-04, RF-13 | Núcleo |
 | Habilidades y endorsements | — | RF-06 | Soporte: catálogo fijo; endorsements sólo de equipos |
 | Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
 | Mis postulaciones | `/mi-perfil?pestana=postulaciones` | RF-10 | Soporte: pestaña de Mi perfil, sin vista propia |
-| Mensajes | `/mensajes` | RF-12 | Futuro (2.º en recuperarse) |
-| Ajustes de cuenta y privacidad (común a los cuatro roles; hoy nombre y contraseña) | `/cuenta` | RF-01, RNF-05 | Soporte, y cuenta como dos de las 19: Mi cuenta, y Ajustes de privacidad sólo de visibilidad (perfil público sí/no y mostrar ubicación) |
+| Mensajes (simulado; sigue en el enrutador y en el menú hasta la tarea 1.7) | `/mensajes` | RF-12 | Futuro (2.º en recuperarse) |
+| Ajustes de cuenta y privacidad (común a los cuatro roles; hoy sólo nombre y contraseña, reales; los ajustes de privacidad no existen todavía) | `/cuenta` | RF-01, RNF-05 | Soporte, y cuenta como dos de las 19: Mi cuenta, y Ajustes de privacidad sólo de visibilidad (perfil público sí/no y mostrar ubicación) |
 | Onboarding | — | RF-02, RF-05 | Futuro (descartada): su contenido vive en Cuentas vinculadas y en el aviso de ubicación de Mi perfil |
 
 ### Equipo y scout
@@ -250,7 +258,7 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Panel de administración | `/admin` | RF-13 | Futuro (descartada): las operaciones van por scripts documentados en `docs/operacion.md` |
+| Panel de administración (simulado; sigue en el enrutador y en el menú del administrador hasta la tarea 1.7) | `/admin` | RF-13 | Futuro (descartada): las operaciones van por scripts documentados en `docs/operacion.md` |
 | Usuarios, contenido, catálogo de habilidades, auditoría, integraciones | — | RF-01, RF-06, RF-14, RF-03 | Futuro (descartada), igual que el panel |
 
 ### Estados transversales
@@ -272,7 +280,8 @@ vista.
   hexadecimales sueltos en el JSX.
 - Tema oscuro. No construyas tema claro en esta etapa.
 - Componentes de UI reutilizables en `apps/web/src/components/ui`; si necesitas un botón o
-  un input, usa los que ya están. No instales librerías de componentes.
+  un input, usa los que ya están. No instales librerías de componentes. Hoy son un único
+  archivo, `components/ui.tsx` (partirlo es deuda registrada en `docs/decisiones.md`).
 - **Recharts** para gráficas. Una sola librería de gráficos en todo el proyecto.
 - Ningún texto visible embebido en el JSX: van a `src/i18n/es.ts`. El documento contempla
   multilenguaje y recogerlo después sale caro.
@@ -332,7 +341,9 @@ que la usen como base.
 
 ## 9. Estado actual
 
-**Backend.** El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
+**Backend.** La lista completa de rutas, con sus roles, su RF y las que siguen en `501`,
+está en el README, «Rutas de la API»; las variables de entorno, en «Variables de entorno».
+El módulo `usuarios` está implementado; de `perfiles`, sólo `GET /perfiles/me`,
 `PATCH /perfiles/jugador`, `PATCH /perfiles/equipo` (incluida la sede de la organización), `GET /perfiles/:id` (perfil público, sin sesión) y las cuentas vinculadas (`GET`, `DELETE /perfiles/cuentas-gaming/:plataforma` y la vinculación con Riot por desafío de icono en `/perfiles/cuentas-gaming/riot`, `/riot/desafio` (consultar, regenerar y cancelar el desafío activo, guardado en Redis) y `/riot/verificar`). `estadisticas` está implementado (sincronizar desde Riot, histórico y resumen); la integración con Riot vive en `src/integrations/riot/` (cliente, cuota global en Redis con prioridad, estado de la clave, normalización pura y proveedor) y su porqué en `docs/decisiones.md`, «Integración con Riot» y «Cuota de Riot e ingesta». La ingesta va por una cola BullMQ en `src/ingesta/` (worker y planificador en el proceso de la API, sincronización periódica cada 6 h; `POST /estadisticas/sincronizar` encola y responde 202); su operación, en `docs/operacion.md`. Del buscador de talento (`scouting`), `GET /scouting/jugadores` está implementado (filtros de posición, rango mínimo y departamento sobre el catálogo `RangoLol` y la última captura verificada de Riot; contrato con la ingesta en `packages/shared/src/riot.ts`); la ficha ampliada y las búsquedas guardadas siguen en `501`. El módulo `ofertas` está implementado: ofertas con estados (`CUBIERTA` incluido), pesos por oferta, modalidad y ubicación, y postulaciones con la fecha de cada cambio de estado (`ENTREVISTA` incluido). El motor de `matching` está implementado (RF-09): `GET /matching/ofertas/:id/ranking` (con filtro de postulados y orden por puntaje o por dimensión), `GET /matching/ofertas/:id/candidatos/:jugadorId` (detalle de un candidato con su explicación) y `POST /matching/ofertas/:id/recalcular`, con las fórmulas como funciones puras en `src/modules/matching/motor/` (la excepción de §3.2), el vectorizador v2, el recuperador HNSW y la persistencia en `Matching`; sólo lee datos guardados, nunca llama a Riot (`docs/arquitectura.md`, «Algoritmo de compatibilidad»). `GET /matching/jugador/me` sigue en 501. El módulo `analitica` (RF-13, sólo lectura) está implementado: `GET /analitica/embudo` (embudo agregado del equipo con el tiempo hasta cubrir y hasta el primer tryout), `GET /analitica/ofertas/:id/embudo`, `GET /analitica/ofertas/:id/dimension-decisiva` y `GET /analitica/talento` (mapa del talento verificado con el umbral de privacidad); las definiciones, en `docs/arquitectura.md`, «Analítica». Las métricas de todo el piloto no tienen ruta: las exporta en CSV `npm run metricas:piloto -w api` (`src/cli/metricasPiloto.ts`, sin las cuentas del seed por defecto; procedimiento en `docs/operacion.md`). Los demás endpoints de `perfiles` (habilidades, endorsements y la vinculación OAuth, que necesita RSO) y los otros módulos (
 `mensajeria`, `notificaciones`, `admin`) tienen los cinco archivos, las rutas registradas y handlers que devuelven `501` con un
 `// TODO:` describiendo qué debe hacer el endpoint. Al implementar uno, quita el TODO y
@@ -373,3 +384,5 @@ fusiona con el CI en rojo.
 
 **Plan.** Cuatro sprints de dos semanas. S1 fundación y acceso · S2 perfil verificable
 (ingesta desde Riot, solo League of Legends) · S3 motor de matching · S4 IA generativa, cierre y validación.
+El estado de cada tarea está en `docs/plan-implementacion.md`; la guía para redactar el
+informe a partir de lo construido, en `docs/para-el-informe.md`.
