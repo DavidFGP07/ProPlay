@@ -1,30 +1,64 @@
-import { useQuery } from '@tanstack/react-query'
-import { listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '@/mocks/api'
-import { actorDemo } from '@/mocks/sesion'
-import { simulado, useMutacionSimulada } from '@/api/demo'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  contadorNotificacionesSchema,
+  notificacionesMarcadasSchema,
+  notificacionesSchema,
+} from '@proplay/shared'
+import { api } from '@/api/client'
 
-// RF-12 · Bandeja de notificaciones del usuario en sesion
-export function useNotificaciones() {
+/*
+ * Notificaciones dentro de la app (RF-12): API real, sin puente de
+ * demostracion. Sin tiempo real: la campana consulta el contador cada 60 s, y
+ * la lista mientras el panel esta abierto.
+ */
+
+const INTERVALO = 60_000
+
+// RF-12 · Numero de notificaciones sin leer (la campana de la cabecera)
+export function useContadorNotificaciones() {
   return useQuery({
-    queryKey: ['notificaciones'],
-    // TODO: S4 — conectar con GET /api/v1/notificaciones
-    queryFn: () => simulado(() => listarNotificaciones(actorDemo().id), []),
-    refetchInterval: 30_000,
+    queryKey: ['notificaciones', 'contador'],
+    refetchInterval: INTERVALO,
+    queryFn: async () => {
+      const { data } = await api.get('/notificaciones/contador')
+      return contadorNotificacionesSchema.parse(data)
+    },
   })
 }
 
-// RF-12 · Marcar una notificacion como leida
-export function useMarcarNotificacionLeida() {
-  return useMutacionSimulada((id: string) =>
-    // TODO: S4 — conectar con PATCH /api/v1/notificaciones/leidas
-    marcarNotificacionLeida(id),
-  )
+// RF-12 · Las ultimas notificaciones, de la mas reciente a la mas antigua
+export function useNotificacionesRecientes(habilitado: boolean) {
+  return useQuery({
+    queryKey: ['notificaciones', 'recientes'],
+    enabled: habilitado,
+    refetchInterval: habilitado ? INTERVALO : false,
+    queryFn: async () => {
+      const { data } = await api.get('/notificaciones', { params: { pageSize: 10 } })
+      return notificacionesSchema.parse(data)
+    },
+  })
 }
 
-// RF-12 · Marcar toda la bandeja como leida
+function useMarcar(mutacion: (ids?: string[]) => Promise<unknown>) {
+  const cliente = useQueryClient()
+  return useMutation({
+    mutationFn: mutacion,
+    onSuccess: () => cliente.invalidateQueries({ queryKey: ['notificaciones'] }),
+  })
+}
+
+// RF-12 · Marcar como leidas las indicadas (al abrir una, esa)
+export function useMarcarLeidas() {
+  return useMarcar(async (ids = []) => {
+    const { data } = await api.post('/notificaciones/leidas', { ids })
+    return notificacionesMarcadasSchema.parse(data)
+  })
+}
+
+// RF-12 · Marcar todas como leidas
 export function useMarcarTodasLeidas() {
-  return useMutacionSimulada(() =>
-    // TODO: S4 — conectar con PATCH /api/v1/notificaciones/leidas
-    marcarTodasLeidas(actorDemo().id),
-  )
+  return useMarcar(async () => {
+    const { data } = await api.post('/notificaciones/leidas/todas')
+    return notificacionesMarcadasSchema.parse(data)
+  })
 }
