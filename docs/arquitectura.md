@@ -99,7 +99,7 @@ flowchart TB
 | `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | Perfil propio, edición de jugador y de equipo, perfil público y vinculación con Riot por icono implementados; habilidades, endorsements y la vinculación OAuth, `501` |
 | `estadisticas` | Métricas por jugador y periodo; sincronización con Riot | **Implementado** (sincronizar en cola, estado, histórico y resumen) |
 | `scouting` | Búsqueda de jugadores; ficha ampliada y búsquedas guardadas | Buscador (`GET /jugadores`, filtros de posición, rango mínimo y departamento) implementado; ficha y búsquedas guardadas, `501` |
-| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking, detalle del candidato y recálculo implementados; `GET /jugador/me`, `501` |
+| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking, detalle del candidato, recálculo y ofertas compatibles con el jugador (`GET /jugador/me`, calculadas al pedirlas) implementados |
 | `ofertas` | Ofertas de los equipos y postulaciones de los jugadores con sus estados | **Implementado** |
 | `mensajeria` | Conversaciones y mensajes 1:1 y de equipo | Andamiaje (501) |
 | `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |

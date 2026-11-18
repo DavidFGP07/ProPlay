@@ -151,40 +151,139 @@ beforeEach(() => {
   doble.post.mockReset()
 })
 
+/** Explicación válida del motor; sin cuenta verificada, la técnica con «faltan datos». */
+function explicacion(verificado = true) {
+  return {
+    pesos: PESOS_MATCHING,
+    dimensiones: {
+      tecnica: verificado
+        ? {
+            faltanDatos: false,
+            motivo: null,
+            posicionPedida: 'MID',
+            posicionPrincipal: 'MID',
+            fraccionEnPosicion: 1,
+            rango: 'DIAMANTE_II',
+            rangoMinimo: 'DIAMANTE_II',
+            partidasAnalizadas: 20,
+            datosDel: '2026-11-10T00:00:00.000Z',
+            componentes: { posicion: 1, rango: 1, rendimiento: 0.6 },
+            metricas: [],
+          }
+        : {
+            faltanDatos: true,
+            motivo: 'SIN_CUENTA_VERIFICADA',
+            posicionPedida: 'MID',
+            posicionPrincipal: null,
+            fraccionEnPosicion: null,
+            rango: null,
+            rangoMinimo: 'DIAMANTE_II',
+            partidasAnalizadas: null,
+            datosDel: null,
+            componentes: null,
+            metricas: [],
+          },
+      experiencia: { faltanDatos: true, motivo: 'SIN_DATOS_PILOTO' },
+      habilidadesBlandas: { faltanDatos: true, motivo: 'SIN_ENDORSEMENTS', endorsementsDeEquipos: 0 },
+      geografica: { faltanDatos: false, motivo: null, modalidad: 'PRESENCIAL', cercania: 'MISMO_DEPARTAMENTO', relocalizacionAplicada: false },
+      disponibilidad: { faltanDatos: false, motivo: null, horasJugador: 25, horasOferta: 25 },
+    },
+  }
+}
+
+/** Oferta con la compatibilidad del jugador: puntaje = Σ pesos × desglose. */
+function compatible(datos: Record<string, unknown>, tecnica: number, geografica: number, verificado = true) {
+  const desglose = { tecnica, experiencia: 0, habilidadesBlandas: 0, geografica, disponibilidad: 1 }
+  const puntaje = 0.5 * tecnica + 0.25 * geografica + 0.25
+  return { oferta: oferta(datos), puntaje, desglose, explicacion: explicacion(verificado) }
+}
+
+function paginaCompatibles(datos: unknown[], verificado = true, meta: Partial<{ page: number; totalPages: number; total: number }> = {}) {
+  return {
+    ...pagina(datos, meta),
+    verificado,
+    calculadoEn: '2026-11-17T12:00:00.000Z',
+    versionFormulas: 1,
+    modo: 'CONTENIDO',
+    pesoColaborativo: 0,
+  }
+}
+
+const RUTA_COMPATIBLES = '/matching/jugador/me'
+
 describe('Explorar oportunidades (/vacantes)', () => {
-  it('lista las ofertas reales y marca a las que el jugador ya se postuló', async () => {
+  it('el jugador las ve ordenadas por compatibilidad, con su puntaje y la barra de aportes', async () => {
     sesionDe('JUGADOR')
     rutas({
-      '/ofertas': pagina([oferta(), oferta({ id: 'oferta-2', titulo: 'ADC remoto', rol: 'ADC', modalidad: 'REMOTA', pais: null, departamento: null })]),
+      [RUTA_COMPATIBLES]: paginaCompatibles([
+        compatible({}, 0.9, 1),
+        compatible({ id: 'oferta-2', titulo: 'ADC remoto', rol: 'ADC', modalidad: 'REMOTA', pais: null, departamento: null }, 0.2, 0.5),
+      ]),
       '/ofertas/postulaciones/me': [miPostulacion()],
     })
     renderRuta('/vacantes')
 
     expect(await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).toBeInTheDocument()
+    expect(screen.getByText(/ordenadas por tu compatibilidad/)).toBeInTheDocument()
+    expect(screen.queryByText(/llegará con el motor de matching/)).toBeNull()
+    expect(doble.get).toHaveBeenCalledWith(RUTA_COMPATIBLES, { params: { page: 1 } })
+    expect(doble.get).not.toHaveBeenCalledWith('/ofertas', expect.anything())
+
+    const tarjetas = screen.getAllByRole('listitem').filter((li) => within(li).queryByRole('heading'))
+    expect(tarjetas.map((li) => within(li).getByRole('heading').textContent)).toEqual(['MID para la academia', 'ADC remoto'])
+    expect(within(tarjetas[0]!).getByText('95 %')).toBeInTheDocument()
+    expect(within(tarjetas[1]!).getByText('48 %')).toBeInTheDocument()
+    expect(within(tarjetas[0]!).getByTestId('barra-aportes')).toBeInTheDocument()
     expect(screen.getByText('2 ofertas abiertas')).toBeInTheDocument()
-    expect(screen.getByText('Atlántico, Colombia')).toBeInTheDocument()
     expect(screen.getByText('Remota, sin restricción de ubicación')).toBeInTheDocument()
     expect(await screen.findByText(/Ya te postulaste · En revision/)).toBeInTheDocument()
-    // Sin puntaje ni ranking: el matching todavía no existe.
-    expect(screen.queryByText(/Ver ranking/i)).toBeNull()
-    expect(screen.queryByText(/\d+ ?%/)).toBeNull()
+    // Con cuenta verificada no hay aviso.
+    expect(screen.queryByText(/Vincula tu cuenta de Riot para que la técnica cuente/)).toBeNull()
+  })
+
+  it('sin cuenta verificada avisa que la técnica no cuenta y enlaza a Cuentas vinculadas', async () => {
+    sesionDe('JUGADOR')
+    rutas({
+      [RUTA_COMPATIBLES]: paginaCompatibles([compatible({}, 0, 1, false)], false),
+      '/ofertas/postulaciones/me': [],
+    })
+    renderRuta('/vacantes')
+
+    expect(await screen.findByText(/Vincula tu cuenta de Riot para que la técnica cuente/, {}, ESPERA)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ir a Cuentas vinculadas' })).toHaveAttribute('href', '/cuentas-vinculadas')
+    expect(screen.getByText('50 %')).toBeInTheDocument()
+  })
+
+  it.each(['EQUIPO', 'SCOUT'] as const)('el rol %s las sigue viendo por fecha, sin puntaje', async (rol) => {
+    sesionDe(rol)
+    rutas({ '/ofertas': pagina([oferta()]), '/ofertas/me': pagina([]) })
+    renderRuta('/vacantes')
+
+    expect(await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).toBeInTheDocument()
+    expect(screen.getByText(/de la más reciente a la más antigua\.$/)).toBeInTheDocument()
+    expect(doble.get).not.toHaveBeenCalledWith(RUTA_COMPATIBLES, expect.anything())
+    expect(screen.queryByText(/\d+ %/)).toBeNull()
+    expect(screen.queryByTestId('barra-aportes')).toBeNull()
   })
 
   it('filtra con los parámetros de la API y vuelve a la primera página', async () => {
     sesionDe('JUGADOR')
-    rutas({ '/ofertas': pagina([oferta()], { totalPages: 3, total: 41 }), '/ofertas/postulaciones/me': [] })
+    rutas({
+      [RUTA_COMPATIBLES]: paginaCompatibles([compatible({}, 0.9, 1)], true, { totalPages: 3, total: 41 }),
+      '/ofertas/postulaciones/me': [],
+    })
     renderRuta('/vacantes')
     await screen.findByText('41 ofertas abiertas', {}, ESPERA)
 
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/ }))
     await waitFor(() =>
-      expect(doble.get).toHaveBeenLastCalledWith('/ofertas', { params: { page: 2 } }),
+      expect(doble.get).toHaveBeenLastCalledWith(RUTA_COMPATIBLES, { params: { page: 2 } }),
     )
 
     fireEvent.change(screen.getByLabelText('Posición'), { target: { value: 'JUNGLA' } })
     fireEvent.change(screen.getByLabelText('Modalidad'), { target: { value: 'REMOTA' } })
     await waitFor(() =>
-      expect(doble.get).toHaveBeenLastCalledWith('/ofertas', {
+      expect(doble.get).toHaveBeenLastCalledWith(RUTA_COMPATIBLES, {
         params: { page: 1, rol: 'JUNGLA', modalidad: 'REMOTA' },
       }),
     )
@@ -192,7 +291,7 @@ describe('Explorar oportunidades (/vacantes)', () => {
 
   it('sin resultados con filtros ofrece quitarlos', async () => {
     sesionDe('JUGADOR')
-    rutas({ '/ofertas': pagina([]), '/ofertas/postulaciones/me': [] })
+    rutas({ [RUTA_COMPATIBLES]: paginaCompatibles([]), '/ofertas/postulaciones/me': [] })
     renderRuta('/vacantes')
     expect(await screen.findByText('No hay ofertas abiertas', {}, ESPERA)).toBeInTheDocument()
 
@@ -203,11 +302,11 @@ describe('Explorar oportunidades (/vacantes)', () => {
 
   it('si la API falla, ofrece reintentar', async () => {
     sesionDe('JUGADOR')
-    rutas({ '/ofertas': errorApi(500), '/ofertas/postulaciones/me': [] })
+    rutas({ [RUTA_COMPATIBLES]: errorApi(500), '/ofertas/postulaciones/me': [] })
     renderRuta('/vacantes')
     expect(await screen.findByText('No pudimos cargar las ofertas.', {}, ESPERA)).toBeInTheDocument()
 
-    rutas({ '/ofertas': pagina([oferta()]), '/ofertas/postulaciones/me': [] })
+    rutas({ [RUTA_COMPATIBLES]: paginaCompatibles([compatible({}, 0.9, 1)]), '/ofertas/postulaciones/me': [] })
     fireEvent.click(screen.getByRole('button', { name: /Reintentar/ }))
     expect(await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).toBeInTheDocument()
   })

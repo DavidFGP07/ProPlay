@@ -13,7 +13,6 @@ import {
   type RangoLol,
 } from "@proplay/shared";
 import { prisma } from "../../config/prisma";
-import { NotImplementedError } from "../../utils/errors";
 import type { RangoPrisma } from "../../utils/pagination";
 import type { CapturaVerificada, JugadorMotor } from "./motor/tipos";
 
@@ -562,9 +561,10 @@ export async function candidatoDelRanking(
   return filas[0] ?? null;
 }
 
-/** TODO: Devolver las ofertas más compatibles con el jugador autenticado. */
-export async function ofertasCompatibles(_datos?: unknown): Promise<never> {
-  throw new NotImplementedError(
-    "matching.repository.ofertasCompatibles todavía no consulta la base de datos",
-  );
+// ------------------------------------------------ ofertas del jugador
+
+/** Id del perfil de jugador del usuario, o null. */
+export async function idJugadorDeUsuario(usuarioId: string): Promise<string | null> {
+  const perfil = await prisma.perfilJugador.findUnique({ where: { usuarioId }, select: { id: true } });
+  return perfil?.id ?? null;
 }

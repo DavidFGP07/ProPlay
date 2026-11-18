@@ -126,6 +126,15 @@ export async function listar(query: ListarOfertasQuery & OpcionesPaginacion) {
   return paginar(ofertas.map(aOferta), total, rango);
 }
 
+/**
+ * RF-07 · RF-09 · Todas las ofertas abiertas con los filtros de `GET /ofertas`,
+ * sin paginar. Lo usa el módulo `matching` para ordenarlas por compatibilidad
+ * con el jugador (`GET /matching/jugador/me`).
+ */
+export async function abiertasSinPaginar(filtros: ListarOfertasQuery): Promise<Oferta[]> {
+  return (await repositorio.todasAbiertas(filtros)).map(aOferta);
+}
+
 /** RF-07 · Ofertas del equipo autenticado, en cualquier estado. */
 export async function listarPropias(
   usuarioId: string,

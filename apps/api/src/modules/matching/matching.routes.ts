@@ -7,6 +7,7 @@ import * as controlador from "./matching.controller";
 import {
   candidatoOfertaParamsSchema,
   idParamSchema,
+  ofertasCompatiblesQuerySchema,
   rankingOfertaQuerySchema,
 } from "./matching.schema";
 
@@ -54,10 +55,15 @@ matchingRouter.post(
   controlador.recalcular,
 );
 
-// TODO: Devolver las ofertas más compatibles con el jugador autenticado.
+// RF-09 · Ofertas abiertas ordenadas por compatibilidad con el jugador
+// autenticado: el mismo motor y el mismo desglose que el ranking de cada
+// oferta. Admite los filtros de GET /ofertas y la paginación; mismo límite
+// que el ranking.
 matchingRouter.get(
   "/jugador/me",
   auth,
   rbac("JUGADOR"),
+  limiteRanking,
+  validate(ofertasCompatiblesQuerySchema, "query"),
   controlador.ofertasCompatibles,
 );
