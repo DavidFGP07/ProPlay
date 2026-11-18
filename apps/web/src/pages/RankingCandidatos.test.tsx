@@ -921,3 +921,20 @@ describe('Explicación generada con IA en el detalle del candidato (RF-11)', () 
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })
+
+describe('Correo del jugador en el detalle del candidato (sustituto de la mensajería)', () => {
+  it('con contacto, el equipo dueño ve el enlace mailto junto al perfil; sin contacto, nada', async () => {
+    sesionDe('EQUIPO')
+    rutas({ [rutaCandidato(ESPECIALISTA)]: detalle(ESPECIALISTA, { contacto: { email: 'tomas@proplay.test' } }) })
+    const { unmount } = renderRuta('/vacantes/oferta-1/ranking/jugador-1')
+
+    const enlace = await screen.findByRole('link', { name: 'Escribir a Tomás Herrera (tomas@proplay.test)' }, ESPERA)
+    expect(enlace).toHaveAttribute('href', 'mailto:tomas@proplay.test')
+    unmount()
+
+    rutas({ [rutaCandidato(ESPECIALISTA)]: detalle(ESPECIALISTA) })
+    renderRuta('/vacantes/oferta-1/ranking/jugador-1')
+    await screen.findByRole('heading', { name: 'Tomás Herrera' }, ESPERA)
+    expect(screen.queryByRole('link', { name: /Escribir a/ })).toBeNull()
+  })
+})
