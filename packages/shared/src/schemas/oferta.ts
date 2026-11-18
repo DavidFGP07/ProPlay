@@ -233,6 +233,15 @@ export const postulacionSchema = z.object({
  * Postulación recibida (`GET /ofertas/:id/postulaciones`), para el equipo y el
  * scout. Del jugador, sólo campos de su perfil público: el correo no sale aquí.
  */
+/**
+ * Contacto del jugador para el equipo dueño de la oferta (sustituto de la
+ * mensajería): su correo, sólo cuando la postulación está en
+ * `ESTADOS_CON_CORREO_VISIBLE`. Nulo en cualquier otro caso y siempre para el
+ * scout y el administrador. Va aparte de `jugador` para que nunca viaje con los
+ * datos del perfil público.
+ */
+export const contactoPostulanteSchema = z.object({ email: z.string().email() }).nullable();
+
 export const postulacionRecibidaSchema = postulacionSchema.extend({
   jugador: perfilJugadorPublicoSchema.pick({
     id: true,
@@ -241,6 +250,7 @@ export const postulacionRecibidaSchema = postulacionSchema.extend({
     pais: true,
     departamento: true,
   }),
+  contacto: contactoPostulanteSchema,
 });
 
 /** Postulación propia del jugador (`GET /ofertas/postulaciones/me`), con su oferta. */
@@ -268,4 +278,5 @@ export type CrearPostulacionInput = z.infer<typeof crearPostulacionSchema>;
 export type ActualizarPostulacionInput = z.infer<typeof actualizarPostulacionSchema>;
 export type Postulacion = z.infer<typeof postulacionSchema>;
 export type PostulacionRecibida = z.infer<typeof postulacionRecibidaSchema>;
+export type ContactoPostulante = z.infer<typeof contactoPostulanteSchema>;
 export type MiPostulacion = z.infer<typeof miPostulacionSchema>;

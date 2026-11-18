@@ -540,3 +540,33 @@ export type MotivoExplicacionNoDisponible = (typeof MOTIVOS_EXPLICACION_NO_DISPO
 
 /** Longitud máxima del texto generado (2 o 3 frases con margen). */
 export const LONGITUD_MAXIMA_EXPLICACION_GENERADA = 1200;
+
+// ------------------------------------------- correo visible para el equipo
+
+/**
+ * Estados de una postulación en los que el **equipo dueño** de la oferta ve el
+ * correo del jugador, para contactarlo: es el sustituto de la mensajería en el
+ * piloto (decisión 0.10). Desde «en revisión» (la preselección) y mientras el
+ * proceso siga abierto o termine aceptado; en `ENVIADA` todavía no, y en
+ * `RECHAZADA` ya no (minimización). El scout y el administrador no lo ven nunca.
+ */
+export const ESTADOS_CON_CORREO_VISIBLE = ["EN_REVISION", "ENTREVISTA", "ACEPTADA"] as const satisfies readonly (
+  | "ENVIADA"
+  | "EN_REVISION"
+  | "ENTREVISTA"
+  | "ACEPTADA"
+  | "RECHAZADA"
+)[];
+
+// ----------------------------------------------------------- notificaciones
+
+/**
+ * Quién movió una postulación, en la notificación `POSTULACION_ACTUALIZADA`:
+ * el equipo dueño o el cierre de la oferta (rechazo automático al pasarla a
+ * cubierta o cerrada).
+ */
+export const ORIGENES_CAMBIO_POSTULACION = ["EQUIPO", "CIERRE_OFERTA"] as const;
+export type OrigenCambioPostulacion = (typeof ORIGENES_CAMBIO_POSTULACION)[number];
+
+/** Notificaciones que se pueden marcar como leídas en una sola petición. */
+export const MAXIMO_NOTIFICACIONES_POR_MARCADO = 100;
