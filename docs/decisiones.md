@@ -609,3 +609,10 @@ decisión.
 | **La cabecera pierde la línea del estado del worker y la campana de notificaciones** | Las dos eran simuladas: la línea decía «Worker de ingesta activo» con cifras del prototipo, y las notificaciones son trabajo futuro (RF-12). El estado real de la ingesta se consulta con `npm run ingesta:estado -w api`. |
 | La vinculación real con Riot y Mis estadísticas siguen en el menú del jugador (`/cuentas-vinculadas`, `/mis-estadisticas`) | No dependen del puente de demostración. La pestaña «Cuentas de juego» de Mi perfil, que desaparece con `VITE_DEMO_DATA=false`, era la simulada del prototipo. |
 | Resuelve la contradicción 1 de «Sincronización de la documentación» (vistas descartadas o de trabajo futuro en el menú) | Esa lista es de sólo añadir: la contradicción se da por resuelta aquí, no se borra allí. |
+
+## Cierre de la tesis sin piloto (2026-11-17)
+
+| Decisión | Justificación |
+| --- | --- |
+| **No hay piloto con usuarios en la tesis.** La sustentación es el 2026-11-27; el código queda cerrado el 2026-11-20 y congelado desde el final del 2026-11-19 (después, sólo correcciones de errores). H1 y H2 se presentan como diseño de validación listo para ejecutarse (`docs/protocolo-validacion.md`), y las tareas 4.13 a 4.16 pasan a trabajo futuro | No da tiempo a desplegar, reclutar y sostener un periodo de uso que cubra vacantes reales. La evidencia disponible es RNF-01, las pruebas automáticas y la demostración (`docs/para-el-informe.md`). |
+| El manual de pruebas piloto del prototipo se sustituye por un **protocolo de validación propuesto**, breve, sin fechas ni duración del periodo de uso, y el manual queda como histórico con un aviso | El manual medía H1 con un cronómetro y pedía funciones que no existen (contradicción 3 de «Sincronización de la documentación», que esto resuelve). El protocolo usa las métricas que ya calcula la plataforma y el script `metricas:piloto`. |

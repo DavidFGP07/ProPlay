@@ -1,6 +1,6 @@
 # Manual de pruebas piloto
 
-> **Documento del prototipo (rama `Fronted`), conservado como historia.** Describe el prototipo, no el código actual (`docs/decisiones.md`, «Integración del cliente de `Fronted`»). **No refleja todavía cómo se medirá el piloto con la aplicación actual.** Diferencias que hay que resolver antes del piloto (no se resuelven aquí): (1) H1 se mide en la aplicación como el tiempo de la publicación a la primera aceptación y al primer tryout, en días naturales (`docs/arquitectura.md`, «Analítica»), no con un cronómetro desde que se abre el ranking; (2) el buscador filtra por posición, rango mínimo y departamento, no por juego, región ni disponibilidad; (3) el ranking se ordena por puntaje o por una dimensión, no por similitud vectorial; (4) se ven tres dimensiones, no cinco (experiencia y habilidades blandas tienen peso 0 en el piloto); (5) la explicación es determinista: la generada con lenguaje natural es del Sprint 4; (6) el registro de habilidades responde `501`. Las métricas de la plataforma se exportan con `npm run metricas:piloto -w api` (`docs/operacion.md`).
+> **Documento del prototipo (rama `Fronted`), conservado como histórico. Sustituido por el [protocolo de validación propuesto](../protocolo-validacion.md)**, que usa las métricas reales de la plataforma y sólo funciones que existen. En la tesis no hubo piloto con usuarios.
 
 Guía operativa para las pruebas piloto con equipos de eSports y jugadores
 semiprofesionales de la región Caribe (OE4), y para la medición de los
