@@ -36,3 +36,12 @@ export { cuotaRiot, estadoClaveRiot } from "./riot/compartido";
 export { LLAMADA_VINCULACION } from "./riot/riot.client";
 export type { EstadoClaveRiot } from "./riot/estadoClave";
 export type { GameStatsProvider } from "./GameStatsProvider";
+export {
+  ErrorLLM,
+  ErrorLLMTiempoAgotado,
+  ProveedorLLMDesactivado,
+  costeEstimado,
+  obtenerProveedorLLM,
+  usarProveedorLLM,
+} from "./llm";
+export type { PeticionLLM, ProveedorLLM, RespuestaLLM } from "./llm";
