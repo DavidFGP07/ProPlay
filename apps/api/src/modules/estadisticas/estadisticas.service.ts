@@ -9,6 +9,7 @@ import {
   type NovedadesRiot,
 } from "../../integrations";
 import { descifrarOpcional } from "../../utils/crypto";
+import { esPuuidSeed } from "../../utils/datosDePrueba";
 import {
   AppError,
   IntegracionRiotNoDisponibleError,
@@ -140,6 +141,8 @@ export async function solicitarSincronizacion(
   datos: SincronizarEstadisticasInput,
 ): Promise<EstadoSincronizacion> {
   const { jugadorId, cuenta } = await cuentaRiotDelUsuario(usuarioId, datos);
+  // Cuenta del seed: no se encola ni se llama a Riot; queda como la dejó el seed.
+  if (esPuuidSeed(cuenta.externalId)) return sincronizacionDeSeed(cuenta.sincronizadaEn);
   if ((await estadoClaveRiot.estado(env.RIOT_API_KEY)) !== "ok") {
     throw new IntegracionRiotNoDisponibleError();
   }
@@ -168,7 +171,17 @@ export async function consultarSincronizacion(
   datos: SincronizarEstadisticasInput,
 ): Promise<EstadoSincronizacion> {
   const { jugadorId, cuenta } = await cuentaRiotDelUsuario(usuarioId, datos);
+  if (esPuuidSeed(cuenta.externalId)) return sincronizacionDeSeed(cuenta.sincronizadaEn);
   return colaIngesta().estado(jugadorId, cuenta.sincronizadaEn);
+}
+
+/**
+ * Estado de una cuenta del seed (`utils/datosDePrueba.ts`): nunca está en la
+ * cola, aunque quede un trabajo suyo de antes, y su última sincronización es
+ * la que fijó el seed.
+ */
+function sincronizacionDeSeed(sincronizadaEn: Date | null): EstadoSincronizacion {
+  return { estado: "INACTIVA", muchaDemanda: false, sincronizadaEn, ultimoResultado: null };
 }
 
 /** Jugadores a los que toca la sincronización periódica. */
@@ -198,7 +211,8 @@ export async function sincronizarCuenta(
   origen: OrigenSincronizacion,
 ): Promise<ResultadoSincronizarCuenta> {
   const cuenta = await repositorio.cuentaVerificada(jugadorId, "RIOT");
-  if (!cuenta) return "OMITIDA";
+  // Sin cuenta, o del seed (su puuid es inventado): nada que pedir a Riot.
+  if (!cuenta || esPuuidSeed(cuenta.externalId)) return "OMITIDA";
 
   const ahora = new Date();
   const reservado = await repositorio.reservarIntentoSincronizacion(

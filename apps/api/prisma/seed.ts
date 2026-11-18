@@ -671,17 +671,22 @@ async function main() {
     } else {
       const handle = `${nombre.split(" ")[0]}#SEED`;
       const verificadaEn = haceDias(60 - indice);
+      // La última sincronización es la de la captura más reciente (hace
+      // `indice` días). La ingesta no vuelve a sincronizar estas cuentas
+      // (`esPuuidSeed`), así que la fecha queda fija.
+      const sincronizadaEn = haceDias(indice);
+      const datosCuenta = {
+        externalId: `${PREFIJO_PUUID_SEED}puuid-${indice + 1}`,
+        handle,
+        servidor: "LA1",
+        verificadaEn,
+        sincronizadaEn,
+        intentoSincronizacionEn: sincronizadaEn,
+      };
       const cuenta = await prisma.cuentaGaming.upsert({
         where: { jugadorId_plataforma: { jugadorId: jugador.id, plataforma: "RIOT" } },
-        update: { externalId: `${PREFIJO_PUUID_SEED}puuid-${indice + 1}`, handle, servidor: "LA1", verificadaEn },
-        create: {
-          jugadorId: jugador.id,
-          plataforma: "RIOT",
-          externalId: `${PREFIJO_PUUID_SEED}puuid-${indice + 1}`,
-          handle,
-          servidor: "LA1",
-          verificadaEn,
-        },
+        update: datosCuenta,
+        create: { jugadorId: jugador.id, plataforma: "RIOT", ...datosCuenta },
       });
 
       for (const [captura, rango] of [riot.rangoAnterior, riot.rango].entries()) {

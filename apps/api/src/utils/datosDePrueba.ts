@@ -12,6 +12,14 @@
 /** Prefijo de los `puuid` (`CuentaGaming.externalId`) de las cuentas de Riot del seed. */
 export const PREFIJO_PUUID_SEED = "seed-";
 
+/**
+ * `true` si la cuenta de Riot es del seed. La ingesta no las encola ni llama a
+ * Riot por ellas: su `puuid` es inventado y Riot lo rechazaría.
+ */
+export function esPuuidSeed(externalId: string): boolean {
+  return externalId.startsWith(PREFIJO_PUUID_SEED);
+}
+
 export const CORREO_ADMIN_SEED = "admin@proplay.gg";
 export const CORREO_SCOUT_SEED = "scout@proplay.gg";
 
