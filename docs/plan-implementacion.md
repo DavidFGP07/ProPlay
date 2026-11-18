@@ -191,14 +191,14 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 | 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato) y el PR del explicador. Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido. |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje<br>**Pendiente.** |
 | 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Hecha** con el explicador: sin clave, con error, tiempo agotado, fidelidad fallida o límite agotado responde `NO_DISPONIBLE` y la vista se queda con la explicación determinista. |
-| 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y administración |
+| 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y administración. **Notificaciones (4.5): hechas** en versión mínima (PR de notificaciones): tres eventos, emisor en proceso y rutas propias |
 
 ### Frontend
 
 | # | Tarea |
 |---|---|
 | 4.7 | Explicación del matching en el detalle del candidato<br>**Hecha:** bloque «Por qué encaja (generado con IA)» sobre la tabla de aportes, con esqueleto y nota de degradación (`components/ExplicacionGenerada.tsx`). |
-| 4.8, 4.9, 4.11 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y subvistas de administración |
+| 4.8, 4.9, 4.11 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y subvistas de administración. **Notificaciones en el cliente (4.9): hechas**, con la campana de la cabecera |
 | 4.10 | **Analítica con datos reales**, fusionada con el panel del equipo: completa los cuatro indicadores (mapa del talento de 2.15, tendencia de 2.16, embudo y dimensión decisiva de 3.17). Es el componente de innovación que exige el director<br>**Hecha:** #51 a #55. |
 | 4.12 | **Retirar por completo el puente de demostración y la bandera `VITE_DEMO_DATA`**<br>**Pendiente.** |
 
@@ -238,7 +238,7 @@ Sin orden de recuperación, en fase 2:
 
 | Antes | Tarea |
 |---|---|
-| 4.5 y 4.9 | Módulo `notificaciones` y su conexión en el cliente (RF-12) |
+| 4.5 y 4.9 | ~~Módulo `notificaciones` y su conexión en el cliente (RF-12)~~: hechas en versión mínima. Quedan las preferencias, el correo electrónico, las push y el tiempo real |
 | 4.6 y 4.11 | Módulo `admin` y subvistas de administración (interfaz de RF-14). Mientras tanto, las operaciones van por los scripts de `docs/operacion.md` y la auditoría se sigue escribiendo en `AuditLog` |
 | — | Descartadas: verificación de correo, feed, onboarding, comparador de candidatos y lista de seguimiento |
 
