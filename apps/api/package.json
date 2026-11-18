@@ -31,6 +31,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "@prisma/client": "^5.22.0",
     "@proplay/shared": "*",
     "bcryptjs": "^3.0.3",
