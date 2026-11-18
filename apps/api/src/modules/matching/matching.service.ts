@@ -285,7 +285,8 @@ export async function ranking(
 
 /**
  * RF-09 · RF-11 · Un candidato del ranking de la oferta, con su explicación,
- * sus vecinos por puesto y los datos del cálculo. Mismos permisos y mismo
+ * sus vecinos por puesto y los datos del cálculo. Para el equipo dueño, el
+ * correo del jugador si su postulación está en `ESTADOS_CON_CORREO_VISIBLE`. Mismos permisos y mismo
  * recálculo al leer que el ranking; 404 si el jugador no está en él.
  */
 export async function candidato(
@@ -299,13 +300,20 @@ export async function candidato(
   if (!fila) throw new NotFoundError("El jugador no está en el ranking de esta oferta");
   const vecino = (id: string | null, nombre: string | null) =>
     id !== null && nombre !== null ? { id, nombre } : null;
+  const candidatoRanking = aCandidato(fila);
+  // Sustituto de la mensajería: un EQUIPO sólo llega aquí con una oferta propia
+  // (ofertaDelRanking), así que es el equipo dueño. El correo se lee sólo si toca.
+  const { postulacion } = candidatoRanking;
+  const email =
+    actor.rol === "EQUIPO" && postulacion && ofertas.correoVisibleEn(postulacion.estado)
+      ? await repositorio.correoDelJugador(jugadorId)
+      : null;
   return {
-    candidato: aCandidato(fila),
+    candidato: candidatoRanking,
     anterior: vecino(fila.anteriorId, fila.anteriorNombre),
     siguiente: vecino(fila.siguienteId, fila.siguienteNombre),
     total: fila.total,
-    // El correo visible para el equipo dueño llega en su propio PR; hasta entonces, nadie lo ve.
-    contacto: null,
+    contacto: email ? { email } : null,
     ...datosDelCalculo(oferta, fila.calculadoEn),
   };
 }
