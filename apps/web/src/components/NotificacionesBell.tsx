@@ -1,185 +1,163 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import {
-  Bell,
-  Briefcase,
-  CheckCheck,
-  Database,
-  MessageSquare,
-  Sparkles,
-  UserCheck,
-} from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Bell, CheckCheck } from 'lucide-react'
 import { Button, cn } from '@/components/ui'
 import {
-  useMarcarNotificacionLeida,
+  useContadorNotificaciones,
+  useMarcarLeidas,
   useMarcarTodasLeidas,
-  useNotificaciones,
+  useNotificacionesRecientes,
 } from '@/api/notificaciones'
-import type { Notificacion, TipoNotificacion } from '@/mocks/modelos'
+import { es } from '@/i18n/es'
+import { describirNotificacion, haceCuanto } from '@/lib/notificaciones'
 
-const ICONOS: Record<TipoNotificacion, typeof Bell> = {
-  postulacion: Briefcase,
-  estado_postulacion: Sparkles,
-  oferta: Sparkles,
-  endoso: UserCheck,
-  ingesta: Database,
-  mensaje: MessageSquare,
-}
-
-const COLORES: Record<TipoNotificacion, string> = {
-  postulacion: 'bg-brand-500/12 text-brand-300',
-  estado_postulacion: 'bg-accent-500/12 text-accent-400',
-  oferta: 'bg-brand-500/12 text-brand-300',
-  endoso: 'bg-emerald-500/12 text-emerald-300',
-  ingesta: 'bg-cyan-500/12 text-cyan-300',
-  mensaje: 'bg-amber-500/12 text-amber-300',
-}
-
-function tiempoRelativo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const minutos = Math.floor(diff / 60_000)
-  if (minutos < 1) return 'ahora'
-  if (minutos < 60) return `hace ${minutos} min`
-  const horas = Math.floor(minutos / 60)
-  if (horas < 24) return `hace ${horas} h`
-  const dias = Math.floor(horas / 24)
-  if (dias === 1) return 'ayer'
-  if (dias < 30) return `hace ${dias} dias`
-  return new Date(iso).toLocaleDateString('es-CO')
-}
+const t = es.notificaciones
 
 /**
- * Centro de notificaciones (RF-12). Consume los eventos de negocio que emite
- * la capa de API: postulaciones, cambios de estado, endoses, sincronizaciones
- * del worker y mensajes.
+ * RF-12 · Campana de la cabecera: el contador de no leídas (consultado cada
+ * 60 s, sin tiempo real) y un panel con las últimas notificaciones, «Marcar
+ * todas como leídas» y el enlace de cada una, que la marca como leída.
+ *
+ * Teclado: el botón abre y cierra el panel; Esc lo cierra y devuelve el foco
+ * al botón. El nombre del botón lleva el contador y un aviso educado lo anuncia
+ * cuando cambia.
  */
 export function NotificacionesBell() {
-  const navegar = useNavigate()
   const [abierto, setAbierto] = useState(false)
-  const { data: notificaciones = [] } = useNotificaciones()
-  const marcarLeida = useMarcarNotificacionLeida()
+  const contador = useContadorNotificaciones()
+  const recientes = useNotificacionesRecientes(abierto)
+  const marcarLeidas = useMarcarLeidas()
   const marcarTodas = useMarcarTodasLeidas()
-  const contenedorRef = useRef<HTMLDivElement>(null)
+  const contenedor = useRef<HTMLDivElement>(null)
+  const boton = useRef<HTMLButtonElement>(null)
+  const idPanel = useId()
+  const noLeidas = contador.data?.noLeidas ?? 0
 
-  // Cierre al pulsar fuera del panel.
   useEffect(() => {
     if (!abierto) return
     const alPulsar = (e: MouseEvent) => {
-      if (!contenedorRef.current?.contains(e.target as Node)) setAbierto(false)
+      if (!contenedor.current?.contains(e.target as Node)) setAbierto(false)
     }
-    const alEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAbierto(false)
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setAbierto(false)
+        boton.current?.focus()
+      }
     }
     document.addEventListener('mousedown', alPulsar)
-    document.addEventListener('keydown', alEsc)
+    document.addEventListener('keydown', alTeclear)
     return () => {
       document.removeEventListener('mousedown', alPulsar)
-      document.removeEventListener('keydown', alEsc)
+      document.removeEventListener('keydown', alTeclear)
     }
   }, [abierto])
 
-  const noLeidas = notificaciones.filter((n) => !n.leida).length
-
-  const abrirNotificacion = async (n: Notificacion) => {
-    await marcarLeida.mutateAsync(n.id)
-    setAbierto(false)
-    if (n.enlace) navegar(n.enlace)
-  }
+  const notificaciones = recientes.data?.data ?? []
 
   return (
-    <div className="relative" ref={contenedorRef}>
+    <div className="relative" ref={contenedor}>
       <button
+        ref={boton}
+        type="button"
         onClick={() => setAbierto((v) => !v)}
-        className="relative grid size-9 place-items-center rounded-lg text-slate-400 transition hover:bg-white/6 hover:text-slate-200"
-        aria-label={`Notificaciones${noLeidas > 0 ? `, ${noLeidas} sin leer` : ''}`}
+        aria-label={t.boton(noLeidas)}
         aria-expanded={abierto}
+        aria-controls={idPanel}
+        className="relative grid size-9 place-items-center rounded-lg text-slate-300 transition hover:bg-white/6 hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
       >
-        <Bell size={17} />
+        <Bell size={17} aria-hidden />
         {noLeidas > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[9px] font-bold text-white">
+          <span
+            aria-hidden
+            className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white"
+          >
             {noLeidas > 9 ? '9+' : noLeidas}
           </span>
         )}
       </button>
+      <span className="sr-only" aria-live="polite">
+        {noLeidas > 0 ? t.anuncio(noLeidas) : ''}
+      </span>
 
       {abierto && (
-        <div className="animate-fade-up absolute right-0 top-11 z-50 w-[min(92vw,22rem)] overflow-hidden rounded-2xl border border-white/10 bg-surface-800 shadow-2xl shadow-black/50">
+        <section
+          id={idPanel}
+          aria-label={t.titulo}
+          // En móvil, fijo a la pantalla con 16 px a cada lado (la campana no está en
+          // el borde y un panel anclado a ella se saldría por la izquierda).
+          className="animate-fade-up fixed inset-x-4 top-16 z-50 overflow-hidden rounded-2xl border border-white/10 bg-surface-800 shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:top-11 sm:right-0 sm:w-[22rem]"
+        >
           <div className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
             <div>
-              <p className="text-xs font-semibold text-slate-100">Notificaciones</p>
-              <p className="text-[10px] text-slate-500">
-                {noLeidas > 0 ? `${noLeidas} sin leer` : 'Todo al dia'}
-              </p>
+              <h2 className="text-xs font-semibold text-slate-100">{t.titulo}</h2>
+              <p className="text-[11px] text-slate-400">{t.sinLeer(noLeidas)}</p>
             </div>
             {noLeidas > 0 && (
               <Button
                 variante="fantasma"
                 tamano="sm"
                 onClick={() => marcarTodas.mutate()}
+                disabled={marcarTodas.isPending}
               >
-                <CheckCheck size={13} />
-                Marcar todas
+                <CheckCheck size={13} aria-hidden />
+                {t.marcarTodas}
               </Button>
             )}
           </div>
 
           <div className="max-h-[22rem] overflow-y-auto">
-            {notificaciones.length === 0 ? (
-              <p className="px-4 py-10 text-center text-xs text-slate-500">
-                No hay eventos por ahora.
-              </p>
+            {recientes.isPending ? (
+              <div aria-busy="true" aria-label={t.cargando} className="space-y-2 p-4">
+                <div className="skeleton h-10 rounded-lg" />
+                <div className="skeleton h-10 rounded-lg" />
+                <div className="skeleton h-10 rounded-lg" />
+              </div>
+            ) : recientes.isError ? (
+              <div className="space-y-2 px-4 py-6 text-center">
+                <p className="text-xs text-slate-400">{t.error}</p>
+                <Button variante="fantasma" tamano="sm" onClick={() => void recientes.refetch()}>
+                  {t.reintentar}
+                </Button>
+              </div>
+            ) : notificaciones.length === 0 ? (
+              <p className="px-4 py-10 text-center text-xs text-slate-400">{t.vacio}</p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {notificaciones.map((n) => {
-                  const Icono = ICONOS[n.tipo]
+                  const { texto, enlace } = describirNotificacion(n)
+                  const sinLeer = n.leidaEn === null
                   return (
                     <li key={n.id}>
-                      <button
-                        onClick={() => abrirNotificacion(n)}
+                      <Link
+                        to={enlace}
+                        onClick={() => {
+                          if (sinLeer) marcarLeidas.mutate([n.id])
+                          setAbierto(false)
+                        }}
                         className={cn(
-                          'flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-white/4',
-                          !n.leida && 'bg-brand-500/6',
+                          'flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-white/4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-400',
+                          sinLeer && 'bg-brand-500/6',
                         )}
                       >
                         <span
-                          className={cn(
-                            'mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg',
-                            COLORES[n.tipo],
-                          )}
-                        >
-                          <Icono size={15} />
-                        </span>
+                          aria-hidden
+                          className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', sinLeer ? 'bg-brand-400' : 'bg-transparent')}
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="flex items-start justify-between gap-2">
-                            <span className="text-[11px] font-medium text-slate-200">
-                              {n.titulo}
-                            </span>
-                            <span className="shrink-0 text-[10px] text-slate-600">
-                              {tiempoRelativo(n.fecha)}
-                            </span>
+                          <span className="block text-xs leading-relaxed text-slate-200">
+                            {sinLeer && <span className="sr-only">{t.nueva}: </span>}
+                            {texto}
                           </span>
-                          <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
-                            {n.detalle}
-                          </span>
-                          {!n.leida && (
-                            <span className="mt-1.5 inline-block size-1.5 rounded-full bg-brand-400" />
-                          )}
+                          <span className="mt-0.5 block text-[11px] text-slate-400">{haceCuanto(n.creadoEn)}</span>
                         </span>
-                      </button>
+                      </Link>
                     </li>
                   )
                 })}
               </ul>
             )}
           </div>
-
-          <div className="border-t border-white/8 px-4 py-2.5">
-            <p className="text-[10px] leading-relaxed text-slate-600">
-              Los eventos se registran con usuario, accion y marca de tiempo en el
-              registro de auditoria (RNF-06).
-            </p>
-          </div>
-        </div>
+        </section>
       )}
     </div>
   )

@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { Avatar, Badge, Button, cn } from '@/components/ui'
 import { AvisoDatosDemo } from '@/components/AvisoDatosDemo'
+import { NotificacionesBell } from '@/components/NotificacionesBell'
 import { AREAS } from '@/router/areas'
 import { es } from '@/i18n/es'
 import type { Rol } from '@proplay/shared'
@@ -159,9 +160,10 @@ export function Layout() {
             <Menu size={20} />
           </button>
 
-          {/* Sin la línea del worker ni la campana de notificaciones, que eran
-              simuladas (tarea 1.7): las notificaciones son trabajo futuro. */}
+          {/* RF-12 · La campana usa las notificaciones reales (GET /notificaciones);
+              la línea del worker, que era simulada, sigue fuera (tarea 1.7). */}
           <div className="flex flex-1 items-center justify-end gap-2">
+            <NotificacionesBell />
 
             <Link
               to="/cuenta"

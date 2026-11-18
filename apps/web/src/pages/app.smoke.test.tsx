@@ -141,7 +141,7 @@ describe('Aplicacion', () => {
     }
   })
 
-  it('el menu no ofrece Feed, Mensajes ni Auditoria, y la cabecera no tiene campana ni estado del worker (1.7)', async () => {
+  it('el menu no ofrece Feed, Mensajes ni Auditoria, y la cabecera no tiene estado del worker (1.7) pero si la campana real (RF-12)', async () => {
     for (const rol of ['JUGADOR', 'EQUIPO', 'ADMIN'] as const) {
       sesionDe(rol)
       const { unmount } = render(renderApp('/cuenta'))
@@ -149,7 +149,7 @@ describe('Aplicacion', () => {
       for (const nombre of [/^Feed$/, /^Mensajes$/, /^Auditoria$/]) {
         expect(within(menu).queryByRole('link', { name: nombre })).toBeNull()
       }
-      expect(screen.queryByLabelText(/Notificaciones/i)).toBeNull()
+      expect(screen.getByRole('button', { name: /^Notificaciones/ })).toBeInTheDocument()
       expect(screen.queryByText(/Worker de ingesta/i)).toBeNull()
       unmount()
     }

@@ -610,6 +610,25 @@ export const es = {
     cambiada: (nombre: string, estado: string) => `${nombre}: ${estado}.`,
     congelada: 'La oferta ya no está abierta: sus postulaciones no cambian de estado.',
   },
+  // RF-12 · Notificaciones dentro de la app (campana de la cabecera)
+  notificaciones: {
+    titulo: 'Notificaciones',
+    boton: (noLeidas: number) =>
+      noLeidas === 0 ? 'Notificaciones, ninguna sin leer' : `Notificaciones, ${noLeidas} sin leer`,
+    anuncio: (noLeidas: number) => (noLeidas === 1 ? 'Tienes 1 notificación sin leer' : `Tienes ${noLeidas} notificaciones sin leer`),
+    sinLeer: (noLeidas: number) => (noLeidas === 0 ? 'Todo leído' : `${noLeidas} sin leer`),
+    marcarTodas: 'Marcar todas como leídas',
+    vacio: 'Todavía no tienes notificaciones.',
+    cargando: 'Cargando las notificaciones',
+    error: 'No pudimos cargar las notificaciones.',
+    reintentar: 'Reintentar',
+    nueva: 'Sin leer',
+    ahora: 'ahora',
+    nuevaPostulacion: (oferta: string) => `Nueva postulación a «${oferta}».`,
+    postulacionActualizada: (oferta: string, estado: string) =>
+      `Tu postulación a «${oferta}» pasó a «${estado}».`,
+    cierreOferta: (oferta: string) => `La oferta «${oferta}» se cerró y tu postulación quedó rechazada.`,
+  },
   // Sustituto de la mensajería: correo del jugador para el equipo dueño
   contacto: {
     etiqueta: (nombre: string, email: string) => `Escribir a ${nombre} (${email})`,
