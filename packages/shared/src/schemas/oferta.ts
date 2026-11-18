@@ -150,8 +150,9 @@ export const cambiarEstadoOfertaSchema = z.object({
 
 /**
  * Filtros de `GET /ofertas`: sólo ofertas `ABIERTA`, de la más reciente a la
- * más antigua mientras no exista el ranking por compatibilidad. Se combina con
- * `paginacionQuerySchema`.
+ * más antigua. Se combina con `paginacionQuerySchema`. El jugador las ve
+ * ordenadas por compatibilidad con `GET /matching/jugador/me`
+ * (`ofertasCompatiblesQuerySchema`), que admite los mismos filtros.
  */
 export const listarOfertasQuerySchema = z.object({
   rol: z.enum(POSICIONES_LOL).optional(),
