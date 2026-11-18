@@ -1,4 +1,5 @@
 import {
+  ESTADOS_CON_CORREO_VISIBLE,
   JUEGO_PILOTO,
   TRANSICIONES_OFERTA,
   TRANSICIONES_POSTULACION,
@@ -65,7 +66,21 @@ function aOferta(oferta: repositorio.OfertaDb): Oferta {
   };
 }
 
-function aPostulacionRecibida(p: repositorio.PostulacionRecibidaDb): PostulacionRecibida {
+/**
+ * Sustituto de la mensajería (decisión 0.10): el equipo dueño de la oferta ve
+ * el correo del jugador desde la preselección («en revisión») y mientras el
+ * proceso siga o termine aceptado. Nunca el scout ni el administrador, nunca
+ * en `ENVIADA` ni en `RECHAZADA`. Lo usan las postulaciones recibidas y el
+ * detalle del candidato del ranking.
+ */
+export function correoVisibleEn(estado: EstadoPostulacion): boolean {
+  return (ESTADOS_CON_CORREO_VISIBLE as readonly EstadoPostulacion[]).includes(estado);
+}
+
+function aPostulacionRecibida(
+  p: repositorio.PostulacionRecibidaDb,
+  esEquipoDueno: boolean,
+): PostulacionRecibida {
   const { jugador, ...postulacion } = p;
   return {
     ...postulacion,
@@ -76,8 +91,8 @@ function aPostulacionRecibida(p: repositorio.PostulacionRecibidaDb): Postulacion
       pais: jugador.pais as Pais | null,
       departamento: jugador.departamento,
     },
-    // El correo visible para el equipo dueño llega en su propio PR; hasta entonces, nadie lo ve.
-    contacto: null,
+    contacto:
+      esEquipoDueno && correoVisibleEn(postulacion.estado) ? { email: jugador.usuario.email } : null,
   };
 }
 
@@ -296,16 +311,19 @@ export async function postular(
 
 /**
  * RF-10 · Postulaciones recibidas por una oferta. El equipo sólo ve las de sus
- * ofertas; el scout y el administrador, las de cualquier oferta publicada.
+ * ofertas; el scout y el administrador, las de cualquier oferta publicada. Sólo
+ * el equipo dueño recibe el correo (`contacto`), y sólo en `correoVisibleEn`.
  */
 export async function listarPostulaciones(
   ofertaId: string,
   actor: Actor,
 ): Promise<PostulacionRecibida[]> {
-  if (actor.rol === "EQUIPO") await ofertaPropia(ofertaId, actor);
+  // Un equipo sólo llega aquí con una oferta propia: es el equipo dueño.
+  const esEquipoDueno = actor.rol === "EQUIPO";
+  if (esEquipoDueno) await ofertaPropia(ofertaId, actor);
   else await ofertaVisible(ofertaId, actor);
   const postulaciones = await repositorio.listarPostulacionesDeOferta(ofertaId);
-  return postulaciones.map(aPostulacionRecibida);
+  return postulaciones.map((p) => aPostulacionRecibida(p, esEquipoDueno));
 }
 
 /** RF-10 · Postulaciones del jugador autenticado, con su oferta. */
