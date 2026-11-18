@@ -23,7 +23,7 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
   de Riot por desafío de icono, ingesta en cola con cuota global en Redis y sincronización
   periódica, Cuentas vinculadas y Mis estadísticas con su tendencia, y el buscador de
   talento.
-- **Sprint 3 (motor de matching), cerrado salvo 3.15 y 3.18.** Ofertas con estados, pesos,
+- **Sprint 3 (motor de matching), cerrado salvo 3.15.** Ofertas con estados, pesos,
   modalidad y ubicación; postulaciones con la fecha de cada etapa; motor de matching
   (vectorizador, recuperador HNSW, cinco dimensiones, ponderador y persistencia); ranking
   con desglose y detalle del candidato; RNF-01 medido en local (`docs/rnf-01.md`).
@@ -39,8 +39,7 @@ pruebas propia (`proplay_test`).
   «Calculador exacto») y retirar el puente de demostración (4.12).
 - **Despliegue** (2.13): nunca se ha desplegado. Sin URL pública tampoco se puede pedir la
   clave de producción de Riot (0.1).
-- **Soporte:** habilidades y endorsements (2.2), ajustes de privacidad y el sustituto de la
-  mensajería (3.18).
+- **Soporte:** habilidades y endorsements (2.2) y ajustes de privacidad.
 - **Secciones simuladas de Mi perfil** (cuentas, habilidades, portafolio, privacidad y
   laterales), que desaparecen con `VITE_DEMO_DATA=false`.
 - **Validación** (4.13 a 4.16): depende del despliegue, del reclutamiento y de la línea base,
@@ -163,7 +162,7 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 | 3.9 | **Medir RNF-01 en este sprint**: percentil 95 por debajo de 2 s con 1.000 perfiles indexados. Si se mide al final y falla, corregirlo exige rehacer el motor<br>**Hecha:** #46 (`docs/rnf-01.md`; medido en local, se repetirá en el despliegue). |
 | 3.16 | **Guardar la fecha de cada cambio de estado de la postulación** (historial de estados, no sólo el estado actual). Sin ella no se calcula el embudo de la vacante ni el tiempo hasta cubrirla (H1). Va con 3.2 y es un cambio de esquema en su propio PR<br>**Hecha:** #28 y #29 (columnas `revisadaEn`, `entrevistaEn`, `aceptadaEn`, `rechazadaEn`). |
 | 3.17 | Datos de la analítica: **embudo de la vacante con tiempo hasta cubrirla** (sobre 3.16) y **qué dimensión decide el ranking** (sobre el desglose de 3.7). La vista se completa en 4.10<br>**Hecha:** #51, #52 y #53/#55. |
-| 3.18 | Sustituto de la mensajería en el piloto (decisión 0.10): el equipo ve el correo del jugador cuando **preselecciona** su postulación. Antes de activarlo, reflejarlo en el aviso de privacidad y, si cambia el texto, subir `VERSION_AVISO_PRIVACIDAD`<br>**Pendiente.** |
+| 3.18 | Sustituto de la mensajería en el piloto (decisión 0.10): el equipo ve el correo del jugador cuando **preselecciona** su postulación. Antes de activarlo, reflejarlo en el aviso de privacidad y, si cambia el texto, subir `VERSION_AVISO_PRIVACIDAD`<br>**Hecha** (PR del correo visible): el equipo dueño ve el correo en revisión, entrevista o aceptada, en las postulaciones recibidas y en el detalle del candidato; el aviso lo dice (sigue en 1.0, sin publicar). |
 
 ### Frontend
 
@@ -332,8 +331,8 @@ Actualizado el 2026-11-17. Lo que queda, en el orden en que más incertidumbre r
    producción de Riot (0.1) y es donde hay que repetir RNF-01.
 2. ~~**Retirar del menú las vistas simuladas (1.7)**~~: hecha (#58).
 3. ~~**Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**~~: hecha (#63 y el PR del explicador).
-4. **Soporte mínimo:** habilidades y endorsements (2.2), ajustes de privacidad y sustituto de
-   la mensajería (3.18).
+4. **Soporte mínimo:** habilidades y endorsements (2.2) y ajustes de privacidad; el sustituto
+   de la mensajería (3.18) está hecho.
 5. **Piloto (4.13 a 4.16)**, con la línea base (0.2) cargada en
    `LINEA_BASE_SCOUTING_MANUAL` y las métricas del script `metricas:piloto`.
 

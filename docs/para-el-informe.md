@@ -165,7 +165,7 @@ funcionales (Cuadro IV).
 | RF-09 Puntaje y ranking | Hecho: cinco dimensiones, ranking persistido y explicable |
 | RF-10 Postulaciones | Hecho, con la fecha de cada etapa |
 | RF-11 Explicación en lenguaje natural | Hecho: explicación determinista por dimensión y, encima, un texto redactado por Claude Haiku 5.5 a partir del desglose (módulo `explicador`), con comprobación de fidelidad, caché, límites y degradación a la determinista |
-| RF-12 Mensajería y notificaciones | Trabajo futuro (`501`) |
+| RF-12 Mensajería y notificaciones | Mensajería: trabajo futuro (`501`); la sustituye el correo del jugador, visible para el equipo dueño desde que preselecciona la postulación. Notificaciones: trabajo futuro (`501`) |
 | RF-13 Analítica | Hecho en el módulo `analitica` y `/dashboard`, más el script del piloto |
 | RF-14 Auditoría | Se escribe en `AuditLog` (registro, login, cambios de contraseña, vinculación, ofertas, postulaciones y cambio de rol); **la vista de consulta es trabajo futuro** |
 
