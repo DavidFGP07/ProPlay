@@ -35,8 +35,8 @@ pruebas propia (`proplay_test`).
 
 ### No funciona todavía
 
-- **Sprint 4:** la explicación con modelo de lenguaje (4.1 a 4.3 y 4.7) y retirar el puente
-  de demostración (4.12).
+- **Sprint 4:** el sandbox de Python (4.2; el cálculo es determinista en TypeScript, decisión
+  «Calculador exacto») y retirar el puente de demostración (4.12).
 - **Despliegue** (2.13): nunca se ha desplegado. Sin URL pública tampoco se puede pedir la
   clave de producción de Riot (0.1).
 - **Soporte:** habilidades y endorsements (2.2), ajustes de privacidad y el sustituto de la
@@ -189,16 +189,16 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 
 | # | Tarea |
 |---|---|
-| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Pendiente.** |
+| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato) y el PR del explicador. Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido. |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje<br>**Pendiente.** |
-| 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Pendiente.** |
+| 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Hecha** con el explicador: sin clave, con error, tiempo agotado, fidelidad fallida o límite agotado responde `NO_DISPONIBLE` y la vista se queda con la explicación determinista. |
 | 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y administración |
 
 ### Frontend
 
 | # | Tarea |
 |---|---|
-| 4.7 | Explicación del matching en el detalle del candidato<br>**Pendiente.** El hueco (`explicacionGenerada`) está en `CandidatoDetallePage.tsx` (#49); hoy la explicación es determinista. |
+| 4.7 | Explicación del matching en el detalle del candidato<br>**Hecha:** bloque «Por qué encaja (generado con IA)» sobre la tabla de aportes, con esqueleto y nota de degradación (`components/ExplicacionGenerada.tsx`). |
 | 4.8, 4.9, 4.11 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería, notificaciones y subvistas de administración |
 | 4.10 | **Analítica con datos reales**, fusionada con el panel del equipo: completa los cuatro indicadores (mapa del talento de 2.15, tendencia de 2.16, embudo y dimensión decisiva de 3.17). Es el componente de innovación que exige el director<br>**Hecha:** #51 a #55. |
 | 4.12 | **Retirar por completo el puente de demostración y la bandera `VITE_DEMO_DATA`**<br>**Pendiente.** |
@@ -331,7 +331,7 @@ Actualizado el 2026-11-17. Lo que queda, en el orden en que más incertidumbre r
 1. **Despliegue (2.13)**, con el cliente público: desbloquea la solicitud de la clave de
    producción de Riot (0.1) y es donde hay que repetir RNF-01.
 2. ~~**Retirar del menú las vistas simuladas (1.7)**~~: hecha (#58).
-3. **Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**, con degradación al desglose.
+3. ~~**Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**~~: hecha (#63 y el PR del explicador).
 4. **Soporte mínimo:** habilidades y endorsements (2.2), ajustes de privacidad y sustituto de
    la mensajería (3.18).
 5. **Piloto (4.13 a 4.16)**, con la línea base (0.2) cargada en
