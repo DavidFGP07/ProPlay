@@ -1,12 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   candidatoOfertaSchema,
+  ofertasCompatiblesSchema,
   rankingOfertaSchema,
   type OrdenRanking,
   type RankingOferta,
 } from '@proplay/shared'
 import { api } from '@/api/client'
 import { simulado } from '@/api/demo'
+import type { FiltrosOfertas } from '@/api/ofertas'
 import { obtenerRecomendaciones } from '@/mocks/api'
 import type { Pesos } from '@/mocks/modelos'
 
@@ -73,9 +75,24 @@ export function useRecalcularRanking(ofertaId: string | undefined, filtros: Filt
   })
 }
 
+// RF-09 · Ofertas abiertas ordenadas por compatibilidad con el jugador en
+// sesion, con los mismos filtros y la misma paginacion que GET /ofertas
+export function useOfertasCompatibles(filtros: FiltrosOfertas, habilitado = true) {
+  return useQuery({
+    queryKey: ['matching', 'jugador', filtros],
+    enabled: habilitado,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data } = await api.get('/matching/jugador/me', { params: filtros })
+      return ofertasCompatiblesSchema.parse(data)
+    },
+  })
+}
+
 /*
- * Recomendaciones del feed del jugador: siguen simuladas (la vista es de
- * trabajo futuro y GET /matching/jugador/me responde 501).
+ * Recomendaciones del feed del jugador: siguen simuladas porque el feed es
+ * trabajo futuro (decision 0.10). Explorar oportunidades ya usa
+ * `useOfertasCompatibles`, con la API real.
  */
 
 // RF-09 · Ofertas recomendadas para el jugador en sesion

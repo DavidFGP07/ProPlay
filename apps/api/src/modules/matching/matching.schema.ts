@@ -13,6 +13,9 @@ export {
   explicacionMatchingSchema,
   idParamSchema,
   matchingSchema,
+  ofertaCompatibleSchema,
+  ofertasCompatiblesQuerySchema,
+  ofertasCompatiblesSchema,
   rankingOfertaQuerySchema,
   rankingOfertaSchema,
 } from "@proplay/shared";
@@ -23,6 +26,9 @@ export type {
   DesgloseMatching,
   ExplicacionMatching,
   Matching,
+  OfertaCompatible,
+  OfertasCompatibles,
+  OfertasCompatiblesQuery,
   RankingOferta,
   RankingOfertaQuery,
 } from "@proplay/shared";

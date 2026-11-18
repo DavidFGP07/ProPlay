@@ -351,7 +351,7 @@ de su vista en el inventario de CLAUDE.md §5.
 | `PATCH /ofertas/postulaciones/:id` | EQUIPO | RF-10 | Implementado |
 | `GET /matching/ofertas/:id/ranking` · `GET /matching/ofertas/:id/candidatos/:jugadorId` | EQUIPO, SCOUT, ADMIN | RF-09, RF-11 | Implementado |
 | `POST /matching/ofertas/:id/recalcular` | EQUIPO, SCOUT | RF-09 | Implementado |
-| `GET /matching/jugador/me` | JUGADOR | RF-09 | **501** |
+| `GET /matching/jugador/me` | JUGADOR | RF-09 | Implementado |
 | `GET /analitica/embudo` · `GET /analitica/ofertas/:id/embudo` · `GET /analitica/ofertas/:id/dimension-decisiva` | EQUIPO | RF-13 | Implementado |
 | `GET /analitica/talento` | EQUIPO, SCOUT, ADMIN | RF-13 | Implementado |
 | `GET`, `POST /mensajeria/conversaciones` · `GET`, `POST /mensajeria/conversaciones/:id/mensajes` | con sesión | RF-12 | **501** (trabajo futuro) |

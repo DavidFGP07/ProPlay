@@ -7,6 +7,10 @@ import {
   type CandidatoOferta,
   type CandidatoRanking,
   type EstadoOferta,
+  type Oferta,
+  type OfertaCompatible,
+  type OfertasCompatibles,
+  type OfertasCompatiblesQuery,
   type RankingOferta,
   type RankingOfertaQuery,
   type Rol,
@@ -14,6 +18,7 @@ import {
 import { logger } from "../../config/logger";
 import { AppError, ForbiddenError, NotFoundError } from "../../utils/errors";
 import { calcularRango, paginar } from "../../utils/pagination";
+import * as ofertas from "../ofertas/ofertas.service";
 import * as repositorio from "./matching.repository";
 import { arranqueEnFrio, combinar, modoDe, type ComponenteColaborativo } from "./motor/colaborativo";
 import { ordenarRanking, puntuar } from "./motor/ponderador";
@@ -318,7 +323,76 @@ export async function recalcular(
   return respuesta(oferta, query);
 }
 
-/** TODO: Devolver las ofertas más compatibles con el jugador autenticado. */
-export async function ofertasCompatibles(datos?: unknown) {
-  return repositorio.ofertasCompatibles(datos);
+// --------------------------------------------------- ofertas del jugador
+
+/** La oferta del contrato, en la forma que espera el motor. */
+function ofertaMotorDeContrato(oferta: Oferta): OfertaMotor {
+  return {
+    ofertaId: oferta.id,
+    rol: oferta.rol,
+    rangoMinimo: oferta.rangoMinimo,
+    modalidad: oferta.modalidad,
+    pais: oferta.pais,
+    departamento: oferta.departamento,
+    horasSemana: oferta.horasSemana,
+    pesos: oferta.pesos,
+  };
+}
+
+/**
+ * Orden de las ofertas para el jugador: puntaje de mayor a menor; a igualdad,
+ * la técnica (lo verificable desempata, como en el ranking), la publicación
+ * más reciente y, por último, el id.
+ */
+function compararOfertas(a: OfertaCompatible, b: OfertaCompatible): number {
+  return (
+    b.puntaje - a.puntaje ||
+    b.desglose.tecnica - a.desglose.tecnica ||
+    (b.oferta.publicadaEn?.getTime() ?? 0) - (a.oferta.publicadaEn?.getTime() ?? 0) ||
+    (a.oferta.id < b.oferta.id ? -1 : a.oferta.id > b.oferta.id ? 1 : 0)
+  );
+}
+
+/**
+ * RF-09 · Las ofertas abiertas ordenadas por compatibilidad con el jugador
+ * autenticado, con los filtros de `GET /ofertas`. Cada una se puntúa con las
+ * mismas funciones puras y los mismos datos que su ranking (`datosParaMotor`
+ * y `puntuar`), así que el puntaje coincide con el que ve el equipo. Se
+ * calcula al pedirlo y no se guarda: `Matching` es la instantánea del ranking
+ * de cada oferta. No pasa por el índice HNSW: el jugador ya está elegido.
+ */
+export async function ofertasCompatibles(
+  usuarioId: string,
+  query: OfertasCompatiblesQuery,
+): Promise<OfertasCompatibles> {
+  const jugadorId = await repositorio.idJugadorDeUsuario(usuarioId);
+  const [jugador] = jugadorId ? await repositorio.datosParaMotor([jugadorId]) : [];
+  if (!jugadorId || !jugador) throw new NotFoundError("Perfil de jugador no encontrado");
+
+  const { page, pageSize, ...filtros } = query;
+  const abiertas = await ofertas.abiertasSinPaginar(filtros);
+  let pesoColaborativo = 0;
+  const puntuadas = abiertas.map((oferta): OfertaCompatible => {
+    const p = puntuar(jugador, ofertaMotorDeContrato(oferta));
+    const peso = colaborativo.peso(oferta.equipoId);
+    pesoColaborativo = Math.max(pesoColaborativo, peso);
+    const deColaborativo = colaborativo.puntajes(oferta.equipoId, [jugadorId]).get(jugadorId) ?? 0;
+    return {
+      oferta,
+      puntaje: combinar(p.puntaje, deColaborativo, peso),
+      desglose: { ...p.desglose },
+      explicacion: p.explicacion,
+    };
+  });
+  puntuadas.sort(compararOfertas);
+
+  const rango = calcularRango({ page, pageSize });
+  return {
+    ...paginar(puntuadas.slice(rango.skip, rango.skip + rango.take), puntuadas.length, rango),
+    verificado: jugador.verificado,
+    calculadoEn: new Date(),
+    versionFormulas: VERSION_FORMULAS_MATCHING,
+    modo: modoDe(pesoColaborativo),
+    pesoColaborativo,
+  };
 }

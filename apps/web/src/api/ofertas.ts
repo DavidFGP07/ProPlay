@@ -31,9 +31,10 @@ const CLAVE_MIS_POSTULACIONES = ['postulaciones', 'me'] as const
 export type FiltrosOfertas = ListarOfertasQuery & { page: number }
 
 // RF-07 · Ofertas abiertas, paginadas y filtradas por rol, departamento y modalidad
-export function useOfertas(filtros: FiltrosOfertas) {
+export function useOfertas(filtros: FiltrosOfertas, habilitado = true) {
   return useQuery({
     queryKey: ['ofertas', 'abiertas', filtros],
+    enabled: habilitado,
     // La pagina anterior se mantiene en pantalla mientras llega la siguiente.
     placeholderData: keepPreviousData,
     queryFn: async () => {

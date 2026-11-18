@@ -2,7 +2,7 @@ import { queryValidada } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { UnauthorizedError } from "../../utils/errors";
 import * as servicio from "./matching.service";
-import { rankingOfertaQuerySchema } from "./matching.schema";
+import { ofertasCompatiblesQuerySchema, rankingOfertaQuerySchema } from "./matching.schema";
 
 /**
  * Controladores del módulo `matching`: sólo traducen entre HTTP y el servicio.
@@ -44,8 +44,10 @@ export const recalcular = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/v1/matching/jugador/me
- * TODO: Devolver las ofertas más compatibles con el jugador autenticado.
+ * RF-09 · Ofertas abiertas ordenadas por compatibilidad con el jugador
+ * autenticado, con su puntaje y su desglose.
  */
 export const ofertasCompatibles = asyncHandler(async (req, res) => {
-  res.json(await servicio.ofertasCompatibles(req.body ?? req.validado));
+  const query = queryValidada(req, ofertasCompatiblesQuerySchema);
+  res.status(200).json(await servicio.ofertasCompatibles(actor(req).id, query));
 });

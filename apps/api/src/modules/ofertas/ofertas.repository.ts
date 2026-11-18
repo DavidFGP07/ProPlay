@@ -142,6 +142,19 @@ export async function listarAbiertas(
   ]);
 }
 
+/**
+ * Todas las ofertas abiertas que cumplen los filtros, sin paginar: el módulo
+ * `matching` las puntúa todas antes de ordenarlas por compatibilidad. En el
+ * piloto son decenas.
+ */
+export async function todasAbiertas(filtros: ListarOfertasQuery): Promise<OfertaDb[]> {
+  return prisma.oferta.findMany({
+    where: { estado: "ABIERTA", ...filtros },
+    select: seleccionOferta,
+    orderBy: [{ publicadaEn: "desc" }, { id: "desc" }],
+  });
+}
+
 export async function listarDeEquipo(
   equipoId: string,
   estado: EstadoOferta | undefined,

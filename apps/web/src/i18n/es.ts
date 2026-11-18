@@ -433,9 +433,16 @@ export const es = {
   // RF-07 · RF-10 · Explorar oportunidades, detalle de la oferta y postulaciones del jugador
   ofertas: {
     titulo: 'Explorar oportunidades',
-    subtitulo:
-      'Ofertas abiertas de los equipos, de la más reciente a la más antigua. El orden por compatibilidad llegará con el motor de matching.',
+    subtitulo: 'Ofertas abiertas de los equipos, de la más reciente a la más antigua.',
+    subtituloJugador:
+      'Ofertas abiertas ordenadas por tu compatibilidad: el mismo puntaje que ve el equipo en su ranking.',
     publicar: 'Publicar oferta',
+    compatibilidad: 'Compatibilidad',
+    porcentaje: (n: number) => `${n} %`,
+    sinVerificar: 'Vincula tu cuenta de Riot para que la técnica cuente.',
+    sinVerificarDetalle:
+      'Sin una cuenta verificada, la dimensión técnica vale 0 en todas las ofertas y tu compatibilidad se queda corta.',
+    irCuentas: 'Ir a Cuentas vinculadas',
     cargando: 'Cargando las ofertas',
     filtros: 'Filtros',
     filtroRol: 'Posición',

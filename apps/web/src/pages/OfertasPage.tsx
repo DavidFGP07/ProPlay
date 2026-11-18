@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, CheckCircle2, Clock, MapPin, Plus, TrendingUp } from 'lucide-react'
+import { Briefcase, CheckCircle2, CircleAlert, Clock, MapPin, Plus, TrendingUp, Trophy } from 'lucide-react'
 import {
   MODALIDADES,
   POSICIONES_LOL,
@@ -8,6 +8,7 @@ import {
   type EstadoPostulacion,
   type Modalidad,
   type Oferta,
+  type OfertaCompatible,
   type PosicionLol,
 } from '@proplay/shared'
 import {
@@ -23,22 +24,37 @@ import {
   Select,
 } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
+import { useOfertasCompatibles } from '@/api/matching'
 import { useMisPostulaciones, useOfertas, type FiltrosOfertas } from '@/api/ofertas'
+import { BarraAportes } from '@/components/BarraAportes'
 import { es } from '@/i18n/es'
+import { calcularAportes } from '@/lib/aportes'
 import { OPCIONES_DEPARTAMENTO, lugarOferta } from '@/lib/ubicacion'
 
 const t = es.ofertas
 
 const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' })
 
-// RF-07 · RF-09 · Explorar oportunidades: ofertas abiertas reales de
-// GET /api/v1/ofertas, paginadas y filtradas por posición, departamento y
-// modalidad. Sin puntaje: el orden por compatibilidad llega con el matching.
+/** Lo que la tarjeta necesita de la compatibilidad: puntaje, desglose y pesos aplicados. */
+type Compatibilidad = Pick<OfertaCompatible, 'puntaje' | 'desglose' | 'explicacion'>
+
+// RF-07 · RF-09 · Explorar oportunidades: ofertas abiertas reales, paginadas y
+// filtradas por posición, departamento y modalidad. El jugador las ve
+// ordenadas por compatibilidad (GET /api/v1/matching/jugador/me), con su
+// puntaje y la barra de aportes del ranking; el equipo y el scout, de la más
+// reciente a la más antigua (GET /api/v1/ofertas).
 export default function OfertasPage() {
   const { usuario } = useAuth()
   const [filtros, setFiltros] = useState<FiltrosOfertas>({ page: 1 })
-  const consulta = useOfertas(filtros)
   const esJugador = usuario?.rol === 'JUGADOR'
+  const porCompatibilidad = useOfertasCompatibles(filtros, esJugador)
+  const porFecha = useOfertas(filtros, !esJugador)
+  const consulta = esJugador ? porCompatibilidad : porFecha
+  const elementos: { oferta: Oferta; compatibilidad?: Compatibilidad }[] | undefined = esJugador
+    ? porCompatibilidad.data?.data.map((c) => ({ oferta: c.oferta, compatibilidad: c }))
+    : porFecha.data?.data.map((oferta) => ({ oferta }))
+  const meta = esJugador ? porCompatibilidad.data?.meta : porFecha.data?.meta
+  const sinVerificar = esJugador && porCompatibilidad.data?.verificado === false
   const mias = useMisPostulaciones(esJugador)
   const postuladas = new Map(mias.data?.map((p) => [p.oferta.id, p.estado]))
   const hayFiltros = Boolean(filtros.rol || filtros.departamento || filtros.modalidad)
@@ -51,7 +67,7 @@ export default function OfertasPage() {
     <div className="space-y-6">
       <SectionTitle
         title={t.titulo}
-        subtitle={t.subtitulo}
+        subtitle={esJugador ? t.subtituloJugador : t.subtitulo}
         action={
           usuario?.rol === 'EQUIPO' && (
             <Link
@@ -114,6 +130,25 @@ export default function OfertasPage() {
         </fieldset>
       </Card>
 
+      {sinVerificar && (
+        <div
+          role="note"
+          className="flex flex-wrap items-start gap-x-3 gap-y-2 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3"
+        >
+          <CircleAlert size={16} className="mt-0.5 shrink-0 text-amber-300" aria-hidden />
+          <div className="min-w-0 flex-1 text-xs leading-relaxed">
+            <p className="font-semibold text-amber-200">{t.sinVerificar}</p>
+            <p className="text-amber-100/80">{t.sinVerificarDetalle}</p>
+          </div>
+          <Link
+            to="/cuentas-vinculadas"
+            className="text-xs font-medium text-brand-300 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+          >
+            {t.irCuentas}
+          </Link>
+        </div>
+      )}
+
       {consulta.isPending ? (
         <div aria-busy="true" aria-label={t.cargando} className="grid gap-4 lg:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -124,7 +159,7 @@ export default function OfertasPage() {
         <Card>
           <EstadoError titulo={t.error} onReintentar={() => void consulta.refetch()} />
         </Card>
-      ) : consulta.data.data.length === 0 ? (
+      ) : !elementos || !meta ? null : elementos.length === 0 ? (
         <Card>
           <EmptyState
             icono={<Briefcase size={22} />}
@@ -142,18 +177,22 @@ export default function OfertasPage() {
       ) : (
         <div className="space-y-4">
           <p className="text-xs text-slate-400" aria-live="polite">
-            {t.resultados(consulta.data.meta.total)}
+            {t.resultados(meta.total)}
           </p>
           <ul className="grid gap-4 lg:grid-cols-2">
-            {consulta.data.data.map((oferta) => (
+            {elementos.map(({ oferta, compatibilidad }) => (
               <li key={oferta.id} className="min-w-0">
-                <TarjetaOferta oferta={oferta} postulacion={postuladas.get(oferta.id)} />
+                <TarjetaOferta
+                  oferta={oferta}
+                  compatibilidad={compatibilidad}
+                  postulacion={postuladas.get(oferta.id)}
+                />
               </li>
             ))}
           </ul>
           <Paginacion
-            pagina={consulta.data.meta.page}
-            totalPaginas={consulta.data.meta.totalPages}
+            pagina={meta.page}
+            totalPaginas={meta.totalPages}
             onCambiar={(page) => setFiltros((previos) => ({ ...previos, page }))}
           />
         </div>
@@ -164,11 +203,14 @@ export default function OfertasPage() {
 
 function TarjetaOferta({
   oferta,
+  compatibilidad,
   postulacion,
 }: {
   oferta: Oferta
+  compatibilidad?: Compatibilidad
   postulacion: EstadoPostulacion | undefined
 }) {
+  const aportes = compatibilidad ? calcularAportes(compatibilidad) : null
   return (
     <Link
       to={`/vacantes/${oferta.id}`}
@@ -180,7 +222,16 @@ function TarjetaOferta({
           <h3 className="text-sm font-semibold break-words text-slate-100">{oferta.titulo}</h3>
           <p className="truncate text-[11px] text-slate-400">{oferta.equipo.nombreOrg}</p>
         </div>
+        {aportes && (
+          <p className="flex shrink-0 items-baseline gap-1">
+            <span className="sr-only">{t.compatibilidad}: </span>
+            <Trophy size={12} className="self-center text-brand-300" aria-hidden />
+            <span className="text-xl font-bold tabular-nums text-slate-50">{t.porcentaje(aportes.total)}</span>
+          </p>
+        )}
       </div>
+
+      {aportes && <BarraAportes desglose={aportes} compacta className="mt-3" />}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Badge tono="cian">{es.posicionLol[oferta.rol]}</Badge>
