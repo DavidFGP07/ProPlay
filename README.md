@@ -7,11 +7,16 @@ de compatibilidad entre ambos.
 
 Proyecto de grado — Universidad del Norte.
 
-> Estado actual: la autenticación funciona de punta a punta (registro, login,
-> refresh, rutas protegidas por rol), igual que los perfiles y la
-> **integración con la API de Riot Games** (vinculación verificada de la cuenta
-> de League of Legends y estadísticas). Los demás módulos son andamiaje: sus
-> rutas existen y responden `501 Not Implemented`.
+> Estado actual: funcionan de punta a punta la autenticación (registro, login,
+> refresh, rutas protegidas por rol), los perfiles, la **integración con la API
+> de Riot Games** (vinculación verificada por icono de la cuenta de League of
+> Legends, estadísticas e ingesta periódica en cola), el buscador de talento,
+> las ofertas con sus postulaciones, el **motor de matching** con ranking
+> explicable y la **analítica** (embudo de la vacante, dimensión decisiva y mapa
+> del talento). Siguen como andamiaje (`501 Not Implemented`) `mensajeria`,
+> `notificaciones`, `admin`, habilidades y endorsements, la vinculación por
+> OAuth y algunos endpoints sueltos de `scouting` y `matching`: la lista exacta
+> está en [Rutas de la API](#rutas-de-la-api).
 
 ---
 
@@ -106,10 +111,11 @@ RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 - La clave de **desarrollo** se saca en <https://developer.riotgames.com> y
   **caduca cada 24 horas**: hay que regenerarla y pegarla otra vez cada día
   (ver «Renovar la clave» más abajo).
-  Con una clave caducada, los endpoints de Riot responden `502` con el mensaje
-  «Riot rechazó la clave de la API: es inválida o caducó».
-- Sin clave, responden `503 SERVICIO_NO_CONFIGURADO`; el resto de la API
-  funciona igual.
+- Sin clave, o con una caducada o rechazada por Riot, los endpoints que llaman a
+  Riot responden `503 RIOT_NO_DISPONIBLE` («inténtalo más tarde»; el detalle va
+  a los registros) y la cola de ingesta se pausa; el resto de la API funciona
+  igual. Cualquier otro fallo de Riot responde `502 SERVICIO_EXTERNO`
+  (`apps/api/src/integrations/riot/riot.client.ts`).
 - La clave nunca va al repositorio ni a variables `VITE_*`.
 
 #### Renovar la clave cuando caduque
@@ -140,18 +146,19 @@ Con la sesión de un jugador, el menú lateral tiene dos vistas nuevas:
   campeones más jugados y la gráfica de la tendencia entre sincronizaciones.
 
 Límites de la clave de desarrollo: 20 peticiones por segundo y 100 cada dos
-minutos para toda la aplicación. Una sincronización gasta unas 24 peticiones,
-así que caben unas cuatro cada dos minutos. El cliente
-(`apps/api/src/integrations/riot/riot.client.ts`) reparte la cuota, respeta el
-`Retry-After` de Riot y, si la espera fuera larga, responde `429` en lugar de
-dejar la petición colgada.
+minutos para toda la aplicación (`RIOT_LIMITES`, por defecto `20:1,100:120`).
+Una sincronización gasta unas 24 peticiones, así que caben unas cuatro cada dos
+minutos. La cuota es **global y vive en Redis**
+(`apps/api/src/integrations/riot/cuotaRiot.ts`), con prioridad para vincular y
+comprobar el icono (`RIOT_RESERVA_ALTA`, por defecto el 30 % de cada ventana).
+Si no hay cupo, la vinculación responde `503 MUCHA_DEMANDA` con la espera y la
+sincronización se queda en cola; el porqué está en `docs/decisiones.md`,
+«Cuota de Riot e ingesta», y la operación, en `docs/operacion.md`.
 
 ### Qué más se puede añadir con esta misma API
 
 Sin cambiar de clave:
 
-- **Worker de ingesta periódica** (tarea 2.5): sincronizar a todos los
-  jugadores verificados de madrugada, con la cuota en Redis.
 - **Maestría de campeones** (`champion-mastery-v4`): puntos y nivel por
   campeón, útil para la dimensión técnica del matching.
 - **Línea de tiempo de la partida** (`match-v5 /timeline`): oro y experiencia
@@ -161,7 +168,8 @@ Sin cambiar de clave:
 - **Estado del servidor** (`lol-status-v4`): avisar si Riot tiene incidencias
   cuando falla una sincronización.
 - **Comparación por rango**: con el rango que ya se guarda, normalizar las
-  métricas frente a jugadores de la misma liga para el matching (S3).
+  métricas frente a jugadores de la misma liga. Hoy la técnica usa escalas fijas
+  por posición (`docs/arquitectura.md`, «Escalas fijas de la técnica»).
 
 Con una clave de **producción** (tarea 0.1 del plan): Riot Sign On (OAuth) en
 lugar del desafío del icono, sin caducidad diaria y con más cuota. VALORANT
@@ -223,9 +231,13 @@ Si no tienes Docker, hay una alternativa con Homebrew más abajo.
 5. **Aplica las migraciones y carga los datos de prueba:**
 
    ```bash
-   npm run db:migrate
+   npm run db:deploy
    npm run db:seed
    ```
+
+   `db:deploy` aplica las migraciones existentes. `db:migrate`
+   (`prisma migrate dev`) es sólo para **crear** una migración nueva y tiene sus
+   reglas por el índice HNSW (CLAUDE.md §4).
 
 6. **Arranca todo en paralelo:**
 
@@ -261,7 +273,12 @@ brew services start redis
 ```
 
 `DATABASE_URL` y `REDIS_URL` de `apps/api/.env.example` ya apuntan a esos
-puertos, así que el resto de los pasos no cambia. El `docker-compose.yml` usa
+puertos, así que el resto de los pasos no cambia. **Usa una cosa o la otra, no las dos:**
+Docker y Homebrew escuchan en los mismos puertos (5432 y 6379), y si los dos
+están arrancados, `localhost` llega a uno y `docker exec` consulta el otro. Para
+volver a Docker: `brew services stop postgresql@17` y `brew services stop redis`
+(dejan de arrancar al iniciar sesión) y `lsof -nP -iTCP:5432 -sTCP:LISTEN` para
+comprobar que sólo escucha Docker. El `docker-compose.yml` usa
 Postgres 16 (`pgvector/pgvector:pg16`); con Homebrew se instala 17 porque es la
 versión contra la que Homebrew compila pgvector.
 
@@ -278,17 +295,107 @@ Todos se ejecutan desde la raíz del monorepo.
 | `npm run lint` | ESLint en los tres workspaces |
 | `npm run typecheck` | `tsc --noEmit` en los tres workspaces |
 | `npm test` | Pruebas de integración de la API (Vitest + supertest) y pruebas del cliente (Vitest + Testing Library) |
-| `npm run db:migrate` | `prisma migrate dev` (desarrollo) |
-| `npm run db:deploy` | `prisma migrate deploy` (producción y CI) |
+| `npm run verify` | Guarda del índice HNSW, lint, typecheck y pruebas: lo mismo que el CI salvo el build. Tiene que pasar antes de empujar |
+| `npm run db:deploy` | `prisma migrate deploy`: aplica las migraciones existentes (local, producción y CI) |
+| `npm run db:migrate` | `prisma migrate dev`: sólo para **crear** una migración nueva, con las reglas de CLAUDE.md §4 |
+| `npm run db:generate` | `prisma generate` (también lo hace el `postinstall`) |
 | `npm run db:seed` | Carga los datos de prueba (idempotente) |
 | `npm run db:test -w api` | Crea y migra la base de las pruebas (`proplay_test`); `npm test` ya lo hace solo |
 | `npm run db:studio` | Abre Prisma Studio |
 | `npm run db:reset` | Borra la base, reaplica migraciones y siembra |
 | `npm run docker:up` / `docker:down` | Atajos de `docker compose` |
+| `npm run check:indice-hnsw -w api` | Falla si una migración borra el índice HNSW sin volver a crearlo |
 | `npm run admin:promover -w api -- <correo>` | Promueve a `ADMIN` una cuenta de scout ya registrada ([docs/operacion.md](docs/operacion.md)) |
+| `npm run ingesta:estado -w api` | Estado de la cola de ingesta de Riot y de la clave ([docs/operacion.md](docs/operacion.md)) |
+| `npm run matching:revectorizar -w api` | Recalcula los vectores de perfil de todos los jugadores |
+| `npm run metricas:piloto -w api -- [opciones]` | Exporta en CSV las métricas del piloto para el informe ([docs/operacion.md](docs/operacion.md)) |
+| `npm run rnf01 -w api` | Mide RNF-01 sobre una base propia y reescribe [docs/rnf-01.md](docs/rnf-01.md) |
 
 Para un solo workspace: `npm run <script> -w api`, `-w web`,
 `-w @proplay/shared`.
+
+---
+
+## Rutas de la API
+
+Todas bajo `/api/v1`. Sacadas de los routers (`apps/api/src/modules/*/*.routes.ts`
+y `apps/api/src/app.ts`); «con sesión» es cualquier rol autenticado. La columna RF
+es la del comentario de trazabilidad de la ruta o, en las que siguen en `501`, la
+de su vista en el inventario de CLAUDE.md §5.
+
+| Método y ruta | Roles | RF | Estado |
+| --- | --- | --- | --- |
+| `GET /health` | público | — | Postgres, Redis y estado de la clave de Riot |
+| `POST /auth/register` · `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` | público | RF-01 | Implementado |
+| `GET /auth/me` | con sesión | RF-01 | Implementado |
+| `GET /usuarios` | ADMIN | — | Implementado |
+| `PATCH /usuarios/me` · `PATCH /usuarios/me/contrasena` | con sesión | RF-01 | Implementado |
+| `GET /usuarios/:id` | con sesión | — | Implementado |
+| `GET /perfiles/me` | con sesión | RF-05 | Implementado |
+| `PATCH /perfiles/jugador` | JUGADOR | RF-05, RF-09 | Implementado (incluida la ubicación) |
+| `PATCH /perfiles/equipo` | EQUIPO | RF-07 | Implementado (incluida la sede) |
+| `GET /perfiles/:id` | público (sesión opcional) | RF-05 | Implementado: perfil público |
+| `GET /perfiles/cuentas-gaming` | JUGADOR | RF-02, RF-03 | Implementado |
+| `POST /perfiles/cuentas-gaming/riot` · `GET`, `DELETE /perfiles/cuentas-gaming/riot/desafio` · `POST …/riot/desafio/regenerar` · `POST …/riot/verificar` | JUGADOR | RF-02 | Implementado: vinculación por icono |
+| `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | RF-02 | Implementado |
+| `POST /perfiles/cuentas-gaming` | JUGADOR | RF-02 | **501**: vinculación por OAuth (necesita RSO) |
+| `GET`, `POST /perfiles/habilidades` · `POST /perfiles/endorsements` | con sesión / JUGADOR | RF-06 | **501** |
+| `POST /estadisticas/sincronizar` · `GET /estadisticas/sincronizacion` | JUGADOR | RF-03 | Implementado (cola de ingesta) |
+| `GET /estadisticas/jugador/:id` · `GET /estadisticas/jugador/:id/resumen` | con sesión | RF-04, RF-13 | Implementado |
+| `GET /scouting/jugadores` | EQUIPO, SCOUT, ADMIN | RF-08 | Implementado |
+| `GET /scouting/jugadores/:id` · `GET`, `POST /scouting/busquedas` | EQUIPO, SCOUT (y ADMIN la ficha) | RF-08 | **501** |
+| `GET /ofertas` · `GET /ofertas/:id` | con sesión | RF-07 | Implementado |
+| `GET /ofertas/me` · `POST /ofertas` · `PATCH /ofertas/:id` · `PATCH /ofertas/:id/estado` | EQUIPO | RF-07 | Implementado |
+| `POST /ofertas/:id/postulaciones` · `GET /ofertas/postulaciones/me` | JUGADOR | RF-10 | Implementado |
+| `GET /ofertas/:id/postulaciones` | EQUIPO, SCOUT, ADMIN | RF-10 | Implementado |
+| `PATCH /ofertas/postulaciones/:id` | EQUIPO | RF-10 | Implementado |
+| `GET /matching/ofertas/:id/ranking` · `GET /matching/ofertas/:id/candidatos/:jugadorId` | EQUIPO, SCOUT, ADMIN | RF-09, RF-11 | Implementado |
+| `POST /matching/ofertas/:id/recalcular` | EQUIPO, SCOUT | RF-09 | Implementado |
+| `GET /matching/jugador/me` | JUGADOR | RF-09 | **501** |
+| `GET /analitica/embudo` · `GET /analitica/ofertas/:id/embudo` · `GET /analitica/ofertas/:id/dimension-decisiva` | EQUIPO | RF-13 | Implementado |
+| `GET /analitica/talento` | EQUIPO, SCOUT, ADMIN | RF-13 | Implementado |
+| `GET`, `POST /mensajeria/conversaciones` · `GET`, `POST /mensajeria/conversaciones/:id/mensajes` | con sesión | RF-12 | **501** (trabajo futuro) |
+| `GET /notificaciones` · `GET /notificaciones/contador` · `POST /notificaciones/leidas` | con sesión | RF-12 | **501** (trabajo futuro) |
+| `GET /admin/metricas` · `GET /admin/auditoria` · `POST /admin/usuarios/rol` · `POST /admin/usuarios/suspender` | ADMIN | RF-14 | **501** (trabajo futuro; las operaciones van por scripts) |
+
+---
+
+## Variables de entorno
+
+La API las valida con Zod al arrancar (`apps/api/src/config/env.ts`) y no arranca si
+falta una obligatoria. El cliente lee las suyas en `apps/web/src/lib/env.ts`. Los
+`.env.example` de cada app llevan un comentario por variable.
+
+### API (`apps/api/.env`)
+
+| Variable | Obligatoria | Por defecto | Para qué |
+| --- | --- | --- | --- |
+| `NODE_ENV` | no | `development` | `development`, `test` o `production` |
+| `PORT` | no | `3000` | Puerto HTTP |
+| `DATABASE_URL` | **sí** | — | PostgreSQL con pgvector |
+| `REDIS_URL` | **sí** | — | Redis: cuota de Riot, desafíos de vinculación y cola de ingesta |
+| `JWT_SECRET`, `JWT_REFRESH_SECRET` | **sí** | — | Firmas de los tokens; al menos 32 caracteres y distintos |
+| `ENCRYPTION_KEY` | **sí** | — | Clave AES-256-GCM (64 caracteres hexadecimales) para los tokens de las cuentas de juego |
+| `CORS_ORIGIN` | no | `http://localhost:5173` | Origen (o lista) autorizado |
+| `TRUST_PROXY` | **en producción** | sin proxy | Proxies delante de la API (ver «Despliegue») |
+| `RIOT_API_KEY` | no | — | Clave de la API de Riot; sin ella, lo de Riot responde `503 RIOT_NO_DISPONIBLE` |
+| `RIOT_LIMITES` | no | `20:1,100:120` | Ventanas de cuota de la clave, `límite:segundos` |
+| `RIOT_RESERVA_ALTA` | no | `30` | Porcentaje de cada ventana reservado a la vinculación |
+| `INGESTA_ACTIVA` | no | `true` (`false` en pruebas) | Arranca el worker y el planificador de la ingesta en el proceso de la API |
+| `INGESTA_INTERVALO_HORAS` | no | `6` | Horas entre dos sincronizaciones periódicas del mismo jugador |
+| `LOG_LEVEL` | no | `info` | Nivel de log de pino |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | no | — | Cliente de Cloudinary (`integrations/cloudinary`); ningún endpoint lo usa todavía |
+| `STEAM_API_KEY`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` | no | — | Declaradas para integraciones que son trabajo futuro (decisión 0.3: el piloto es sólo League of Legends); sus proveedores responden `501` |
+
+### Cliente (`apps/web/.env`)
+
+| Variable | Obligatoria | Para qué |
+| --- | --- | --- |
+| `VITE_API_URL` | **sí** | URL base de la API con `/api/v1`, sin barra final. Es pública: va en el bundle |
+| `VITE_DEMO_DATA` | no | `true` enciende el puente de datos de demostración de las vistas aún simuladas; cualquier otro valor, sólo datos reales |
+
+El `.env` de la raíz sólo tiene las variables del contenedor de Postgres
+(`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) que usa `docker-compose.yml`.
 
 ---
 
@@ -298,10 +405,11 @@ Para un solo workspace: `npm run <script> -w api`, `-w web`,
 npm test
 ```
 
-Son pruebas de **integración**: levantan la app Express real y hablan con
-Postgres, así que la base de datos tiene que estar arriba. Cubren el registro,
-el login, el refresco de sesión, `/auth/me`, el acceso denegado sin token, el
-acceso denegado por rol y la forma del error del contrato.
+Las de la API son sobre todo de **integración**: levantan la app Express real
+y hablan con Postgres y Redis, así que los dos tienen que estar arriba; las
+funciones puras (fórmulas del motor, métricas de la analítica) se prueban
+además con cifras exactas. Las del cliente usan Vitest y Testing Library con un
+doble del cliente HTTP. `npm run verify` las ejecuta todas.
 
 Las pruebas de la API **nunca corren contra la base de desarrollo**: usan una
 base propia en el mismo servidor, con el nombre de la de `DATABASE_URL` y el
@@ -321,6 +429,13 @@ borran al terminar. La base de pruebas no lleva los datos del seed.
 Cada app se despliega por separado aunque vivan en el mismo repositorio.
 
 ### API en Railway o Render (Docker)
+
+> **Aún no se ha desplegado nunca** (tarea 2.13 del plan). El worker y el
+> planificador de la ingesta de Riot corren **dentro del proceso de la API**
+> (`apps/api/src/server.ts`, `INGESTA_ACTIVA`): en un plan que suspenda el
+> servicio por inactividad, la sincronización periódica se detiene mientras
+> duerme. Hace falta además un Postgres gestionado con la extensión `pgvector`
+> y un Redis.
 
 El `Dockerfile` es multi-stage sobre `node:22-alpine`, corre como usuario no
 root y su `CMD` aplica las migraciones antes de arrancar el servidor.
@@ -342,9 +457,10 @@ docker build -f apps/api/Dockerfile -t proplay-api .
 
 Variables de entorno que hay que definir en el servicio: `DATABASE_URL`,
 `REDIS_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `ENCRYPTION_KEY`,
-`CORS_ORIGIN` (el dominio de Vercel), `NODE_ENV=production`, `TRUST_PROXY`
-`RIOT_API_KEY` (ver «Integración con la API de Riot Games») y, cuando se
-conecte, `CLOUDINARY_*`.
+`CORS_ORIGIN` (el dominio de Vercel), `NODE_ENV=production`, `TRUST_PROXY` y
+`RIOT_API_KEY` (ver «Integración con la API de Riot Games»); con una clave de
+producción, también `RIOT_LIMITES`. La lista completa está en
+[Variables de entorno](#variables-de-entorno).
 
 `TRUST_PROXY` es el número de proxies que hay delante de la API: `1` en
 Railway o Render, uno más por cada capa añadida (una CDN, por ejemplo) y `0`
@@ -386,8 +502,11 @@ La web y la API viven en dominios distintos, así que:
 
 ### Integración continua
 
-`.github/workflows/ci.yml` levanta Postgres y Redis como *services*, instala
-desde la raíz y ejecuta `lint`, `typecheck`, `test` y `build`.
+`.github/workflows/ci.yml` corre en cada pull request contra `main` y en cada
+push a `main`. Levanta Postgres (con pgvector) y Redis como *services*, instala
+desde la raíz y ejecuta la guarda del índice HNSW, `db:deploy`, `lint`,
+`typecheck`, `test` y `build`. Un pull request apilado sobre otra rama no lo
+dispara hasta que se reapunta a `main`.
 
 ---
 
@@ -399,9 +518,14 @@ desde la raíz y ejecuta `lint`, `typecheck`, `test` y `build`.
   rápido si falta algo.
 - Contraseñas con bcrypt (12 rondas). Access token de 15 minutos en memoria del
   cliente; refresh token de 7 días en cookie `httpOnly`.
-- Los tokens OAuth de las cuentas gaming se guardan cifrados con AES-256-GCM
-  (`apps/api/src/utils/crypto.ts`).
-- `helmet`, CORS por lista blanca y rate limiting global (300 peticiones cada 15
-  minutos) más uno estricto en `/auth` (10 cada 15 minutos).
+- Los tokens de las cuentas gaming se guardarían cifrados con AES-256-GCM
+  (`apps/api/src/utils/crypto.ts`, `ENCRYPTION_KEY`; RNF-03). **Hoy no se guarda
+  ninguno**: la vinculación con Riot es por icono, sin OAuth, y
+  `CuentaGaming.accessToken` y `refreshToken` quedan nulos
+  (`docs/decisiones.md`, «Integración con Riot»).
+- `helmet`, CORS por lista blanca y límites de peticiones: global (300 cada 15
+  minutos), `/auth` (10 cada 15 minutos) y propios del refresco, el cambio de
+  contraseña, el perfil público, el buscador, el ranking, el recálculo y la
+  vinculación con Riot (`apps/api/src/middleware/rateLimit.ts`).
 - Manejador de errores central: siempre `{ error: { code, message, details? } }`
   y nunca stack traces en producción.

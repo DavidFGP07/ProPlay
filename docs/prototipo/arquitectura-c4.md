@@ -1,5 +1,7 @@
 # Arquitectura de ProPlay en los tres niveles del modelo C4
 
+> **Documento del prototipo (rama `Fronted`), conservado como historia.** Describe el prototipo, no el código actual (`docs/decisiones.md`, «Integración del cliente de `Fronted`»). La arquitectura vigente está en [`docs/arquitectura.md`](../arquitectura.md). Diferencias principales: el piloto sólo integra Riot (League of Legends), sin Steam, Twitch ni YouTube (decisión 0.3); la cuenta de Riot se verifica por icono, no por OAuth; no hay sandbox de Python ni servicio LLM todavía (Sprint 4); la integración con Riot es una capa de infraestructura y no un módulo de negocio, y la analítica es el módulo `analitica`.
+
 Cada nivel amplía el detalle del anterior: el **contexto** sitúa el sistema
 entre sus actores y dependencias externas; los **contenedores** lo descomponen
 en unidades desplegables; y los **componentes** abren el módulo que concentra

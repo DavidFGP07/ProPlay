@@ -1,5 +1,7 @@
 # Matriz de trazabilidad
 
+> **Documento del prototipo (rama `Fronted`), conservado como historia.** Describe el prototipo, no el código actual (`docs/decisiones.md`, «Integración del cliente de `Fronted`»). La columna «Ubicación en el cliente» apunta a la simulación del prototipo. Qué realiza hoy cada requisito está en el README («Rutas de la API»), en el inventario de vistas de `CLAUDE.md` §5 y en [`docs/plan-implementacion.md`](../plan-implementacion.md).
+
 Cada requisito funcional declara el componente de arquitectura que lo realiza y
 el sprint en que se entrega, lo que permite verificar en cualquier momento qué
 parte del diseño está implementada y cuál no.

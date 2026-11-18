@@ -2,6 +2,10 @@
 
 Procedimientos que se ejecutan a mano sobre un entorno, fuera de la aplicación.
 
+> **La aplicación no se ha desplegado todavía** (tarea 2.13 del plan). Los pasos «en el
+> servidor» describen cómo se hará con la imagen de `apps/api/Dockerfile`; no se han
+> probado en una plataforma real.
+
 ---
 
 ## Alta del primer administrador
@@ -84,8 +88,8 @@ LIMIT 5;
 
 ## Ingesta de Riot
 
-La API sincroniza sola, cada 6 horas, las estadísticas de los jugadores con cuenta de Riot
-verificada, y atiende las sincronizaciones que piden los jugadores. Todo pasa por una cola en
+La API sincroniza sola, cada `INGESTA_INTERVALO_HORAS` horas (6 por defecto), las
+estadísticas de los jugadores con cuenta de Riot verificada, y atiende las sincronizaciones que piden los jugadores. Todo pasa por una cola en
 Redis (BullMQ) y por la cuota de Riot, que es de toda la aplicación. El porqué está en
 `docs/decisiones.md`, «Cuota de Riot e ingesta».
 
@@ -94,7 +98,9 @@ Redis (BullMQ) y por la cuota de Riot, que es de toda la aplicación. El porqué
 - **En local**: `npm run dev` levanta la API y, dentro de ella, el worker y el planificador.
   No hay que arrancar nada más. Sin `RIOT_API_KEY` la cola queda en pausa y el resto funciona.
 - **En el servidor**: igual, dentro del contenedor de la API (`INGESTA_ACTIVA=true`, el valor
-  por defecto). Si algún día se separa, se arranca otro servicio con la misma imagen y
+  por defecto). Por eso la API tiene que estar siempre encendida: en un plan que suspenda el
+  servicio por inactividad, la sincronización periódica se detiene mientras duerme. Si algún
+  día se separa, se arranca otro servicio con la misma imagen y
   `node apps/api/dist/ingesta/main.js`, y se pone `INGESTA_ACTIVA=false` en la API.
 
 ### Ver el estado
@@ -130,7 +136,8 @@ Reiniciar con la **misma** clave caducada no reanuda nada: la API la reconoce po
 ### Piloto: vinculaciones en tandas
 
 Con la clave de desarrollo, la cuota es de **100 peticiones cada 2 minutos para toda la
-aplicación**. Vincular gasta 2 peticiones, cada comprobación del icono 1 (la vista comprueba
+aplicación** (`RIOT_LIMITES`, por defecto `20:1,100:120`, con el `RIOT_RESERVA_ALTA` % de cada
+ventana reservado a vincular y comprobar el icono). Vincular gasta 2 peticiones, cada comprobación del icono 1 (la vista comprueba
 sola cada 45 s) y cada sincronización hasta 24. En la sesión de arranque del piloto,
 **organiza las vinculaciones en tandas de unos 10 jugadores**: que una tanda termine de
 vincular (unos minutos, lo que tarda Riot en reflejar el icono) antes de que empiece la

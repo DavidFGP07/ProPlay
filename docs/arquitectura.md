@@ -22,7 +22,7 @@ flowchart TB
 
     subgraph Servidor["Servidor — apps/api (:3000)"]
         MW["Middlewares<br/>helmet · cors · rateLimit · auth · rbac · validate"]
-        MOD["Nueve módulos de negocio<br/>routes → controller → service → repository"]
+        MOD["Diez módulos de negocio<br/>routes → controller → service → repository"]
         ERR["errorHandler centralizado"]
         MW --> MOD --> ERR
     end
@@ -30,14 +30,12 @@ flowchart TB
     subgraph Datos["Infraestructura"]
         PG[("PostgreSQL 16<br/>+ pgvector")]
         RD[("Redis 7")]
-        CL["Cloudinary"]
+        CL["Cloudinary<br/>(cliente preparado, sin uso)"]
     end
 
-    subgraph Externas["Integraciones OAuth 2.0"]
-        RIOT["Riot Games"]
-        STEAM["Steam"]
-        TWITCH["Twitch"]
-        YT["YouTube"]
+    subgraph Externas["Integraciones externas"]
+        RIOT["Riot Games<br/>API con clave de la aplicación"]
+        OTRAS["Steam · Twitch · YouTube<br/>(trabajo futuro, 501)"]
     end
 
     AX -- "REST /api/v1" --> MW
@@ -98,11 +96,11 @@ flowchart TB
 | Módulo | Responsabilidad | Estado |
 | --- | --- | --- |
 | `usuarios` | Registro, login, refresco de sesión, `/me`, gestión de cuentas y auditoría de acceso | **Implementado** |
-| `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | `GET /me` y `PATCH /jugador` implementados; el resto, andamiaje (501) |
-| `estadisticas` | Métricas por jugador, juego y periodo; sincronización con las plataformas externas | Andamiaje (501) |
-| `scouting` | Búsqueda y descubrimiento de jugadores con filtros de juego, rol, región y rendimiento; búsquedas guardadas | Andamiaje (501) |
-| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking (`GET /ofertas/:id/ranking`) y recálculo implementados; `GET /jugador/me` en 501 |
-| `ofertas` | Ofertas de los equipos y postulaciones de los jugadores con sus estados | Andamiaje (501) |
+| `perfiles` | Perfil de jugador y de equipo, catálogo de habilidades, niveles, endorsements y vinculación de cuentas gaming | Perfil propio, edición de jugador y de equipo, perfil público y vinculación con Riot por icono implementados; habilidades, endorsements y la vinculación OAuth, `501` |
+| `estadisticas` | Métricas por jugador y periodo; sincronización con Riot | **Implementado** (sincronizar en cola, estado, histórico y resumen) |
+| `scouting` | Búsqueda de jugadores; ficha ampliada y búsquedas guardadas | Buscador (`GET /jugadores`, filtros de posición, rango mínimo y departamento) implementado; ficha y búsquedas guardadas, `501` |
+| `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking, detalle del candidato y recálculo implementados; `GET /jugador/me`, `501` |
+| `ofertas` | Ofertas de los equipos y postulaciones de los jugadores con sus estados | **Implementado** |
 | `mensajeria` | Conversaciones y mensajes 1:1 y de equipo | Andamiaje (501) |
 | `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |
 | `admin` | Métricas de la plataforma, moderación de cuentas y consulta del `AuditLog` | Andamiaje (501) |
@@ -146,10 +144,17 @@ Notas:
   escribirlo; la columna `embedding vector(64)` la añade la migración
   `20260910145700_pgvector_perfil_vector` y es la que usa el recuperador del
   motor de matching, con el índice HNSW `PerfilVector_embedding_hnsw_idx`.
-- Los tokens de `CuentaGaming` se guardan cifrados con AES-256-GCM.
-- Hay índices en las claves foráneas y en los campos por los que se filtra:
-  `Oferta.juego`, `Oferta.region`, `Oferta.estado`, `Estadistica.jugadorId`,
-  `Matching.ofertaId` y `Matching(ofertaId, puntaje)`.
+- Los tokens de `CuentaGaming` se guardarían cifrados con AES-256-GCM
+  (`utils/crypto.ts`, RNF-03); hoy quedan nulos, porque la vinculación con Riot es
+  por icono y no produce tokens.
+- Hay índices en las claves foráneas y en los campos por los que se filtra, entre
+  ellos `Oferta(estado, publicadaEn)`, `Oferta.rol`, `Oferta.modalidad`,
+  `Oferta(pais, departamento)`, `PerfilJugador(pais, departamento)`,
+  `Estadistica(jugadorId, juego, capturadaEn)`, `Matching.ofertaId` y
+  `Matching(ofertaId, puntaje)`. La lista exacta está en `schema.prisma`.
+- `schema.prisma` tiene 18 tablas: las 15 entidades del documento más
+  `Publicacion`, `Conversacion` y `ParticipanteConversacion`, heredadas del
+  prototipo y sin uso en los endpoints implementados (CLAUDE.md §4).
 
 ## Algoritmo de compatibilidad
 
@@ -166,7 +171,10 @@ la oferta y los que se aplican si el equipo no los ajusta. En el piloto,
 experiencia y habilidades blandas van con peso 0 porque no hay datos verificables
 con que medirlas (`DIMENSIONES_SIN_DATOS_PILOTO`; `docs/decisiones.md`, «Motor de
 matching»): el motor las sigue calculando y la interfaz no las muestra (las vistas
-iteran sobre `DIMENSIONES_VISIBLES`, de `apps/web/src/lib/pesos.ts`).
+y la analítica iteran sobre `DIMENSIONES_VISIBLES`, de `@proplay/shared`).
+
+Los pesos por defecto de la tabla son los de `PESOS_MATCHING`; si cambian allí, manda
+la constante.
 
 | Dimensión | Peso por defecto (piloto) | Qué mide (Sección VIII) |
 | --- | --- | --- |
@@ -239,10 +247,10 @@ flowchart LR
 
 | Dimensión | Fórmula | Sin datos |
 | --- | --- | --- |
-| Técnica | factorPosición × (0,45·rango + 0,55·rendimiento), de la última captura verificada. factorPosición = min(1, proporción de partidas de solo/dúo en la posición pedida / 0,6): quien nunca la juega queda en 0 y quien la juega en el 60 % o más cuenta como especialista completo. Rango: 1 si cumple el mínimo; baja linealmente y llega a 0 una liga (cuatro divisiones) por debajo; sin mínimo, posición en el catálogo de 0 a 1. Rendimiento: media de las métricas de la posición normalizadas con las escalas fijas (abajo) | 0 con `SIN_CUENTA_VERIFICADA` o `SIN_CAPTURA`; sin rango, la parte de rango vale 0 |
+| Técnica | factorPosición × (0,45·rango + 0,55·rendimiento) (`SUBPESOS_TECNICA`), de la última captura verificada. factorPosición = min(1, proporción de partidas de solo/dúo en la posición pedida / 0,6) (`UMBRAL_ESPECIALISTA`): quien nunca la juega queda en 0 y quien la juega en el 60 % o más cuenta como especialista completo. Rango: 1 si cumple el mínimo; baja linealmente y llega a 0 una liga (cuatro divisiones) por debajo; sin mínimo, posición en el catálogo de 0 a 1. Rendimiento: media de las métricas de la posición normalizadas con las escalas fijas (abajo) | 0 con `SIN_CUENTA_VERIFICADA` o `SIN_CAPTURA`; sin rango, la parte de rango vale 0 |
 | Experiencia | Sin modelo de trayectoria en el piloto | 0 con `SIN_DATOS_PILOTO` |
-| Habilidades blandas | Media, sobre las habilidades `BLANDA` del catálogo, de min(1, endorsements de equipos / 3) | 0 con `SIN_ENDORSEMENTS` |
-| Geográfica | Oferta remota: 1. Presencial: mismo departamento 1, misma macrorregión 0,6, mismo país 0,3, otro país 0,1. Híbrida: 1 / 0,8 / 0,5 / 0,2. Con disposición a relocalizarse, al menos 0,75 (presencial) u 0,85 (híbrida). Fuera de Colombia, el mismo país es la coincidencia completa | 0,5 con `SIN_UBICACION` |
+| Habilidades blandas | Media, sobre las habilidades `BLANDA` del catálogo, de min(1, endorsements de equipos / 3) (`ENDORSEMENTS_PARA_SATURAR`) | 0 con `SIN_ENDORSEMENTS` |
+| Geográfica | Oferta remota: 1. Presencial: mismo departamento 1, misma macrorregión 0,6, mismo país 0,3, otro país 0,1. Híbrida: 1 / 0,8 / 0,5 / 0,2 (`PUNTAJE_CERCANIA`). Con disposición a relocalizarse, al menos 0,75 (presencial) u 0,85 (híbrida) (`MINIMO_CON_RELOCALIZACION`). Fuera de Colombia, el mismo país es la coincidencia completa | 0,5 con `SIN_UBICACION` |
 | Disponibilidad | min(1, horas del jugador / horas de la oferta); oferta sin horas: 1 | 0,5 con `SIN_HORAS` |
 
 ### Escalas fijas de la técnica
@@ -498,6 +506,17 @@ refrescar y reintentar la petición fallida una única vez.
 Todas cumplen la interfaz `GameStatsProvider`
 (`apps/api/src/integrations/GameStatsProvider.ts`) con tres métodos:
 `vincularCuenta`, `obtenerEstadisticas` y `refrescarToken`. El registro de
-`integrations/index.ts` resuelve el proveedor por plataforma, así que el módulo
-`estadisticas` nunca depende de una implementación concreta. Riot es la primera
-que se va a conectar y su clase ya documenta los endpoints del camino.
+`integrations/index.ts` resuelve el proveedor por plataforma.
+
+**Riot es la única conectada** (decisión 0.3: el piloto es sólo League of
+Legends). `RiotProvider` implementa `obtenerEstadisticas` con account-v1,
+summoner-v4, league-v4 y match-v5, y añade la búsqueda de la cuenta, el icono
+actual y las novedades que usan la vinculación por icono y la ingesta.
+`vincularCuenta` y `refrescarToken` responden `501`: son el camino de Riot Sign On
+(OAuth), que exige una clave de producción. La cuota global en Redis, la cola de
+ingesta y la normalización están en `integrations/riot/` y `ingesta/`; su porqué,
+en `docs/decisiones.md` («Integración con Riot» y «Cuota de Riot e ingesta»).
+
+Steam, Twitch y YouTube tienen su clase con todos los métodos en `501` y sus
+variables de entorno declaradas: son trabajo futuro. Cloudinary tiene cliente
+(`integrations/cloudinary`) pero ningún endpoint lo usa.
