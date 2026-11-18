@@ -12,6 +12,7 @@ import {
 } from "@proplay/shared";
 import { AppError, ForbiddenError, NotFoundError } from "../../utils/errors";
 import { calcularRango, paginar, type OpcionesPaginacion } from "../../utils/pagination";
+import { publicar } from "../../eventos";
 import * as repositorio from "./ofertas.repository";
 import {
   ubicacionOfertaSchema,
@@ -278,7 +279,7 @@ export async function cambiarEstado(
 
   const ahora = new Date();
   const final = esFinalOferta(estado);
-  const actualizada = await repositorio.cambiarEstadoOferta(
+  const { oferta: actualizada, rechazadas } = await repositorio.cambiarEstadoOferta(
     id,
     actor.id,
     oferta.estado,
@@ -286,6 +287,18 @@ export async function cambiarEstado(
     estado === "ABIERTA" ? { publicadaEn: ahora } : final ? { cerradaEn: ahora } : {},
     final,
   );
+  // RF-12 · Cada jugador rechazado por el cierre recibe su notificación.
+  for (const rechazada of rechazadas) {
+    publicar({
+      tipo: "POSTULACION_CAMBIADA",
+      ofertaId: id,
+      ofertaTitulo: actualizada.titulo,
+      postulacionId: rechazada.id,
+      jugadorUsuarioId: rechazada.jugadorUsuarioId,
+      estado: "RECHAZADA",
+      origen: "CIERRE_OFERTA",
+    });
+  }
   return aOferta(actualizada);
 }
 
@@ -302,11 +315,20 @@ export async function postular(
   const oferta = await ofertaVisible(ofertaId, actor);
   if (oferta.estado !== "ABIERTA") throw ofertaNoAbierta();
 
-  return repositorio.crearPostulacion(actor.id, {
+  const postulacion = await repositorio.crearPostulacion(actor.id, {
     ofertaId,
     jugadorId: jugador.id,
     mensaje: mensaje || null,
   });
+  // RF-12 · El equipo dueño recibe la notificación de la nueva postulación.
+  publicar({
+    tipo: "POSTULACION_CREADA",
+    ofertaId,
+    ofertaTitulo: oferta.titulo,
+    postulacionId: postulacion.id,
+    equipoUsuarioId: oferta.equipo.usuarioId,
+  });
+  return postulacion;
 }
 
 /**
@@ -346,7 +368,7 @@ export async function actualizarPostulacion(
 ): Promise<Postulacion> {
   const postulacion = await repositorio.buscarPostulacion(id);
   if (!postulacion) throw new NotFoundError("Postulación no encontrada");
-  const { oferta, ...datos } = postulacion;
+  const { oferta, jugador, ...datos } = postulacion;
   if (oferta.equipo.usuarioId !== actor.id) {
     throw new ForbiddenError("Sólo el equipo que publicó la oferta puede gestionar sus postulaciones");
   }
@@ -355,5 +377,16 @@ export async function actualizarPostulacion(
   const permitidas: readonly EstadoPostulacion[] = TRANSICIONES_POSTULACION[datos.estado];
   if (!permitidas.includes(estado)) throw transicionNoPermitida(datos.estado, estado);
 
-  return repositorio.cambiarEstadoPostulacion(id, actor.id, datos.estado, estado);
+  const actualizada = await repositorio.cambiarEstadoPostulacion(id, actor.id, datos.estado, estado);
+  // RF-12 · El jugador recibe la notificación del cambio.
+  publicar({
+    tipo: "POSTULACION_CAMBIADA",
+    ofertaId: oferta.id,
+    ofertaTitulo: oferta.titulo,
+    postulacionId: id,
+    jugadorUsuarioId: jugador.usuarioId,
+    estado,
+    origen: "EQUIPO",
+  });
+  return actualizada;
 }

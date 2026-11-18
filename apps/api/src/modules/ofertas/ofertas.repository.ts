@@ -235,7 +235,7 @@ export async function cambiarEstadoOferta(
   a: EstadoOferta,
   fechas: { publicadaEn?: Date; cerradaEn?: Date },
   esFinal: boolean,
-): Promise<OfertaDb> {
+): Promise<{ oferta: OfertaDb; rechazadas: { id: string; jugadorUsuarioId: string }[] }> {
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.oferta.updateMany({
       where: { id, estado: de },
@@ -256,7 +256,7 @@ export async function cambiarEstadoOferta(
     if (esFinal) {
       const pendientes = await tx.postulacion.findMany({
         where: { ofertaId: id, estado: { in: ESTADOS_NO_FINALES } },
-        select: { id: true, estado: true },
+        select: { id: true, estado: true, jugador: { select: { usuarioId: true } } },
       });
       if (pendientes.length > 0) {
         const ahora = fechas.cerradaEn ?? new Date();
@@ -279,9 +279,16 @@ export async function cambiarEstadoOferta(
           })),
         });
       }
+      return {
+        oferta: await tx.oferta.findUniqueOrThrow({ where: { id }, select: seleccionOferta }),
+        rechazadas: pendientes.map((p) => ({ id: p.id, jugadorUsuarioId: p.jugador.usuarioId })),
+      };
     }
 
-    return tx.oferta.findUniqueOrThrow({ where: { id }, select: seleccionOferta });
+    return {
+      oferta: await tx.oferta.findUniqueOrThrow({ where: { id }, select: seleccionOferta }),
+      rechazadas: [],
+    };
   });
 }
 
@@ -342,7 +349,8 @@ export async function buscarPostulacion(id: string) {
     where: { id },
     select: {
       ...seleccionPostulacion,
-      oferta: { select: { estado: true, equipo: { select: { usuarioId: true } } } },
+      oferta: { select: { id: true, titulo: true, estado: true, equipo: { select: { usuarioId: true } } } },
+      jugador: { select: { usuarioId: true } },
     },
   });
 }
