@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
@@ -121,15 +121,52 @@ describe('Aplicacion', () => {
     expect(screen.getByText('Declaro que soy mayor de 18 años.')).toBeInTheDocument()
   })
 
-  it('el feed del jugador carga con sus metricas y recomendaciones', async () => {
+  it('el inicio lleva al jugador a Explorar oportunidades: el feed salio de esta version (1.7)', async () => {
     sesionDe('JUGADOR')
     render(renderApp('/'))
     expect(
-      await screen.findByRole('heading', { name: /Bienvenido, Daniel/i }, { timeout: 8000 }),
+      await screen.findByRole('heading', { name: /Explorar oportunidades/i }, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByText(/Vacantes que encajan contigo/i, {}, { timeout: 8000 }),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Bienvenido/i })).toBeNull()
+  })
+
+  it('el inicio lleva al equipo, al scout y al administrador a la analitica (1.7)', async () => {
+    for (const rol of ['EQUIPO', 'SCOUT', 'ADMIN'] as const) {
+      sesionDe(rol)
+      const { unmount } = render(renderApp('/'))
+      expect(
+        await screen.findByRole('heading', { name: 'Analítica' }, { timeout: 8000 }),
+      ).toBeInTheDocument()
+      unmount()
+    }
+  })
+
+  it('el menu no ofrece Feed, Mensajes ni Auditoria, y la cabecera no tiene campana ni estado del worker (1.7)', async () => {
+    for (const rol of ['JUGADOR', 'EQUIPO', 'ADMIN'] as const) {
+      sesionDe(rol)
+      const { unmount } = render(renderApp('/cuenta'))
+      const menu = await screen.findByRole('navigation', {}, { timeout: 8000 })
+      for (const nombre of [/^Feed$/, /^Mensajes$/, /^Auditoria$/]) {
+        expect(within(menu).queryByRole('link', { name: nombre })).toBeNull()
+      }
+      expect(screen.queryByLabelText(/Notificaciones/i)).toBeNull()
+      expect(screen.queryByText(/Worker de ingesta/i)).toBeNull()
+      unmount()
+    }
+  })
+
+  it('el jugador conserva en el menu Cuentas vinculadas y Mis estadisticas', async () => {
+    sesionDe('JUGADOR')
+    render(renderApp('/cuenta'))
+    const menu = await screen.findByRole('navigation', {}, { timeout: 8000 })
+    expect(within(menu).getByRole('link', { name: 'Cuentas vinculadas' })).toHaveAttribute(
+      'href',
+      '/cuentas-vinculadas',
+    )
+    expect(within(menu).getByRole('link', { name: 'Mis estadísticas' })).toHaveAttribute(
+      'href',
+      '/mis-estadisticas',
+    )
   })
 
   it('el jugador accede a su perfil profesional, que sin API ofrece reintentar', async () => {
@@ -204,30 +241,30 @@ describe('Aplicacion', () => {
     expect(screen.queryByRole('heading', { name: 'Tus vacantes' })).toBeNull()
   })
 
-  it('la bandeja de notificaciones lista los eventos del usuario', async () => {
+  it('los mensajes no estan disponibles en esta version: la URL muestra el aviso (1.7)', async () => {
     sesionDe('JUGADOR')
-    render(renderApp('/'))
-    const boton = await screen.findByLabelText(/Notificaciones/i, {}, { timeout: 8000 })
-    boton.click()
+    render(renderApp('/mensajes'))
     expect(
-      await screen.findByText(/Estadisticas sincronizadas/i, {}, { timeout: 8000 }),
+      await screen.findByText('Función no disponible en esta versión', {}, { timeout: 8000 }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ir al inicio/i })).toHaveAttribute('href', '/')
   })
 
-  it('la auditoria solo es visible para el administrador', async () => {
+  it('para cualquier rol, /admin muestra el aviso de funcion no disponible (1.7)', async () => {
     sesionDe('EQUIPO')
     render(renderApp('/admin'))
     expect(
-      await screen.findByText(/No tienes permisos para esta seccion/i, {}, { timeout: 8000 }),
+      await screen.findByText('Función no disponible en esta versión', {}, { timeout: 8000 }),
     ).toBeInTheDocument()
   })
 
-  it('el registro de auditoria se abre para el administrador', async () => {
+  it('el panel de administracion no esta disponible en esta version (1.7)', async () => {
     sesionDe('ADMIN')
     render(renderApp('/admin'))
     expect(
-      await screen.findByRole('heading', { name: /Administracion y trazabilidad/i }, { timeout: 8000 }),
+      await screen.findByText('Función no disponible en esta versión', {}, { timeout: 8000 }),
     ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Administracion y trazabilidad/i })).toBeNull()
   })
 
   it('la vista de vacantes habla con la API real: sin servidor ofrece reintentar', async () => {

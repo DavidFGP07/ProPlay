@@ -224,7 +224,7 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Feed (simulado; sigue en el enrutador y en el menú hasta la tarea 1.7) | `/` | RF-08 | Futuro (descartada) |
+| Feed (fuera del menú; `/` redirige a la vista principal del rol: Explorar oportunidades para el jugador, Analítica para los demás) | — | RF-08 | Futuro (descartada) |
 | Mi perfil (cabecera, datos profesionales, ubicación y pestaña de postulaciones reales; cuentas, habilidades, portafolio, privacidad y laterales, simulados) | `/mi-perfil` | RF-05 | Núcleo |
 | Cuentas vinculadas (estado, última sincronización) | `/cuentas-vinculadas` | RF-02, RF-03 | Núcleo. Absorbe el contenido del onboarding |
 | Mis estadísticas (incluye la tendencia del rendimiento, uno de los indicadores de la analítica) | `/mis-estadisticas` | RF-04, RF-13 | Núcleo |
@@ -232,7 +232,7 @@ está en `docs/decisiones.md`, «Recorte de alcance»):
 | Explorar oportunidades | `/vacantes` | RF-07, RF-09 | Núcleo |
 | Detalle de la oferta y postulación | `/vacantes/:id` | RF-07, RF-10 | Núcleo |
 | Mis postulaciones | `/mi-perfil?pestana=postulaciones` | RF-10 | Soporte: pestaña de Mi perfil, sin vista propia |
-| Mensajes (simulado; sigue en el enrutador y en el menú hasta la tarea 1.7) | `/mensajes` | RF-12 | Futuro (2.º en recuperarse) |
+| Mensajes (fuera del menú; `/mensajes` muestra «Función no disponible en esta versión») | — | RF-12 | Futuro (2.º en recuperarse) |
 | Ajustes de cuenta y privacidad (común a los cuatro roles; hoy sólo nombre y contraseña, reales; los ajustes de privacidad no existen todavía) | `/cuenta` | RF-01, RNF-05 | Soporte, y cuenta como dos de las 19: Mi cuenta, y Ajustes de privacidad sólo de visibilidad (perfil público sí/no y mostrar ubicación) |
 | Onboarding | — | RF-02, RF-05 | Futuro (descartada): su contenido vive en Cuentas vinculadas y en el aviso de ubicación de Mi perfil |
 
@@ -258,7 +258,7 @@ dentro de cada vista.
 
 | Vista | Ruta actual | RF | Alcance |
 |---|---|---|---|
-| Panel de administración (simulado; sigue en el enrutador y en el menú del administrador hasta la tarea 1.7) | `/admin` | RF-13 | Futuro (descartada): las operaciones van por scripts documentados en `docs/operacion.md` |
+| Panel de administración (fuera del menú; `/admin` muestra «Función no disponible en esta versión») | — | RF-13 | Futuro (descartada): las operaciones van por scripts documentados en `docs/operacion.md` |
 | Usuarios, contenido, catálogo de habilidades, auditoría, integraciones | — | RF-01, RF-06, RF-14, RF-03 | Futuro (descartada), igual que el panel |
 
 ### Estados transversales
@@ -368,7 +368,7 @@ desvincular), `/mis-estadisticas` (rango, métricas y tendencia), en
 `/mi-perfil` la cabecera, los datos profesionales y la pestaña de postulaciones, y en
 `/panel-equipo` todo: «Datos de la organización», con la sede, «Tus ofertas», el resumen de la analítica y «Mejores
 candidatos» (los tres primeros del ranking de cada oferta abierta; sólo el rol `EQUIPO`; el scout ve el resumen del talento verificado), y la analítica `/dashboard` (RF-13: tiempos de las vacantes, embudo, dimensión decisiva por oferta y mapa del talento). `/legal/privacidad` es texto estático. El resto de `/mi-perfil` (cuentas,
-habilidades, portafolio, privacidad y laterales) sigue simulado, con `MarcaDatosDemo` en cada sección.
+habilidades, portafolio, privacidad y laterales) sigue simulado, con `MarcaDatosDemo` en cada sección, y desaparece con `VITE_DEMO_DATA=false`. Feed, Mensajes y Auditoría salieron del menú (tarea 1.7): `/` lleva a la vista principal de cada rol y `/mensajes` y `/admin` muestran un aviso de función no disponible. La cabecera ya no tiene la línea del worker ni la campana de notificaciones, que eran simuladas.
 
 El **puente de datos de demostración** (`VITE_DEMO_DATA=true` en `apps/web/.env`) alimenta
 las vistas simuladas: la sesión real se hace pasar por una persona de ejemplo de su mismo

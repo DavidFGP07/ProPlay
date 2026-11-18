@@ -600,3 +600,12 @@ decisión.
 6. **El documento pide OAuth 2.0** para vincular las cuentas (`CLAUDE.md` §1) y el piloto usa
    el desafío de icono. Es una divergencia ya registrada («Vinculación con Riot»); se cita
    aquí porque `CLAUDE.md` §1 la presentaba como hecha.
+
+## Menú de esta versión (tarea 1.7)
+
+| Decisión | Justificación |
+| --- | --- |
+| **Feed, Mensajes y Auditoría salen del menú.** `/` redirige a la vista principal de cada rol (`inicioDe` en `router/areas.ts`): Explorar oportunidades para el jugador y Analítica para el equipo, el scout y el administrador. `/mensajes` y `/admin` muestran «Función no disponible en esta versión» dentro del `Layout`. El código de esas vistas se conserva como prototipo, sin enrutar | Son vistas descartadas o de trabajo futuro (decisión 0.10) con datos simulados: en la demostración no deben aparecer como si fueran reales. Un aviso es mejor que un 404 para quien tenga un enlace antiguo. |
+| **La cabecera pierde la línea del estado del worker y la campana de notificaciones** | Las dos eran simuladas: la línea decía «Worker de ingesta activo» con cifras del prototipo, y las notificaciones son trabajo futuro (RF-12). El estado real de la ingesta se consulta con `npm run ingesta:estado -w api`. |
+| La vinculación real con Riot y Mis estadísticas siguen en el menú del jugador (`/cuentas-vinculadas`, `/mis-estadisticas`) | No dependen del puente de demostración. La pestaña «Cuentas de juego» de Mi perfil, que desaparece con `VITE_DEMO_DATA=false`, era la simulada del prototipo. |
+| Resuelve la contradicción 1 de «Sincronización de la documentación» (vistas descartadas o de trabajo futuro en el menú) | Esa lista es de sólo añadir: la contradicción se da por resuelta aquí, no se borra allí. |

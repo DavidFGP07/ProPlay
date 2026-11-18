@@ -150,6 +150,13 @@ export const es = {
       YOUTUBE: 'YouTube',
     } satisfies Record<Plataforma, string>,
   },
+  // Tarea 1.7 · Funciones del prototipo fuera de esta versión (mensajes, administración)
+  noDisponible: {
+    titulo: 'Función no disponible en esta versión',
+    detalle:
+      'Esta parte de ProPlay no forma parte de la versión actual. Puedes seguir desde el inicio.',
+    volver: 'Ir al inicio',
+  },
   noEncontrada: {
     titulo: 'Pagina no encontrada',
     detalle: 'La direccion que buscas no existe o ya no esta disponible.',

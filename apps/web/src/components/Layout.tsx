@@ -1,29 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity,
   BarChart3,
   Briefcase,
   ChartNoAxesColumn,
-  ClipboardList,
-  Home,
   Link2,
   LogOut,
   Menu,
-  MessageSquare,
   Search,
   Settings,
   ShieldCheck,
   Target,
   UserRound,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { Avatar, Badge, Button, cn } from '@/components/ui'
-import { NotificacionesBell } from '@/components/NotificacionesBell'
 import { AvisoDatosDemo } from '@/components/AvisoDatosDemo'
-import { useEstadoIngesta } from '@/api/estadisticas'
 import { AREAS } from '@/router/areas'
 import { es } from '@/i18n/es'
 import type { Rol } from '@proplay/shared'
@@ -31,12 +26,13 @@ import type { Rol } from '@proplay/shared'
 interface ItemNav {
   to: string
   label: string
-  icono: typeof Home
+  icono: LucideIcon
   roles?: readonly Rol[]
 }
 
+// Tarea 1.7: Feed, Mensajes y Auditoría (administración) salen del menú; son
+// trabajo futuro (decisión 0.10) y sus URL muestran «no disponible».
 const NAVEGACION: ItemNav[] = [
-  { to: '/', label: 'Feed', icono: Home },
   { to: '/mi-perfil', label: 'Mi perfil', icono: UserRound, roles: AREAS.jugador },
   {
     to: '/cuentas-vinculadas',
@@ -54,8 +50,6 @@ const NAVEGACION: ItemNav[] = [
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
   { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: AREAS.equipo },
   { to: '/dashboard', label: es.analitica.menu, icono: ChartNoAxesColumn, roles: AREAS.equipo },
-  { to: '/mensajes', label: 'Mensajes', icono: MessageSquare },
-  { to: '/admin', label: 'Auditoria', icono: ClipboardList, roles: AREAS.admin },
   // Sin roles: la vista de cuenta es comun a los cuatro.
   { to: '/cuenta', label: es.cuenta.menu, icono: Settings },
 ]
@@ -66,12 +60,6 @@ export function Layout() {
   const navegar = useNavigate()
   const ubicacion = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const { data: worker, refetch: refrescarWorker } = useEstadoIngesta()
-
-  // El estado del worker se refresca en cada cambio de pantalla.
-  useEffect(() => {
-    void refrescarWorker()
-  }, [ubicacion.pathname, refrescarWorker])
 
   if (!usuario) return null
 
@@ -83,15 +71,6 @@ export function Layout() {
     await salir()
     notificar('Sesion cerrada correctamente.', 'info')
     navegar('/login')
-  }
-
-  const ultimaSyncTexto = () => {
-    if (!worker?.ultimaSync) return 'sin sincronizar'
-    const diff = Date.now() - new Date(worker.ultimaSync).getTime()
-    const horas = Math.floor(diff / 3_600_000)
-    if (horas < 1) return 'hace menos de 1 h'
-    if (horas < 24) return `hace ${horas} h`
-    return `hace ${Math.floor(horas / 24)} dias`
   }
 
   return (
@@ -131,7 +110,6 @@ export function Layout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
                 onClick={() => setMenuAbierto(false)}
                 className={({ isActive }) =>
                   cn(
@@ -181,19 +159,9 @@ export function Layout() {
             <Menu size={20} />
           </button>
 
-          <div className="hidden min-w-0 flex-1 items-center gap-2 md:flex">
-            <Activity size={15} className="shrink-0 text-brand-400" />
-            <p className="truncate text-xs text-slate-500">
-              Worker de ingesta activo · ultima sincronizacion{' '}
-              <span className="text-slate-300">{ultimaSyncTexto()}</span> ·{' '}
-              <span className="text-emerald-400">
-                {worker?.perfiles ?? 0} perfiles verificados
-              </span>
-            </p>
-          </div>
-
-          <div className="flex flex-1 items-center justify-end gap-2 md:flex-none">
-            <NotificacionesBell />
+          {/* Sin la línea del worker ni la campana de notificaciones, que eran
+              simuladas (tarea 1.7): las notificaciones son trabajo futuro. */}
+          <div className="flex flex-1 items-center justify-end gap-2">
 
             <Link
               to="/cuenta"
