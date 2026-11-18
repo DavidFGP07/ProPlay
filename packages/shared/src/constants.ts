@@ -509,3 +509,34 @@ export interface LineaBaseScouting {
  * comparación y el CSV del piloto la marca como pendiente.
  */
 export const LINEA_BASE_SCOUTING_MANUAL: LineaBaseScouting | null = null;
+
+// ------------------------------------------------------------ explicador
+
+/**
+ * Estado de la explicación generada con un modelo de lenguaje (RF-11, tareas
+ * 4.1 y 4.3). `NO_DISPONIBLE` no es un error: la vista muestra entonces sólo la
+ * explicación determinista del desglose, con una nota discreta.
+ */
+export const ESTADOS_EXPLICACION_GENERADA = ["GENERADA", "NO_DISPONIBLE"] as const;
+export type EstadoExplicacionGenerada = (typeof ESTADOS_EXPLICACION_GENERADA)[number];
+
+/**
+ * Por qué no hay explicación generada (degradación elegante, 4.3):
+ * - `DESACTIVADO`: sin clave del proveedor o con el explicador apagado.
+ * - `ERROR`: el proveedor falló o declinó la petición, o la caché no respondió.
+ * - `TIEMPO_AGOTADO`: el proveedor no respondió dentro del tiempo máximo.
+ * - `FIDELIDAD`: el texto traía una cifra, un rango o una dimensión que no
+ *   estaba en la entrada, y se descartó.
+ * - `LIMITE`: se agotó el límite por usuario y hora o el tope diario global.
+ */
+export const MOTIVOS_EXPLICACION_NO_DISPONIBLE = [
+  "DESACTIVADO",
+  "ERROR",
+  "TIEMPO_AGOTADO",
+  "FIDELIDAD",
+  "LIMITE",
+] as const;
+export type MotivoExplicacionNoDisponible = (typeof MOTIVOS_EXPLICACION_NO_DISPONIBLE)[number];
+
+/** Longitud máxima del texto generado (2 o 3 frases con margen). */
+export const LONGITUD_MAXIMA_EXPLICACION_GENERADA = 1200;
