@@ -18,6 +18,7 @@ import { matchingRouter } from "./modules/matching/matching.routes";
 import { ofertasRouter } from "./modules/ofertas/ofertas.routes";
 import { mensajeriaRouter } from "./modules/mensajeria/mensajeria.routes";
 import { notificacionesRouter } from "./modules/notificaciones/notificaciones.routes";
+import { escucharEventos } from "./modules/notificaciones/notificaciones.service";
 import { adminRouter } from "./modules/admin/admin.routes";
 import { analiticaRouter } from "./modules/analitica/analitica.routes";
 import { explicadorRouter } from "./modules/explicador/explicador.routes";
@@ -30,6 +31,8 @@ import { explicadorRouter } from "./modules/explicador/explicador.routes";
  */
 export function crearApp(): Express {
   const app = express();
+  // RF-12 · `notificaciones` consume los eventos que publican los demás módulos.
+  escucharEventos();
 
   configurarProxy(app, env.trustProxy);
 
@@ -87,7 +90,7 @@ function crearRouterApi(): Router {
   api.use("/auth", authRouter);
   api.use("/usuarios", usuariosRouter);
 
-  // Módulos de negocio restantes (andamiaje: responden 501).
+  // Módulos de negocio restantes.
   api.use("/perfiles", perfilesRouter);
   api.use("/estadisticas", estadisticasRouter);
   api.use("/scouting", scoutingRouter);

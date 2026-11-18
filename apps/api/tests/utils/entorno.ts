@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { crearApp } from "../../src/app";
 import { prisma } from "../../src/config/prisma";
 import { desconectarRedis } from "../../src/config/redis";
+import { esperarEventos } from "../../src/eventos";
 import { cerrarColaIngesta } from "../../src/ingesta/cola";
 
 /**
@@ -27,12 +28,15 @@ export function emailDePrueba(etiqueta: string): string {
 
 /** Borra todo lo que hayan creado las pruebas (los perfiles caen en cascada). */
 export async function limpiarUsuariosDePrueba(): Promise<void> {
+  // Las notificaciones de los eventos en curso se escriben antes de borrar a sus destinatarios.
+  await esperarEventos();
   await prisma.usuario.deleteMany({
     where: { email: { startsWith: PREFIJO_PRUEBA } },
   });
 }
 
 export async function cerrarConexiones(): Promise<void> {
+  await esperarEventos();
   await cerrarColaIngesta();
   await Promise.all([prisma.$disconnect(), desconectarRedis()]);
 }

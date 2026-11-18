@@ -600,7 +600,7 @@ async function main() {
   // ---------------------------------------------------------------- jugadores
   let estadisticasCreadas = 0;
   let postulacionesCreadas = 0;
-  const perfilesJugador: { id: string }[] = [];
+  const perfilesJugador: { id: string; usuarioId: string }[] = [];
   for (const [indice, nombre] of NOMBRES_JUGADORES.entries()) {
     const email = correoJugadorSeed(indice + 1);
     const riot = DATOS_RIOT[indice]!;
@@ -833,6 +833,80 @@ async function main() {
   console.log(
     `  · ${OFERTAS.length} ofertas (abiertas, cubiertas, cerrada y borrador) y ${postulacionesCreadas} postulaciones con sus fechas`,
   );
+
+  // ---------------------------------------------------------- notificaciones
+  // RF-12 · Unas pocas para el equipo y el jugador de la demostración, sacadas
+  // de sus postulaciones reales (hasta tres cada uno, la más antigua ya leída).
+  // Se rehacen en cada ejecución.
+  const equipoDemo = perfilesEquipo[0]!;
+  const jugadorDemo = perfilesJugador[0]!;
+  await prisma.notificacion.deleteMany({
+    where: { usuarioId: { in: [equipoDemo.usuarioId, jugadorDemo.usuarioId] } },
+  });
+  const recibidas = await prisma.postulacion.findMany({
+    where: { oferta: { equipoId: equipoDemo.id } },
+    orderBy: [{ creadoEn: "desc" }, { id: "asc" }],
+    take: 3,
+    select: { id: true, creadoEn: true, oferta: { select: { id: true, titulo: true } } },
+  });
+  const propias = await prisma.postulacion.findMany({
+    where: { jugadorId: jugadorDemo.id, estado: { not: "ENVIADA" } },
+    select: {
+      id: true,
+      estado: true,
+      revisadaEn: true,
+      entrevistaEn: true,
+      aceptadaEn: true,
+      rechazadaEn: true,
+      oferta: { select: { id: true, titulo: true, estado: true } },
+    },
+  });
+  // Una por cada paso del recorrido, como las habrían creado los eventos; las tres últimas.
+  const pasos = propias
+    .flatMap((p) => {
+      const porCierre = p.estado === "RECHAZADA" && p.oferta.estado !== "ABIERTA";
+      const recorrido: [EstadoPostulacion, Date | null][] = [
+        ["EN_REVISION", p.revisadaEn],
+        ["ENTREVISTA", p.entrevistaEn],
+        ["ACEPTADA", p.aceptadaEn],
+        ["RECHAZADA", p.rechazadaEn],
+      ];
+      return recorrido
+        .filter((paso): paso is [EstadoPostulacion, Date] => paso[1] !== null)
+        .map(([estado, fecha]) => ({
+          p,
+          estado,
+          fecha,
+          origen: estado === "RECHAZADA" && porCierre ? "CIERRE_OFERTA" : "EQUIPO",
+        }));
+    })
+    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
+    .slice(0, 3);
+  const notificaciones = [
+    ...recibidas.map((p, i) => ({
+      usuarioId: equipoDemo.usuarioId,
+      tipo: "NUEVA_POSTULACION",
+      payload: { ofertaId: p.oferta.id, ofertaTitulo: p.oferta.titulo, postulacionId: p.id },
+      creadoEn: p.creadoEn,
+      // La más antigua, leída; las demás, sin leer.
+      leidaEn: i > 0 && i === recibidas.length - 1 ? p.creadoEn : null,
+    })),
+    ...pasos.map(({ p, estado, fecha, origen }, i) => ({
+      usuarioId: jugadorDemo.usuarioId,
+      tipo: "POSTULACION_ACTUALIZADA",
+      payload: {
+        ofertaId: p.oferta.id,
+        ofertaTitulo: p.oferta.titulo,
+        postulacionId: p.id,
+        estado,
+        origen,
+      },
+      creadoEn: fecha,
+      leidaEn: i > 0 && i === pasos.length - 1 ? fecha : null,
+    })),
+  ];
+  await prisma.notificacion.createMany({ data: notificaciones });
+  console.log(`  · ${notificaciones.length} notificaciones (equipo y jugador de la demostración)`);
 
   // ---------------------------------------------------------------- vectores
   // Con el vectorizador del motor de matching, a partir de las capturas que
