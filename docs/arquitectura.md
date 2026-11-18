@@ -3,7 +3,7 @@
 ## Vista general
 
 Monolito modular en el servidor con cliente desacoplado. Una sola aplicación
-Express contiene los diez módulos de negocio, separados por carpetas y no por
+Express contiene los once módulos de negocio, separados por carpetas y no por
 servicios; el contrato de la API vive en un paquete compartido que consumen
 tanto el backend como el frontend.
 
@@ -22,7 +22,7 @@ flowchart TB
 
     subgraph Servidor["Servidor — apps/api (:3000)"]
         MW["Middlewares<br/>helmet · cors · rateLimit · auth · rbac · validate"]
-        MOD["Diez módulos de negocio<br/>routes → controller → service → repository"]
+        MOD["Once módulos de negocio<br/>routes → controller → service → repository"]
         ERR["errorHandler centralizado"]
         MW --> MOD --> ERR
     end
@@ -35,6 +35,7 @@ flowchart TB
 
     subgraph Externas["Integraciones externas"]
         RIOT["Riot Games<br/>API con clave de la aplicación"]
+        LLM["Anthropic (Claude Haiku 5.5)<br/>explicador, opcional"]
         OTRAS["Steam · Twitch · YouTube<br/>(trabajo futuro, 501)"]
     end
 
@@ -65,7 +66,7 @@ flowchart LR
     RP -- error --> EH
 ```
 
-## Los diez módulos
+## Los once módulos
 
 ```mermaid
 flowchart TB
@@ -80,6 +81,7 @@ flowchart TB
     API --> N["notificaciones"]
     API --> AD["admin"]
     API --> AN["analitica"]
+    API --> EX["explicador"]
 
     U -.->|identidad| P
     P -.->|habilidades y cuentas| E
@@ -91,6 +93,7 @@ flowchart TB
     MS -.->|mensajes| N
     U -.->|auditoría| AD
     M -.->|ranking al día| AN
+    M -.->|candidato y desglose| EX
 ```
 
 | Módulo | Responsabilidad | Estado |
@@ -105,6 +108,7 @@ flowchart TB
 | `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |
 | `admin` | Métricas de la plataforma, moderación de cuentas y consulta del `AuditLog` | Andamiaje (501) |
 | `analitica` | Indicadores de la analítica (RF-13): embudo de la vacante con el tiempo hasta cubrirla, dimensión decisiva del ranking y mapa del talento verificado. Sólo lee | **Implementado** (`GET /embudo`, `/ofertas/:id/embudo`, `/ofertas/:id/dimension-decisiva`, `/talento`) |
+| `explicador` | Explicación en lenguaje natural del puntaje de un candidato, redactada con un modelo de lenguaje a partir del desglose (RF-11). Fuera del motor: el ranking no depende de él | **Implementado** (`GET /explicaciones/ofertas/:id/candidatos/:jugadorId`) |
 
 ## Modelo de datos
 
@@ -501,6 +505,55 @@ El access token vive sólo en memoria del cliente; la sesión sobrevive a la
 recarga gracias a la cookie `httpOnly`, que el interceptor de axios usa para
 refrescar y reintentar la petición fallida una única vez.
 
+## Explicador con modelo de lenguaje
+
+RF-11, tareas 4.1, 4.3 y 4.7. El detalle del candidato muestra, sobre la tabla de aportes,
+un texto de 2 o 3 frases que explica qué suma y qué resta al puntaje. Lo redacta Claude
+Haiku 5.5 por la API de Anthropic. El porqué de cada decisión está en
+`docs/decisiones.md`, «Explicador con modelo de lenguaje».
+
+```mermaid
+flowchart LR
+    V["Detalle del candidato<br/>(web)"] -->|GET /explicaciones/…| C["explicador"]
+    C -->|candidato| M["matching<br/>(permisos y recálculo al leer)"]
+    C --> E["Entrada: sólo cifras y códigos"]
+    E --> K{"¿En la caché<br/>de Redis?"}
+    K -- sí --> R["GENERADA"]
+    K -- no --> L{"¿Quedan<br/>generaciones?"}
+    L -- no --> D["NO_DISPONIBLE"]
+    L -- sí --> P["ProveedorLLM<br/>(Anthropic)"]
+    P --> F{"¿Fiel a<br/>la entrada?"}
+    F -- sí --> R
+    F -- no --> D
+    P -. "error, negativa o<br/>tiempo agotado" .-> D
+```
+
+- **Fuera del motor.** El módulo `matching` sigue sin red (regla de ESLint y
+  `tests/matching-sin-red.test.ts`). `explicador` llama a `matching.candidato()`, que
+  aplica los permisos, el 404 y el recálculo al leer; nadie llama a `explicador`.
+- **Entrada** (`redaccion/entrada.ts`): los requisitos de la oferta, el puntaje y las
+  dimensiones visibles con peso mayor que 0, con sus cifras ya en porcentaje, más el orden
+  de lo que más suma (peso × valor) y de lo que más resta (peso × lo que le falta). Si la
+  misma dimensión encabeza las dos listas, `mismaDimension` dice qué parte suma y cuál
+  resta (en la técnica, sus componentes). Nunca `candidato.jugador`: ni nombre, ni correo,
+  ni Riot ID, ni ids, ni ubicación, ni fechas.
+- **Prompt** (`redaccion/prompt.ts`): en español y versionado (`VERSION_PROMPT`).
+- **Llamada** (`integrations/llm/`): `ProveedorLLM` con tres implementaciones (Anthropic,
+  desactivada y, en las pruebas, una falsa). Esfuerzo `low`, pensamiento desactivado, 400
+  tokens como máximo, sin reintentos y con el tiempo máximo de `EXPLICADOR_TIMEOUT_MS`.
+- **Fidelidad** (`redaccion/fidelidad.ts`): se descarta el texto que traiga una cifra que no
+  está en la entrada (se admite la forma de fracción de un porcentaje), un rango o una
+  división que no están, o una dimensión oculta.
+- **Caché** en Redis por contenido: sha256 de la versión del prompt, el modelo y la entrada,
+  durante 30 días. Un acierto no llama al modelo ni gasta los límites.
+- **Límites**: `EXPLICADOR_LIMITE_USUARIO_HORA` generaciones nuevas por usuario y hora y
+  `EXPLICADOR_LIMITE_DIARIO` para toda la aplicación, con contadores en Redis.
+- **Degradación**: responde siempre 200. Sin texto, `NO_DISPONIBLE` con su motivo
+  (`DESACTIVADO`, `ERROR`, `TIEMPO_AGOTADO`, `FIDELIDAD` o `LIMITE`) y la vista deja una
+  nota discreta sobre la explicación determinista.
+- **Registros**: por llamada, el modelo, los tokens, el coste estimado y los milisegundos;
+  nunca la entrada ni el texto.
+
 ## Integraciones externas
 
 Todas cumplen la interfaz `GameStatsProvider`
@@ -516,6 +569,10 @@ actual y las novedades que usan la vinculación por icono y la ingesta.
 (OAuth), que exige una clave de producción. La cuota global en Redis, la cola de
 ingesta y la normalización están en `integrations/riot/` y `ingesta/`; su porqué,
 en `docs/decisiones.md` («Integración con Riot» y «Cuota de Riot e ingesta»).
+
+**Anthropic** (modelos de lenguaje) no es un proveedor de estadísticas: tiene su propia
+interfaz, `ProveedorLLM` (`integrations/llm/`), y sólo la usa el explicador. Sin
+`ANTHROPIC_API_KEY`, o con `EXPLICADOR_ACTIVO=false`, queda la implementación desactivada.
 
 Steam, Twitch y YouTube tienen su clase con todos los métodos en `501` y sus
 variables de entorno declaradas: son trabajo futuro. Cloudinary tiene cliente
