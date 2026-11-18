@@ -76,6 +76,8 @@ function aPostulacionRecibida(p: repositorio.PostulacionRecibidaDb): Postulacion
       pais: jugador.pais as Pais | null,
       departamento: jugador.departamento,
     },
+    // El correo visible para el equipo dueño llega en su propio PR; hasta entonces, nadie lo ve.
+    contacto: null,
   };
 }
 
