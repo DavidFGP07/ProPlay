@@ -165,7 +165,7 @@ funcionales (Cuadro IV).
 | RF-09 Puntaje y ranking | Hecho: cinco dimensiones, ranking persistido y explicable |
 | RF-10 Postulaciones | Hecho, con la fecha de cada etapa |
 | RF-11 Explicación en lenguaje natural | Hecho: explicación determinista por dimensión y, encima, un texto redactado por Claude Haiku 5.5 a partir del desglose (módulo `explicador`), con comprobación de fidelidad, caché, límites y degradación a la determinista |
-| RF-12 Mensajería y notificaciones | Mensajería: trabajo futuro (`501`); la sustituye el correo del jugador, visible para el equipo dueño desde que preselecciona la postulación. Notificaciones: trabajo futuro (`501`) |
+| RF-12 Mensajería y notificaciones | Mensajería: trabajo futuro (`501`); la sustituye el correo del jugador, visible para el equipo dueño desde que preselecciona la postulación. Notificaciones: **hechas en versión mínima** dentro de la app (nueva postulación, cambio de estado y rechazo al cerrar la oferta), con la campana de la cabecera; sin correo electrónico, push ni tiempo real |
 | RF-13 Analítica | Hecho en el módulo `analitica` y `/dashboard`, más el script del piloto |
 | RF-14 Auditoría | Se escribe en `AuditLog` (registro, login, cambios de contraseña, vinculación, ofertas, postulaciones y cambio de rol); **la vista de consulta es trabajo futuro** |
 
@@ -379,8 +379,10 @@ Para la sección de limitaciones del informe:
    pero no es OAuth. Se sustituye por Riot Sign On si llega la clave de producción.
 5. **Componente colaborativo con peso 0.** El motor opera sólo por contenido. El modo
    híbrido necesita un historial de contrataciones que el piloto no tendrá.
-6. **Recorte de alcance.** 19 vistas de 39. Mensajería, notificaciones, administración,
-   feed, comparador y lista de seguimiento quedaron fuera («Recorte de alcance»).
+6. **Recorte de alcance.** 19 vistas de 39. Mensajería, administración, feed, comparador y
+   lista de seguimiento quedaron fuera («Recorte de alcance»). Las notificaciones volvieron en
+   versión mínima (sin correo, push, tiempo real ni preferencias) y la mensajería la sustituye
+   el correo del jugador visible para el equipo dueño.
 7. **RNF-01 medido en local** (Apple M4, base en la misma máquina), no en la infraestructura
    del despliegue.
 8. **Escalas fijas de la técnica** calibradas con razonamiento, no con distribuciones

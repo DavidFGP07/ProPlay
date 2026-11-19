@@ -89,7 +89,7 @@ flowchart TB
     P -.->|vector de perfil| M
     O -.->|requisitos| M
     M -.->|ranking| SC
-    O -.->|postulaciones| N
+    O -.->|"eventos (src/eventos)"| N
     MS -.->|mensajes| N
     U -.->|auditoría| AD
     M -.->|ranking al día| AN
@@ -105,7 +105,7 @@ flowchart TB
 | `matching` | Algoritmo de compatibilidad jugador ↔ oferta y ranking persistido | Ranking, detalle del candidato, recálculo y ofertas compatibles con el jugador (`GET /jugador/me`, calculadas al pedirlas) implementados |
 | `ofertas` | Ofertas de los equipos y postulaciones de los jugadores con sus estados | **Implementado** |
 | `mensajeria` | Conversaciones y mensajes 1:1 y de equipo | Andamiaje (501) |
-| `notificaciones` | Notificaciones in-app y su estado de lectura | Andamiaje (501) |
+| `notificaciones` | Notificaciones dentro de la app y su estado de lectura. Consume los eventos de `src/eventos`; nadie lo llama | **Implementado** (`GET /`, `/contador`, `POST /leidas`, `/leidas/todas`) |
 | `admin` | Métricas de la plataforma, moderación de cuentas y consulta del `AuditLog` | Andamiaje (501) |
 | `analitica` | Indicadores de la analítica (RF-13): embudo de la vacante con el tiempo hasta cubrirla, dimensión decisiva del ranking y mapa del talento verificado. Sólo lee | **Implementado** (`GET /embudo`, `/ofertas/:id/embudo`, `/ofertas/:id/dimension-decisiva`, `/talento`) |
 | `explicador` | Explicación en lenguaje natural del puntaje de un candidato, redactada con un modelo de lenguaje a partir del desglose (RF-11). Fuera del motor: el ranking no depende de él | **Implementado** (`GET /explicaciones/ofertas/:id/candidatos/:jugadorId`) |

@@ -300,9 +300,14 @@ describe('Datos de la organización en el panel de equipo', () => {
 
   it('ofrece reintentar si no puede cargar los datos', async () => {
     sesionDe('EQUIPO')
-    doble.get
-      .mockRejectedValueOnce(errorApi(500))
-      .mockResolvedValueOnce(respuesta({ tipo: 'EQUIPO', perfil: perfil() }))
+    // La campana de la cabecera también consulta: el fallo es sólo del perfil.
+    let intentos = 0
+    doble.get.mockImplementation(async (ruta: string) => {
+      if (ruta.startsWith('/notificaciones')) return { data: { noLeidas: 0 } }
+      intentos += 1
+      if (intentos === 1) throw errorApi(500)
+      return respuesta({ tipo: 'EQUIPO', perfil: perfil() })
+    })
     renderPanel()
     const t = await tarjeta()
 
@@ -312,7 +317,7 @@ describe('Datos de la organización en el panel de equipo', () => {
     fireEvent.click(t.getByRole('button', { name: 'Reintentar' }))
 
     expect(await t.findByLabelText(/^Nombre de la organización/)).toHaveValue('Lobos del Caribe')
-    await waitFor(() => expect(doble.get).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(intentos).toBe(2))
   })
 
   it('no se muestra al scout, que no tiene perfil propio', async () => {
