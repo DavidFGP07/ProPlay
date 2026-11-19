@@ -304,6 +304,8 @@ export async function candidato(
     anterior: vecino(fila.anteriorId, fila.anteriorNombre),
     siguiente: vecino(fila.siguienteId, fila.siguienteNombre),
     total: fila.total,
+    // El correo visible para el equipo dueño llega en su propio PR; hasta entonces, nadie lo ve.
+    contacto: null,
     ...datosDelCalculo(oferta, fila.calculadoEn),
   };
 }

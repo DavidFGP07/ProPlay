@@ -220,6 +220,7 @@ function detalle(c: ReturnType<typeof candidato>, cambios: Record<string, unknow
     anterior: vecino(TODOS[i - 1]),
     siguiente: vecino(TODOS[i + 1]),
     total: TODOS.length,
+    contacto: null,
     ...CALCULO,
     ...cambios,
   }

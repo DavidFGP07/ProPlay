@@ -195,6 +195,7 @@ describe("candidatoOfertaSchema", () => {
     anterior: null,
     siguiente: { id: "jugador-2", nombre: "Luis" },
     total: 2,
+    contacto: null,
     oferta: {
       id: "oferta-1",
       titulo: "MID para la academia",

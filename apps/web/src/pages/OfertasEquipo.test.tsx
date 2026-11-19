@@ -108,6 +108,7 @@ function recibida(id: string, nombre: string, estado: string, cambios: Record<st
     rechazadaEn: null,
     actualizadoEn: '2026-10-21T12:00:00.000Z',
     jugador: { id: `perfil-${id}`, nombre, avatarUrl: null, pais: 'CO', departamento: 'BOLIVAR' },
+    contacto: null,
     ...cambios,
   }
 }

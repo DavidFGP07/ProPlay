@@ -14,7 +14,12 @@ import {
   ORDENES_RANKING,
 } from "../constants";
 import { idSchema, paginacionQuerySchema, paginadoSchema } from "./common";
-import { listarOfertasQuerySchema, ofertaSchema, pesosMatchingSchema } from "./oferta";
+import {
+  contactoPostulanteSchema,
+  listarOfertasQuerySchema,
+  ofertaSchema,
+  pesosMatchingSchema,
+} from "./oferta";
 import { jugadorEncontradoSchema } from "./scouting";
 
 /**
@@ -218,6 +223,12 @@ export const candidatoOfertaSchema = z.object({
   siguiente: vecinoRankingSchema.nullable(),
   /** Candidatos del ranking completo. */
   total: z.number().int().min(0),
+  /**
+   * Correo del jugador para el equipo dueño, con la postulación en
+   * `ESTADOS_CON_CORREO_VISIBLE`; nulo en los demás casos. Sólo en el detalle:
+   * el ranking (`candidatoRankingSchema`) no lo lleva nunca.
+   */
+  contacto: contactoPostulanteSchema,
   ...calculoRanking,
 });
 
