@@ -610,6 +610,11 @@ export const es = {
     cambiada: (nombre: string, estado: string) => `${nombre}: ${estado}.`,
     congelada: 'La oferta ya no está abierta: sus postulaciones no cambian de estado.',
   },
+  // Sustituto de la mensajería: correo del jugador para el equipo dueño
+  contacto: {
+    etiqueta: (nombre: string, email: string) => `Escribir a ${nombre} (${email})`,
+    ayuda: 'Ves su correo porque preseleccionaste su postulación.',
+  },
   // RF-08 · Buscador de talento (/explorar)
   buscador: {
     titulo: 'Buscador de talento',

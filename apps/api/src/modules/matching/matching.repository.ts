@@ -568,3 +568,15 @@ export async function idJugadorDeUsuario(usuarioId: string): Promise<string | nu
   const perfil = await prisma.perfilJugador.findUnique({ where: { usuarioId }, select: { id: true } });
   return perfil?.id ?? null;
 }
+
+/**
+ * Correo del jugador, para el contacto del equipo dueño en el detalle del
+ * candidato. Sólo se lee cuando el servicio ya decidió que es visible.
+ */
+export async function correoDelJugador(jugadorId: string): Promise<string | null> {
+  const perfil = await prisma.perfilJugador.findUnique({
+    where: { id: jugadorId },
+    select: { usuario: { select: { email: true } } },
+  });
+  return perfil?.usuario.email ?? null;
+}

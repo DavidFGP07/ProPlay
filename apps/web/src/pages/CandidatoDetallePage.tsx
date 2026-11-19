@@ -15,6 +15,7 @@ import {
 } from '@/components/ui'
 import { AccionesPostulacion } from '@/components/AccionesPostulacion'
 import { ExplicacionGenerada } from '@/components/ExplicacionGenerada'
+import { CorreoContacto } from '@/components/CorreoContacto'
 import { BarraAportes, COLOR_DIMENSION, MuestraDimension, nombreAporte } from '@/components/BarraAportes'
 import { useAuth } from '@/context/AuthContext'
 import { useCandidatoOferta } from '@/api/matching'
@@ -151,6 +152,7 @@ function Detalle({ detalle, busqueda }: { detalle: CandidatoOferta; busqueda: st
                 <User size={13} aria-hidden />
                 {t.verPerfil}
               </Link>
+              <CorreoContacto contacto={detalle.contacto} nombre={jugador.nombre} className="mt-2 flex text-xs" />
             </div>
           </div>
 
