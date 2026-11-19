@@ -3,6 +3,7 @@ import { UserPlus } from 'lucide-react'
 import type { Oferta, PostulacionRecibida } from '@proplay/shared'
 import { Avatar, Badge, Card, CardHeader, EmptyState, EstadoError } from '@/components/ui'
 import { AccionesPostulacion } from '@/components/AccionesPostulacion'
+import { CorreoContacto } from '@/components/CorreoContacto'
 import { RecorridoPostulacion } from '@/components/RecorridoPostulacion'
 import { usePostulacionesRecibidas } from '@/api/ofertas'
 import { es } from '@/i18n/es'
@@ -95,11 +96,16 @@ function Postulacion({
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3">
         <Link
           to={`/jugador/${jugador.id}`}
-          className="mr-auto text-[11px] font-medium text-brand-300 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+          className="text-[11px] font-medium text-brand-300 hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
         >
           {t.verPerfil}
         </Link>
-        {acciones && <AccionesPostulacion postulacion={postulacion} nombre={jugador.nombre} />}
+        <CorreoContacto contacto={postulacion.contacto} nombre={jugador.nombre} />
+        {acciones && (
+          <span className="ml-auto flex flex-wrap gap-2">
+            <AccionesPostulacion postulacion={postulacion} nombre={jugador.nombre} />
+          </span>
+        )}
       </div>
     </article>
   )

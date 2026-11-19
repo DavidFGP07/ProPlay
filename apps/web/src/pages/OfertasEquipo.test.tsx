@@ -284,8 +284,21 @@ describe('Editar oferta (/panel-equipo/ofertas/:id/editar)', () => {
 describe('Detalle de una oferta propia', () => {
   const RECIBIDAS = [
     recibida('p1', 'Andrés Molina', 'ENVIADA'),
-    recibida('p2', 'Valentina Ríos', 'ACEPTADA', { revisadaEn: '2026-10-22T12:00:00.000Z', entrevistaEn: '2026-10-24T12:00:00.000Z', aceptadaEn: '2026-10-28T12:00:00.000Z' }),
+    recibida('p2', 'Valentina Ríos', 'ACEPTADA', { revisadaEn: '2026-10-22T12:00:00.000Z', entrevistaEn: '2026-10-24T12:00:00.000Z', aceptadaEn: '2026-10-28T12:00:00.000Z', contacto: { email: 'valentina@proplay.test' } }),
   ]
+
+  it('el equipo dueño ve el correo de la preseleccionada como enlace mailto, y no el de la enviada', async () => {
+    sesionDe('EQUIPO')
+    rutas({ '/ofertas/oferta-1': oferta(), '/perfiles/me': PERFIL_EQUIPO, '/ofertas/oferta-1/postulaciones': RECIBIDAS })
+    renderRuta('/vacantes/oferta-1')
+
+    const valentina = (await screen.findByRole('heading', { name: 'Valentina Ríos' }, ESPERA)).closest('article')!
+    const andres = screen.getByRole('heading', { name: 'Andrés Molina' }).closest('article')!
+    const correo = within(valentina).getByRole('link', { name: 'Escribir a Valentina Ríos (valentina@proplay.test)' })
+    expect(correo).toHaveAttribute('href', 'mailto:valentina@proplay.test')
+    expect(correo).toHaveTextContent('valentina@proplay.test')
+    expect(within(andres).queryByRole('link', { name: /Escribir a/ })).toBeNull()
+  })
 
   it('el equipo gestiona las postulaciones recibidas según sus transiciones', async () => {
     sesionDe('EQUIPO')

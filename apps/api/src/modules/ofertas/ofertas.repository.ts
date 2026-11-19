@@ -71,7 +71,8 @@ const seleccionPostulacionRecibida = {
       avatarUrl: true,
       pais: true,
       departamento: true,
-      usuario: { select: { nombre: true } },
+      // El correo sólo sale al equipo dueño en ESTADOS_CON_CORREO_VISIBLE (lo decide el servicio).
+      usuario: { select: { nombre: true, email: true } },
     },
   },
 } satisfies Prisma.PostulacionSelect;
