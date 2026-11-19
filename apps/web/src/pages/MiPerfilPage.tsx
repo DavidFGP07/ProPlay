@@ -15,7 +15,6 @@ import {
   Save,
   ShieldCheck,
   Trash2,
-  TrendingUp,
 } from 'lucide-react'
 import { MACROREGION_POR_DEPARTAMENTO, type PerfilJugadorRespuesta } from '@proplay/shared'
 import {
@@ -38,7 +37,6 @@ import { MisPostulaciones } from '@/components/MisPostulaciones'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { useIdentidad } from '@/api/identidad'
-import { useMarcarTodasLeidas, useNotificaciones } from '@/api/notificaciones'
 import {
   useActualizarPrivacidad,
   useDesvincularCuenta,
@@ -144,9 +142,7 @@ function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespu
   const { data: demo = null } = usePerfil(demoId)
   const { data: catalogo = [] } = useHabilidades()
   const { data: config = null } = usePrivacidad()
-  const { data: notificaciones = [] } = useNotificaciones()
   const privacidad = useActualizarPrivacidad()
-  const marcarTodas = useMarcarTodasLeidas()
 
   // Datos profesionales y postulaciones son reales; el resto, simulado.
   const tabs: { id: Pestana; label: string; badge?: number }[] = [
@@ -286,45 +282,6 @@ function Perfil({ nombre, perfil }: { nombre: string; perfil: PerfilJugadorRespu
           <div className="space-y-6">
             <ResumenEvidencia stats={demo.stats} skills={demo.skills} cuentas={demo.cuentas} />
 
-            <Card>
-              <CardHeader
-                title="Notificaciones"
-                subtitle={`${notificaciones.filter((n) => !n.leida).length} sin leer`}
-                icon={<TrendingUp size={16} />}
-              />
-              <div className="space-y-2 p-3">
-                <MarcaDatosDemo />
-                {notificaciones.length === 0 ? (
-                  <p className="px-2 py-4 text-center text-xs text-slate-500">
-                    Sin eventos por ahora.
-                  </p>
-                ) : (
-                  notificaciones.slice(0, 6).map((n) => (
-                    <div
-                      key={n.id}
-                      className={cn(
-                        'rounded-lg border px-3 py-2.5',
-                        n.leida
-                          ? 'border-white/6 bg-white/3'
-                          : 'border-brand-500/25 bg-brand-500/8',
-                      )}
-                    >
-                      <p className="text-[11px] font-medium text-slate-200">{n.titulo}</p>
-                      <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-                        {n.detalle}
-                      </p>
-                    </div>
-                  ))
-                )}
-                {notificaciones.some((n) => !n.leida) && (
-                  <div className="flex justify-end">
-                    <Button variante="fantasma" tamano="sm" onClick={() => marcarTodas.mutate()}>
-                      Marcar leidas
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
           </div>
         )}
       </div>

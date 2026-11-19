@@ -150,14 +150,15 @@ describe('Mi perfil', () => {
     renderMiPerfil()
     const f = await formulario()
 
-    // La pestaña real no lleva marca; los dos laterales simulados sí.
+    // La pestaña real no lleva marca; el lateral simulado sí. Las notificaciones
+    // ya no están aquí: son reales y van en la campana de la cabecera.
     expect(f.queryByText('Datos de demostracion')).toBeNull()
     expect(await screen.findByText('Resumen de evidencia', {}, { timeout: 8000 })).toBeInTheDocument()
-    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(2)
+    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(1)
     expect(screen.queryByText(/Lo que ves en esta seccion/)).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /Cuentas de juego/ }))
-    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(3)
+    expect(screen.getAllByText('Datos de demostracion')).toHaveLength(2)
     expect(screen.getAllByRole('note')[0]).toHaveTextContent(/Datos de demostracion.*no de tu cuenta/)
   })
 
@@ -266,9 +267,14 @@ describe('Mi perfil', () => {
 
   it('ofrece reintentar si no puede cargar el perfil', async () => {
     sesionDe('JUGADOR')
-    doble.get
-      .mockRejectedValueOnce(errorApi(500))
-      .mockResolvedValueOnce(respuesta({ tipo: 'JUGADOR', perfil: perfil() }))
+    // La campana de la cabecera también consulta: el fallo es sólo del perfil.
+    let intentos = 0
+    doble.get.mockImplementation(async (ruta: string) => {
+      if (ruta.startsWith('/notificaciones')) return { data: { noLeidas: 0 } }
+      intentos += 1
+      if (intentos === 1) throw errorApi(500)
+      return respuesta({ tipo: 'JUGADOR', perfil: perfil() })
+    })
     renderMiPerfil()
 
     expect(
@@ -278,6 +284,6 @@ describe('Mi perfil', () => {
 
     const f = await formulario()
     expect(f.getByRole('note')).toHaveTextContent('Completa tu ubicación')
-    await waitFor(() => expect(doble.get).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(intentos).toBe(2))
   })
 })

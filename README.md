@@ -13,8 +13,8 @@ Proyecto de grado — Universidad del Norte.
 > Legends, estadísticas e ingesta periódica en cola), el buscador de talento,
 > las ofertas con sus postulaciones, el **motor de matching** con ranking
 > explicable y la **analítica** (embudo de la vacante, dimensión decisiva y mapa
-> del talento). Siguen como andamiaje (`501 Not Implemented`) `mensajeria`,
-> `notificaciones`, `admin`, habilidades y endorsements, la vinculación por
+> del talento) y las **notificaciones dentro de la app**. Siguen como andamiaje
+> (`501 Not Implemented`) `mensajeria`, `admin`, habilidades y endorsements, la vinculación por
 > OAuth y algunos endpoints sueltos de `scouting` y `matching`: la lista exacta
 > está en [Rutas de la API](#rutas-de-la-api).
 
@@ -356,7 +356,7 @@ de su vista en el inventario de CLAUDE.md §5.
 | `GET /analitica/talento` | EQUIPO, SCOUT, ADMIN | RF-13 | Implementado |
 | `GET /explicaciones/ofertas/:id/candidatos/:jugadorId` | EQUIPO, SCOUT, ADMIN | RF-11 | Implementado (sin clave del proveedor responde `NO_DISPONIBLE`) |
 | `GET`, `POST /mensajeria/conversaciones` · `GET`, `POST /mensajeria/conversaciones/:id/mensajes` | con sesión | RF-12 | **501** (trabajo futuro) |
-| `GET /notificaciones` · `GET /notificaciones/contador` · `POST /notificaciones/leidas` | con sesión | RF-12 | **501** (trabajo futuro) |
+| `GET /notificaciones` · `GET /notificaciones/contador` · `POST /notificaciones/leidas` · `POST /notificaciones/leidas/todas` | con sesión (cada uno, las suyas) | RF-12 | Implementado |
 | `GET /admin/metricas` · `GET /admin/auditoria` · `POST /admin/usuarios/rol` · `POST /admin/usuarios/suspender` | ADMIN | RF-14 | **501** (trabajo futuro; las operaciones van por scripts) |
 
 ---

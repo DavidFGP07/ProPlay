@@ -64,7 +64,7 @@ describe("Rutas protegidas", () => {
 
   it("responde 501 en un módulo que todavía es andamiaje", async () => {
     const respuesta = await request(app)
-      .get(`${API_PREFIX}/notificaciones`)
+      .get(`${API_PREFIX}/mensajeria/conversaciones`)
       .set("Authorization", `Bearer ${accessToken}`);
 
     expect(respuesta.status).toBe(501);
