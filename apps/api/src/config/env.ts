@@ -144,6 +144,27 @@ export const envSchema = z.object({
   /** Horas entre dos sincronizaciones periódicas del mismo jugador. */
   INGESTA_INTERVALO_HORAS: z.coerce.number().positive().max(168).default(6),
   STEAM_API_KEY: z.string().optional(),
+
+  /**
+   * Explicador con modelo de lenguaje (RF-11, tareas 4.1 y 4.3). Sin clave, o
+   * con EXPLICADOR_ACTIVO=false, el explicador queda desactivado y la vista
+   * muestra sólo la explicación determinista. La clave es sólo del servidor:
+   * nunca en variables VITE_*, en los registros ni en las respuestas.
+   */
+  ANTHROPIC_API_KEY: z.string().optional(),
+  /** Desactivado por defecto en las pruebas: el CI nunca llama al proveedor real. */
+  EXPLICADOR_ACTIVO: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((valor) => (valor ?? (process.env.NODE_ENV === "test" ? "false" : "true")) === "true"),
+  EXPLICADOR_MODELO: z.string().min(1).default("claude-haiku-5-5"),
+  /** Tiempo máximo de espera de una generación; pasado, se degrada. */
+  EXPLICADOR_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4000),
+  /** Generaciones nuevas por usuario y hora (los aciertos de caché no cuentan). */
+  EXPLICADOR_LIMITE_USUARIO_HORA: z.coerce.number().int().min(0).default(30),
+  /** Tope diario de generaciones nuevas para toda la aplicación. */
+  EXPLICADOR_LIMITE_DIARIO: z.coerce.number().int().min(0).default(300),
+
   TWITCH_CLIENT_ID: z.string().optional(),
   TWITCH_CLIENT_SECRET: z.string().optional(),
   YOUTUBE_CLIENT_ID: z.string().optional(),

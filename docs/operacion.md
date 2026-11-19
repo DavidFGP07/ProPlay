@@ -152,6 +152,99 @@ reintentando» y las sincronizaciones esperarán en la cola.
 Las sincronizaciones de los recién vinculados pueden esperar: la periódica los recoge en las
 siguientes horas, o pueden pedirla desde «Cuentas vinculadas» cuando acabe la sesión.
 
+## Explicador con modelo de lenguaje
+
+El detalle del candidato muestra, sobre la tabla de aportes, el bloque «Por qué encaja
+(generado con IA)»: un texto que redacta Claude Haiku 5.5 a partir del desglose (RF-11). Si
+el explicador está desactivado o falla, el bloque se sustituye por una nota y queda la
+explicación determinista: el ranking y el puesto nunca dependen de él. El porqué, en
+`docs/decisiones.md`, «Explicador con modelo de lenguaje».
+
+### Activarlo
+
+1. Crea una clave en la consola de Anthropic (<https://platform.claude.com>, **API Keys**).
+2. Ponla en `ANTHROPIC_API_KEY`:
+   - en local, en `apps/api/.env`;
+   - en Railway o Render, en las variables del servicio de la API.
+
+   **Nunca** en `apps/web/.env` ni en ninguna variable `VITE_*`: se empaquetaría en el
+   cliente y sería pública. El registro de la API la oculta.
+3. Deja `EXPLICADOR_ACTIVO=true` (el valor por defecto) y reinicia la API.
+
+### Desactivarlo
+
+Pon `EXPLICADOR_ACTIVO=false` (o quita la clave) y reinicia la API. Las peticiones responden
+`NO_DISPONIBLE` con el motivo `DESACTIVADO`, sin llamar a nadie, y la vista enseña la nota.
+
+### Ajustes
+
+| Variable | Por defecto | Qué cambia |
+| --- | --- | --- |
+| `EXPLICADOR_MODELO` | `claude-haiku-5-5` | Modelo que redacta |
+| `EXPLICADOR_TIMEOUT_MS` | `4000` | Espera máxima de una generación; pasada, se degrada |
+| `EXPLICADOR_LIMITE_USUARIO_HORA` | `30` | Generaciones nuevas por usuario y hora |
+| `EXPLICADOR_LIMITE_DIARIO` | `300` | Generaciones nuevas al día en toda la aplicación |
+
+Los textos se guardan en Redis 30 días por contenido: abrir otra vez el mismo candidato, sin
+cambios en su desglose, no vuelve a llamar al modelo ni gasta los límites.
+
+### Registros
+
+Con el explicador activo, cada petición deja una línea `Explicación del candidato` (módulo
+`explicador`) con el
+modelo, la versión del prompt, los milisegundos y, si llamó al modelo, `tokensEntrada`,
+`tokensSalida` y `costeUsd` (estimado). Si se degradó, lleva `motivo` y, para la fidelidad,
+`causa` y el elemento que falló. **Nunca** lleva la entrada ni el texto generado.
+
+### Prueba manual con la clave real
+
+Es la comprobación que no hace el CI (que nunca llama al proveedor real). Con el seed y la
+oferta «ADC para la liga en línea»:
+
+1. Pon la clave en `apps/api/.env` como en «Activarlo».
+2. Desde la raíz del monorepo:
+
+   ```bash
+   docker compose up -d
+   npm run db:deploy
+   npm run db:seed
+   npm run dev
+   ```
+
+3. Entra en <http://localhost:5173> con `equipo@caribeesports.gg` y la contraseña de
+   demostración del seed.
+4. Ve a **Vacantes** → «ADC para la liga en línea» → **Ver ranking de candidatos**.
+5. Abre el **puesto 1**. En unos segundos aparece «Por qué encaja (generado con IA)» sobre
+   la tabla de aportes. Copia el texto.
+6. Repite con los **puestos 2 y 3** (con «Candidato siguiente», al pie del detalle).
+7. En la terminal de `npm run dev`, comprueba que hay tres líneas `Explicación del
+   candidato` con `tokensEntrada`, `tokensSalida` y `costeUsd`, y ninguna con `motivo`.
+8. Vuelve a abrir el puesto 1 recargando la página: la línea nueva dice `deCache: true` y no
+   lleva tokens.
+
+Qué revisar en cada texto: 2 o 3 frases; primero lo que más suma y después lo que más resta;
+en el puesto 1, que la técnica sume por la posición y el rango y reste por el rendimiento
+(`mismaDimension`), sin contradecirse; ninguna cifra que no esté en la tabla; ningún juicio
+sobre la persona.
+
+**Si sale la nota en vez del texto**, la línea del registro dice el motivo (o la respuesta de
+la API, en la pestaña Red del navegador):
+
+| `motivo` | Qué hacer |
+| --- | --- |
+| Ninguna línea (`DESACTIVADO`) | La API no leyó la clave o `EXPLICADOR_ACTIVO` es `false`: revisa `apps/api/.env` y reinicia `npm run dev` |
+| `ERROR` | Clave inválida o sin saldo (la línea no trae el mensaje de Anthropic: pruébala en la consola), o Redis caído (`docker compose ps`) |
+| `TIEMPO_AGOTADO` | Sube `EXPLICADOR_TIMEOUT_MS` (por ejemplo, a `8000`) y reinicia |
+| `FIDELIDAD` | El modelo escribió algo que no estaba en la entrada (`causa` y `detalle` dicen qué). No se guarda: recarga la página para pedir otro |
+| `LIMITE` | Se agotó un límite; espera a la hora siguiente o súbelo |
+
+Para volver a generar los textos desde cero (por ejemplo, tras cambiar el prompt sin subir
+su versión), borra la caché:
+
+```bash
+docker exec proplay-redis sh -c "redis-cli --scan --pattern 'explicador:texto:*' | xargs -r redis-cli del"
+```
+
 ## Vectores del motor de matching
 
 El motor de matching (RF-09) guarda un vector de 64 dimensiones por jugador en `PerfilVector`.

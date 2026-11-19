@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, BadgeCheck, ChevronLeft, ChevronRight, CircleAlert, Sigma, User, UserSearch } from 'lucide-react'
@@ -14,6 +14,7 @@ import {
   cn,
 } from '@/components/ui'
 import { AccionesPostulacion } from '@/components/AccionesPostulacion'
+import { ExplicacionGenerada } from '@/components/ExplicacionGenerada'
 import { BarraAportes, COLOR_DIMENSION, MuestraDimension, nombreAporte } from '@/components/BarraAportes'
 import { useAuth } from '@/context/AuthContext'
 import { useCandidatoOferta } from '@/api/matching'
@@ -36,7 +37,9 @@ const claseVecino =
 // esta oferta. Datos reales de GET /api/v1/matching/ofertas/:id/candidatos/:jugadorId.
 // Por dimensión muestra el valor, el peso, el aporte y una explicación
 // determinista construida con los motivos y las cifras que guardó el motor
-// (`lib/explicacion.ts`); no interviene ningún modelo de lenguaje.
+// (`lib/explicacion.ts`). Encima de la tabla, el texto redactado con un modelo
+// de lenguaje (GET /api/v1/explicaciones/...), que sólo complementa: si no
+// está, queda una nota y el resto de la página no cambia.
 export default function CandidatoDetallePage() {
   const { id, jugadorId } = useParams<{ id: string; jugadorId: string }>()
   // El filtro y el orden del ranking viajan en la URL para volver a la misma lista.
@@ -179,6 +182,8 @@ function Detalle({ detalle, busqueda }: { detalle: CandidatoOferta; busqueda: st
         </div>
       </Card>
 
+      <ExplicacionGenerada ofertaId={oferta.id} jugadorId={jugador.id} />
+
       <TablaAportes desglose={desglose} candidato={candidato} />
 
       <ExplicacionCandidato candidato={candidato} />
@@ -283,23 +288,15 @@ function TablaAportes({
 }
 
 /**
- * Por qué vale cada dimensión lo que vale (RF-11). `explicacionGenerada` es el
- * hueco para la explicación en lenguaje natural del Sprint 4: cuando exista el
- * endpoint, la página se la pasará y aparecerá sobre el detalle por dimensión,
- * que es su base. Hoy nadie la pasa y no se muestra nada.
+ * Por qué vale cada dimensión lo que vale (RF-11), sin modelo de lenguaje. La
+ * explicación redactada con IA va aparte, sobre la tabla de aportes
+ * (`components/ExplicacionGenerada.tsx`), y ésta es su base.
  */
-export function ExplicacionCandidato({
-  candidato,
-  explicacionGenerada,
-}: {
-  candidato: CandidatoRanking
-  explicacionGenerada?: ReactNode
-}) {
+export function ExplicacionCandidato({ candidato }: { candidato: CandidatoRanking }) {
   return (
     <Card>
       <CardHeader title={t.explicacionTitulo} subtitle={t.explicacionSubtitulo} icon={<UserSearch size={16} />} />
       <div className="space-y-4 p-5">
-        {explicacionGenerada}
         {DIMENSIONES_VISIBLES.map((dimension) => (
           <ExplicacionDeDimension key={dimension} candidato={candidato} dimension={dimension} />
         ))}
