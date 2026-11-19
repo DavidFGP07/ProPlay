@@ -87,7 +87,7 @@ export const legal = {
           lista: [
             'Alojamiento en la nube: [PROVEEDOR DE ALOJAMIENTO], que guarda la base de datos y ejecuta la aplicación en [PAÍS DE ALOJAMIENTO].',
             'Riot Games, como fuente de las estadísticas de League of Legends cuando vinculas tu cuenta.',
-            'Un proveedor de modelos de lenguaje, [PROVEEDOR DE MODELOS DE LENGUAJE], que genera las explicaciones del puntaje de compatibilidad a partir de tus estadísticas.',
+            'Un proveedor de modelos de lenguaje, Anthropic, PBC (Estados Unidos), que redacta las explicaciones del puntaje de compatibilidad a partir de las cifras del desglose. No recibe tu nombre, tu correo ni tu Riot ID.',
           ],
           despues: [
             'Algunos de estos proveedores pueden estar fuera de Colombia, lo que implica una transferencia internacional de datos. Al aceptar este aviso autorizas esa transferencia, que se hace solo para las finalidades descritas.',

@@ -354,6 +354,7 @@ de su vista en el inventario de CLAUDE.md §5.
 | `GET /matching/jugador/me` | JUGADOR | RF-09 | Implementado |
 | `GET /analitica/embudo` · `GET /analitica/ofertas/:id/embudo` · `GET /analitica/ofertas/:id/dimension-decisiva` | EQUIPO | RF-13 | Implementado |
 | `GET /analitica/talento` | EQUIPO, SCOUT, ADMIN | RF-13 | Implementado |
+| `GET /explicaciones/ofertas/:id/candidatos/:jugadorId` | EQUIPO, SCOUT, ADMIN | RF-11 | Implementado (sin clave del proveedor responde `NO_DISPONIBLE`) |
 | `GET`, `POST /mensajeria/conversaciones` · `GET`, `POST /mensajeria/conversaciones/:id/mensajes` | con sesión | RF-12 | **501** (trabajo futuro) |
 | `GET /notificaciones` · `GET /notificaciones/contador` · `POST /notificaciones/leidas` | con sesión | RF-12 | **501** (trabajo futuro) |
 | `GET /admin/metricas` · `GET /admin/auditoria` · `POST /admin/usuarios/rol` · `POST /admin/usuarios/suspender` | ADMIN | RF-14 | **501** (trabajo futuro; las operaciones van por scripts) |
@@ -383,6 +384,12 @@ falta una obligatoria. El cliente lee las suyas en `apps/web/src/lib/env.ts`. Lo
 | `RIOT_RESERVA_ALTA` | no | `30` | Porcentaje de cada ventana reservado a la vinculación |
 | `INGESTA_ACTIVA` | no | `true` (`false` en pruebas) | Arranca el worker y el planificador de la ingesta en el proceso de la API |
 | `INGESTA_INTERVALO_HORAS` | no | `6` | Horas entre dos sincronizaciones periódicas del mismo jugador |
+| `ANTHROPIC_API_KEY` | no | — | Clave del explicador con modelo de lenguaje (RF-11). Sólo del servidor: nunca en `VITE_*`. Sin ella, el explicador queda desactivado y el detalle del candidato muestra la explicación determinista |
+| `EXPLICADOR_ACTIVO` | no | `true` (`false` en las pruebas) | Apaga el explicador sin quitar la clave |
+| `EXPLICADOR_MODELO` | no | `claude-haiku-5-5` | Modelo que redacta la explicación |
+| `EXPLICADOR_TIMEOUT_MS` | no | `4000` | Tiempo máximo de una generación; pasado, se degrada a la explicación determinista |
+| `EXPLICADOR_LIMITE_USUARIO_HORA` | no | `30` | Generaciones nuevas por usuario y hora (la caché no cuenta) |
+| `EXPLICADOR_LIMITE_DIARIO` | no | `300` | Tope diario de generaciones nuevas para toda la aplicación |
 | `LOG_LEVEL` | no | `info` | Nivel de log de pino |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | no | — | Cliente de Cloudinary (`integrations/cloudinary`); ningún endpoint lo usa todavía |
 | `STEAM_API_KEY`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` | no | — | Declaradas para integraciones que son trabajo futuro (decisión 0.3: el piloto es sólo League of Legends); sus proveedores responden `501` |

@@ -920,6 +920,14 @@ export const es = {
     etiquetaAnterior: 'Candidato anterior',
     etiquetaSiguiente: 'Candidato siguiente',
   },
+  // RF-11 · Explicación del puntaje redactada con un modelo de lenguaje.
+  explicacionGenerada: {
+    titulo: 'Por qué encaja (generado con IA)',
+    nota: 'Texto generado a partir del desglose; las cifras de la tabla son las que deciden el puesto.',
+    cargando: 'Generando la explicación del candidato',
+    noDisponible:
+      'La explicación generada con IA no está disponible ahora. El desglose y la explicación de cada dimensión, debajo, son los que deciden el puesto.',
+  },
   // RF-11 · Explicación determinista de cada dimensión, a partir de los datos
   // que guardó el motor (sin modelo de lenguaje).
   explicacion: {

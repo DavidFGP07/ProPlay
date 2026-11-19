@@ -680,7 +680,7 @@ describe('Detalle del candidato (/vacantes/:id/ranking/:jugadorId)', () => {
         'Dispone de 15 h a la semana de las 20 h que pide la oferta (75 %).',
       ),
     ).toBeInTheDocument()
-    // Ninguna explicación generada por un modelo: el hueco existe, pero no se muestra.
+    // La tarjeta por dimensión es la determinista; la generada con IA va aparte, sobre la tabla.
     expect(screen.getByText(/No interviene ningún modelo de lenguaje/)).toBeInTheDocument()
   })
 
@@ -841,5 +841,82 @@ describe('Detalle del candidato (/vacantes/:id/ranking/:jugadorId)', () => {
 
     expect(await screen.findByText('Este jugador no está en el ranking', {}, ESPERA)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Volver al ranking/ })).toBeInTheDocument()
+  })
+})
+
+describe('Explicación generada con IA en el detalle del candidato (RF-11)', () => {
+  const RUTA_EXPLICACION = '/explicaciones/ofertas/oferta-1/candidatos/jugador-1'
+  const TEXTO =
+    'Lo que más suma es la técnica: juega de ADC en el 80 % de sus partidas. Dentro de ella, lo que más resta es el rendimiento (60).'
+
+  it('muestra el texto generado sobre la tabla del desglose, con su nota', async () => {
+    sesionDe('EQUIPO')
+    rutas({
+      [rutaCandidato(ESPECIALISTA)]: detalle(ESPECIALISTA),
+      [RUTA_EXPLICACION]: {
+        estado: 'GENERADA',
+        texto: TEXTO,
+        motivo: null,
+        modelo: 'claude-haiku-5-5',
+        versionPrompt: 1,
+        deCache: false,
+      },
+    })
+    renderRuta('/vacantes/oferta-1/ranking/jugador-1')
+
+    const parrafo = await screen.findByText(TEXTO, {}, ESPERA)
+    expect(screen.getByText('Por qué encaja (generado con IA)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Texto generado a partir del desglose; las cifras de la tabla son las que deciden el puesto.'),
+    ).toBeInTheDocument()
+    // Va antes que la tabla de aportes.
+    const tabla = screen.getAllByRole('table')[0]!
+    expect(parrafo.compareDocumentPosition(tabla) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(doble.get).toHaveBeenCalledWith(RUTA_EXPLICACION)
+  })
+
+  it('mientras se genera muestra un esqueleto, no un spinner', async () => {
+    sesionDe('EQUIPO')
+    doble.get.mockImplementation(async (ruta: string) => {
+      if (ruta === rutaCandidato(ESPECIALISTA)) return { data: detalle(ESPECIALISTA) }
+      return new Promise(() => {})
+    })
+    renderRuta('/vacantes/oferta-1/ranking/jugador-1')
+
+    expect(await screen.findByLabelText('Generando la explicación del candidato', {}, ESPERA)).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    // El resto del detalle no espera a la IA.
+    expect(screen.getAllByRole('table').length).toBeGreaterThan(0)
+  })
+
+  it.each([
+    ['sin texto (NO_DISPONIBLE)', 'respuesta'],
+    ['con la petición fallida', 'error'],
+  ])('%s deja una nota discreta y la explicación determinista', async (_caso, tipo) => {
+    sesionDe('SCOUT')
+    rutas({
+      [rutaCandidato(ESPECIALISTA)]: detalle(ESPECIALISTA),
+      ...(tipo === 'respuesta' && {
+        [RUTA_EXPLICACION]: {
+          estado: 'NO_DISPONIBLE',
+          texto: null,
+          motivo: 'TIEMPO_AGOTADO',
+          modelo: 'claude-haiku-5-5',
+          versionPrompt: 1,
+          deCache: false,
+        },
+      }),
+    })
+    renderRuta('/vacantes/oferta-1/ranking/jugador-1')
+
+    expect(await screen.findByText(/La explicación generada con IA no está disponible ahora/, {}, ESPERA)).toHaveAttribute(
+      'role',
+      'note',
+    )
+    expect(screen.queryByText('Por qué encaja (generado con IA)')).toBeNull()
+    expect(screen.getByRole('region', { name: /Técnica/ })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

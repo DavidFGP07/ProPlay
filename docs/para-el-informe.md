@@ -38,11 +38,10 @@ puntúa cinco dimensiones y explica el ranking.
 - Sólo **League of Legends** con la API de Riot; Steam, Twitch y YouTube son trabajo futuro
   (decisión 0.3, «Privacidad y piloto»).
 - El motor opera **sólo por contenido**: el componente colaborativo existe con peso 0
-  (arranque en frío) y el modelo Transformer todavía no está integrado (ver «Riesgos del
-  título»).
+  (arranque en frío). El modelo Transformer (Claude Haiku 5.5, por la API de Anthropic)
+  **redacta la explicación del puntaje, no lo calcula ni ordena** (ver «Riesgos del título»).
 
-**Qué falta.** La explicación con modelo de lenguaje (Sprint 4). La validación con usuarios
-queda diseñada y no se ejecuta en la tesis.
+**Qué falta.** La validación con usuarios queda diseñada y no se ejecuta en la tesis.
 
 ## II. Descripción del problema
 
@@ -63,10 +62,10 @@ colaborativo), el modelo Transformer que explica el resultado y el intérprete d
 aislado.
 
 **Divergencias.** Las mismas de la Sección I: icono en lugar de OAuth, colaborativo con
-peso 0, sin Transformer ni sandbox de Python por ahora. Conviene redactar el valor
-tecnológico sobre lo construido (verificabilidad, matching explicable con desglose por
-dimensión, analítica) y dejar el resto como diseño o trabajo futuro según lo que se termine
-en el Sprint 4.
+peso 0, el Transformer sólo redacta la explicación y no hay sandbox de Python. Conviene
+redactar el valor tecnológico sobre lo construido (verificabilidad, matching explicable con
+desglose por dimensión y explicación en lenguaje natural anclada en él, analítica) y dejar el
+resto como diseño o trabajo futuro.
 
 ## IV. Objetivos
 
@@ -81,16 +80,17 @@ en el Sprint 4.
 - **OE1.** Es trabajo documental, sin código que lo muestre: sin verificar desde el código.
 - **OE2.** Hecho, con las divergencias de las Secciones VIII y IX.
 - **OE3.** Hecho en lo que no depende del Sprint 4. Divergen OAuth (icono), Steam (sólo Riot),
-  el modo híbrido (colaborativo con peso 0) y Transformer y sandbox (pendientes, tareas 4.1 y
-  4.2).
+  el modo híbrido (colaborativo con peso 0), el Transformer, que redacta la explicación sin
+  intervenir en el puntaje (tareas 4.1, 4.3 y 4.7), y el sandbox de Python, que no se construye
+  (4.2: el cálculo es aritmética determinista en TypeScript).
 - **OE4.** **No se ejecuta en la tesis:** queda como protocolo de validación propuesto
   (`docs/protocolo-validacion.md`), con las métricas que ya calcula la plataforma y el script
   `metricas:piloto`. Ejecutarlo depende del despliegue (2.13), del reclutamiento (0.7) y de la
   línea base (0.2).
 
-**Divergencias que hay que reflejar.** OE3 tal como está redactado no se cumple entero. O se
-termina la explicación con modelo de lenguaje, o se ajusta la redacción (ver «Riesgos del
-título»).
+**Divergencias que hay que reflejar.** OE3 se cumple con las divergencias anteriores. Conviene
+precisar en la redacción que el modelo Transformer asiste explicando el resultado, no
+recomendando (ver «Riesgos del título»).
 
 ## V. Metodología de I+D
 
@@ -164,7 +164,7 @@ funcionales (Cuadro IV).
 | RF-08 Búsqueda de jugadores | Hecho por posición, rango mínimo y departamento; **no por juego ni disponibilidad** |
 | RF-09 Puntaje y ranking | Hecho: cinco dimensiones, ranking persistido y explicable |
 | RF-10 Postulaciones | Hecho, con la fecha de cada etapa |
-| RF-11 Explicación en lenguaje natural | **Determinista** (sin modelo de lenguaje); la generada es la tarea 4.1 |
+| RF-11 Explicación en lenguaje natural | Hecho: explicación determinista por dimensión y, encima, un texto redactado por Claude Haiku 5.5 a partir del desglose (módulo `explicador`), con comprobación de fidelidad, caché, límites y degradación a la determinista |
 | RF-12 Mensajería y notificaciones | Trabajo futuro (`501`) |
 | RF-13 Analítica | Hecho en el módulo `analitica` y `/dashboard`, más el script del piloto |
 | RF-14 Auditoría | Se escribe en `AuditLog` (registro, login, cambios de contraseña, vinculación, ofertas, postulaciones y cambio de rol); **la vista de consulta es trabajo futuro** |
@@ -195,16 +195,19 @@ administradores obtienen las métricas del piloto por script (decisión 0.10).
 - **Interfaz:** feed, perfil, panel y dashboard.
 
 **Qué hay construido** (`arquitectura.md`):
-- **Módulos.** Diez, separados por carpetas. `usuarios` y `perfiles` son módulos distintos,
-  se añade `analitica` y las integraciones son una capa de infraestructura, no un módulo.
+- **Módulos.** Once, separados por carpetas. `usuarios` y `perfiles` son módulos distintos,
+  se añaden `analitica` y `explicador`, y las integraciones son una capa de infraestructura,
+  no un módulo.
 - **Worker de ingesta.** Va por cola (BullMQ) dentro del proceso de la API: desacoplado de la
   petición, no de proceso.
 - **Motor.** Vectorizador (versión 2, 64 dimensiones), recuperador HNSW con 200 vecinos más
   los postulantes, cinco dimensiones como funciones puras, ponderador de la ecuación (1),
   colaborativo con peso 0 y persistencia en `Matching`. Recalcula el ranking al leerlo si
   algo cambió.
-- **Lo que no hay:** sin calculador en Python ni explicador con modelo de lenguaje; la
-  explicación es determinista.
+- **Explicador.** Módulo `explicador` fuera del motor: redacta con Claude Haiku 5.5 un texto a
+  partir del desglose del candidato (sólo cifras y códigos), comprueba que no invente cifras ni
+  rangos y, si algo falla, se queda la explicación determinista. El ranking no depende de él.
+- **Lo que no hay:** sin calculador en Python (el cálculo es determinista en TypeScript).
 - **Interfaz.** Panel del equipo con el resumen de la analítica, ranking con desglose,
   detalle del candidato y analítica. El feed quedó descartado.
 
@@ -224,11 +227,14 @@ matching», «Ranking de candidatos» y «Analítica»):
    horas del jugador sobre las de la oferta.
 5. **Componente colaborativo con peso 0** (arranque en frío, `motor/colaborativo.ts`): el
    ranking informa el modo `CONTENIDO`.
-6. **Explicación determinista** a partir de los motivos y cifras de cada dimensión. La
-   generada con modelo de lenguaje es la tarea 4.1, con degradación al desglose (4.3).
+6. **Explicación determinista** a partir de los motivos y cifras de cada dimensión, y encima
+   la **generada con modelo de lenguaje** (4.1, 4.3 y 4.7): el explicador queda fuera del
+   motor, no recibe datos personales, descarta los textos con cifras que no están en el
+   desglose y degrada a la determinista (`decisiones.md`, «Explicador con modelo de
+   lenguaje»).
 7. **El desglose es una barra apilada de aportes**, no un radar: los aportes suman el
    puntaje mostrado.
-8. **Diez módulos** con `analitica`. RF-13 lo realiza `analitica`, no «Administración».
+8. **Once módulos**, con `analitica` y `explicador`. RF-13 lo realiza `analitica`, no «Administración».
 9. **Analítica:** embudo de la vacante, dimensión decisiva (ventaja media de los 5 primeros
    sobre el resto, `TOP_DIMENSION_DECISIVA`) y mapa del talento con umbral de privacidad de 3
    (`UMBRAL_PRIVACIDAD_ANALITICA`) y supresión secundaria.
@@ -293,8 +299,8 @@ Actions, **Sentry y Logtail**. Seguridad con JWT y OAuth.
 **Qué dice el PDF.** La visión de conjunto de usuarios, módulos, datos e integraciones,
 incluida la vinculación por OAuth.
 
-**Divergencias.** Las de las Secciones VIII a X: icono en lugar de OAuth, sólo Riot, diez
-módulos, sin LLM ni sandbox de Python y sin monitoreo externo. Los diagramas vigentes, en
+**Divergencias.** Las de las Secciones VIII a X: icono en lugar de OAuth, sólo Riot, once
+módulos, el LLM sólo en la explicación, sin sandbox de Python y sin monitoreo externo. Los diagramas vigentes, en
 Mermaid, están en `arquitectura.md`.
 
 ## XIII. Plan de implementación
@@ -306,7 +312,7 @@ en S3.
 **Qué hay construido** (`plan-implementacion.md`, con los PR de cada tarea):
 - S1, S2 y S3 cerrados salvo tareas de soporte.
 - RNF-01 medido en S3.
-- En S4, la analítica está hecha; falta la explicación con modelo de lenguaje.
+- En S4, la analítica y la explicación con modelo de lenguaje están hechas.
 
 **Divergencias.**
 - El orden real añadió el recorte de alcance (0.10), la cuota de Riot e ingesta en cola
@@ -411,4 +417,4 @@ El título es «Analítica de Datos y Recomendación Híbrida Asistida por Model
 | --- | --- | --- |
 | **Analítica de datos** | Construida: módulo `analitica`, `/dashboard`, tendencia en Mis estadísticas y script del piloto | Bajo |
 | **Recomendación híbrida** | El componente colaborativo existe como punto de enganche (`motor/colaborativo.ts`) con **peso 0**; el ranking informa el modo `CONTENIDO`. El recuperador vectorial (HNSW) y las cinco dimensiones sí combinan dos señales de contenido | **Alto**: tal como está, el sistema es basado en contenido. Hay que defender «híbrido» como diseño con arranque en frío (Sección VIII-C lo prevé) o ajustar el título |
-| **Asistida por modelos Transformer** | **No hay ningún modelo de lenguaje integrado.** La explicación es determinista y el explicador simulado del prototipo (`apps/web/src/services/llm.ts`) no decide nada | **Alto**: depende de terminar la tarea 4.1 (con 4.3) antes de la sustentación. Si no, hay que retirar el término del título |
+| **Asistida por modelos Transformer** | **Integrado:** Claude Haiku 5.5 (un modelo Transformer, por la API de Anthropic) redacta en el detalle del candidato por qué encaja, a partir del desglose y anclado en el ranking recalculado al pedirlo. No decide el puntaje ni el orden: los da el motor determinista. Comprobación de fidelidad y degradación elegante (tareas 4.1, 4.3 y 4.7) | **Medio**: hay que redactar «asistida» como asistencia a la explicación, no a la recomendación. Sin clave del proveedor el explicador se desactiva y la demostración enseña la explicación determinista |
