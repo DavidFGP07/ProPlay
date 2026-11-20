@@ -7,6 +7,7 @@ import App from '@/App'
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { crearQueryClient } from '@/api/queryClient'
+import { es } from '@/i18n/es'
 
 /**
  * RF-07 · RF-09 · RF-10 · Vistas del equipo con datos reales: crear y editar
@@ -232,7 +233,17 @@ describe('Crear oferta con pesos (/panel-equipo/ofertas/nueva)', () => {
     fireEvent.change(await screen.findByLabelText('País', {}, ESPERA), { target: { value: 'MX' } })
     const departamento = screen.getByLabelText(/^Departamento/)
     expect(departamento).toBeDisabled()
-    expect(departamento.closest('label')).toHaveTextContent('Sólo se pide en Colombia.')
+    expect(departamento).toHaveAccessibleDescription(/Sólo se pide en Colombia\./)
+  })
+
+  it('cada campo se nombra sólo con su etiqueta, y la ayuda va como descripción', async () => {
+    sesionDe('EQUIPO')
+    renderRuta('/panel-equipo/ofertas/nueva')
+    const titulo = await screen.findByRole('textbox', { name: es.formularioOferta.titulo }, ESPERA)
+    expect(titulo).toHaveAccessibleDescription(es.formularioOferta.tituloAyuda)
+    expect(screen.getByRole('combobox', { name: es.formularioOferta.posicion })).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: es.formularioOferta.horas })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: es.formularioOferta.descripcion })).toBeInTheDocument()
   })
 
   it('valida en el cliente sin llamar a la API', async () => {

@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef } from 'react'
+import { createContext, forwardRef, useContext, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Lock, RotateCcw } from 'lucide-react'
@@ -258,6 +258,14 @@ export function Stat({
 
 /* --------------------------------- Inputs --------------------------------- */
 
+/**
+ * Campo de formulario. La etiqueta se asocia al control por `id` (no
+ * envolviéndolo): así su nombre accesible es sólo la etiqueta, sin la ayuda,
+ * los errores ni las opciones de un select, y la ayuda va en
+ * `aria-describedby`. Cada `Field` lleva un único control de este archivo.
+ */
+const CampoContexto = createContext<{ id: string; ayudaId?: string } | null>(null)
+
 export function Field({
   label,
   hint,
@@ -269,15 +277,30 @@ export function Field({
   children: ReactNode
   className?: string
 }) {
+  const id = useId()
+  const ayudaId = hint ? `${id}-ayuda` : undefined
   return (
-    <label className={cn('block', className)}>
+    <div className={cn('block', className)}>
       {label && (
-        <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}</span>
+        <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-slate-400">
+          {label}
+        </label>
       )}
-      {children}
-      {hint && <span className="mt-1 block text-[11px] text-slate-500">{hint}</span>}
-    </label>
+      <CampoContexto.Provider value={{ id, ayudaId }}>{children}</CampoContexto.Provider>
+      {hint && (
+        <span id={ayudaId} className="mt-1 block text-[11px] text-slate-500">
+          {hint}
+        </span>
+      )}
+    </div>
   )
+}
+
+/** `id` y `aria-describedby` del control dentro de un `Field` (los propios mandan). */
+function useCampo(id?: string, descritoPor?: string) {
+  const campo = useContext(CampoContexto)
+  const describedBy = [descritoPor, campo?.ayudaId].filter(Boolean).join(' ') || undefined
+  return { id: id ?? campo?.id, 'aria-describedby': describedBy }
 }
 
 // Un campo desactivado tiene que verse desactivado: sin esto, parecía que
@@ -287,8 +310,9 @@ const baseInput =
 
 // Reenvian el ref para que react-hook-form pueda registrar el campo.
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  function Input({ className, ...props }, ref) {
-    return <input ref={ref} className={cn(baseInput, className)} {...props} />
+  function Input({ className, id, 'aria-describedby': descritoPor, ...props }, ref) {
+    const campo = useCampo(id, descritoPor)
+    return <input ref={ref} className={cn(baseInput, className)} {...campo} {...props} />
   },
 )
 
@@ -303,9 +327,10 @@ export function ErrorCampo({ mensaje }: { mensaje?: string }) {
 }
 
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  function Select({ className, children, ...props }, ref) {
+  function Select({ className, children, id, 'aria-describedby': descritoPor, ...props }, ref) {
+    const campo = useCampo(id, descritoPor)
     return (
-      <select ref={ref} className={cn(baseInput, 'cursor-pointer', className)} {...props}>
+      <select ref={ref} className={cn(baseInput, 'cursor-pointer', className)} {...campo} {...props}>
         {children}
       </select>
     )
@@ -315,8 +340,9 @@ export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<H
 export const Textarea = forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(function Textarea({ className, ...props }, ref) {
-  return <textarea ref={ref} className={cn(baseInput, 'resize-none', className)} {...props} />
+>(function Textarea({ className, id, 'aria-describedby': descritoPor, ...props }, ref) {
+  const campo = useCampo(id, descritoPor)
+  return <textarea ref={ref} className={cn(baseInput, 'resize-none', className)} {...campo} {...props} />
 })
 
 /* -------------------------------- Estados --------------------------------- */
