@@ -26,7 +26,8 @@ import type { Rol } from '@proplay/shared'
 
 interface ItemNav {
   to: string
-  label: string
+  /** Texto del menú; una función si cambia con el rol. */
+  label: string | ((rol: Rol) => string)
   icono: LucideIcon
   roles?: readonly Rol[]
 }
@@ -49,7 +50,13 @@ const NAVEGACION: ItemNav[] = [
   },
   { to: '/explorar', label: 'Explorar talento', icono: Search, roles: AREAS.equipo },
   { to: '/vacantes', label: 'Vacantes', icono: Briefcase },
-  { to: '/panel-equipo', label: 'Panel de equipo', icono: Target, roles: AREAS.equipo },
+  {
+    to: '/panel-equipo',
+    // El mismo nombre que el título de la vista: el scout ve el panel de scouting.
+    label: (rol) => (rol === 'SCOUT' ? es.panelEquipo.tituloScout : es.panelEquipo.titulo),
+    icono: Target,
+    roles: AREAS.equipo,
+  },
   { to: '/dashboard', label: es.analitica.menu, icono: ChartNoAxesColumn, roles: AREAS.equipo },
   // Sin roles: la vista de cuenta es comun a los cuatro.
   { to: '/cuenta', label: es.cuenta.menu, icono: Settings },
@@ -122,7 +129,7 @@ export function Layout() {
                 }
               >
                 <Icono size={17} className="shrink-0" />
-                {item.label}
+                {typeof item.label === 'function' ? item.label(usuario.rol) : item.label}
               </NavLink>
             )
           })}
