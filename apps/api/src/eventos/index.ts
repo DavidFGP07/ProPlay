@@ -20,6 +20,8 @@ export type Evento =
       ofertaId: string;
       ofertaTitulo: string;
       postulacionId: string;
+      /** Nombre de quien se postula: el equipo dueño ya lo ve en sus postulaciones. */
+      jugadorNombre: string;
       /** Usuario del equipo dueño de la oferta. */
       equipoUsuarioId: string;
     }

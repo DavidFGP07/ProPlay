@@ -83,8 +83,15 @@ describe("cada evento notifica a su destinatario y a nadie más", () => {
     expect(delEquipo[0]).toMatchObject({
       tipo: "NUEVA_POSTULACION",
       leidaEn: null,
-      payload: { ofertaId: oferta.id, ofertaTitulo: "MID para notificaciones", postulacionId: postulacion },
+      payload: {
+        ofertaId: oferta.id,
+        ofertaTitulo: "MID para notificaciones",
+        postulacionId: postulacion,
+        jugadorNombre: "Prueba notif-jugador",
+      },
     });
+    // Del jugador, sólo el nombre: nunca el correo.
+    expect(JSON.stringify(delEquipo[0]!.payload)).not.toContain("@");
     for (const otro of [usuarios.otroEquipo, usuarios.scout, usuarios.jugador, usuarios.otroJugador]) {
       expect(await deUsuario(otro)).toHaveLength(0);
     }
@@ -135,15 +142,18 @@ describe("cada evento notifica a su destinatario y a nadie más", () => {
     expect(await deUsuario(usuarios.equipo)).toHaveLength(0);
   });
 
-  it("el payload no lleva datos personales del jugador", async () => {
+  it("del jugador, el payload sólo lleva el nombre: ni el correo ni el id de la cuenta", async () => {
     const oferta = await crearOferta(tokenEquipo);
     await postular(tokenJugador, oferta.id);
     await esperarEventos();
     const [notificacion] = await deUsuario(usuarios.equipo);
     const jugador = await prisma.usuario.findUniqueOrThrow({ where: { id: usuarios.jugador } });
+    expect(Object.keys(notificacion!.payload as object).sort()).toEqual(
+      ["jugadorNombre", "ofertaId", "ofertaTitulo", "postulacionId"].sort(),
+    );
+    expect((notificacion!.payload as { jugadorNombre: string }).jugadorNombre).toBe(jugador.nombre);
     const texto = JSON.stringify(notificacion!.payload);
     expect(texto).not.toContain(jugador.email);
-    expect(texto).not.toContain(jugador.nombre);
     expect(texto).not.toContain(usuarios.jugador);
   });
 });
