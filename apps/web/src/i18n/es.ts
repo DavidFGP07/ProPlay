@@ -111,6 +111,23 @@ export const es = {
     sinEstadisticas: 'Sin estadísticas todavía',
     sinEstadisticasDetalle:
       'Se cargarán desde la API de Riot Games cuando el jugador vincule su cuenta. ProPlay no muestra cifras autodeclaradas.',
+    sinCapturaDetalle:
+      'La cuenta de Riot está verificada, pero todavía no hay ninguna captura de sus partidas. ProPlay no muestra cifras autodeclaradas.',
+    resumen: {
+      posicion: 'Posición principal',
+      rango: 'Rango solo/dúo',
+      partidas: 'Partidas analizadas',
+      sinRango: 'Sin clasificar',
+      sinPosicion: 'Sin posición definida',
+      metricasTitulo: 'Métricas principales',
+      winRate: 'Tasa de victorias',
+      kda: 'KDA',
+      csPorMinuto: 'Súbditos por minuto',
+      danoPorMinuto: 'Daño a campeones por minuto',
+      visionPorMinuto: 'Visión por minuto',
+      participacionKills: 'Participación en asesinatos',
+      captura: (fecha: string) => `Datos de la API de Riot del ${fecha}`,
+    },
     habilidadesTitulo: 'Habilidades y endorsements',
     habilidadesSubtitulo: 'Validadas por otros usuarios de la plataforma.',
     habilidadesProximamente: 'Próximamente',
