@@ -315,6 +315,8 @@ export default function LoginPage() {
                     <button
                       key={rol}
                       type="button"
+                      aria-label={t.usarCuenta(usuario.nombre, t.descripcionDemo[rol])}
+                      aria-pressed={email === usuario.email}
                       onClick={() => usarCuenta(usuario.email)}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/3 p-3 text-left transition',
@@ -322,7 +324,7 @@ export default function LoginPage() {
                         email === usuario.email && 'border-brand-500/50 bg-brand-500/8',
                       )}
                     >
-                      <Fingerprint size={17} className="shrink-0 text-brand-400" />
+                      <Fingerprint size={17} className="shrink-0 text-brand-400" aria-hidden />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-slate-200">
                           {usuario.nombre}
@@ -331,7 +333,7 @@ export default function LoginPage() {
                           {t.descripcionDemo[rol]}
                         </p>
                       </div>
-                      <Users size={14} className="shrink-0 text-slate-600" />
+                      <Users size={14} className="shrink-0 text-slate-600" aria-hidden />
                     </button>
                   )
                 })}

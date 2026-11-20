@@ -202,6 +202,8 @@ export const es = {
     errorEntrar: 'No pudimos iniciar tu sesión.',
     errorRegistrar: 'No pudimos crear tu cuenta.',
     cuentasDemo: 'Cuentas de demostración',
+    usarCuenta: (nombre: string, descripcion: string) =>
+      `Usar la cuenta de demostración de ${nombre}: ${descripcion}`,
     descripcionDemo: {
       JUGADOR: 'Ofertas compatibles, perfil verificado y postulaciones',
       EQUIPO: 'Publica vacantes y revisa el ranking de candidatos',

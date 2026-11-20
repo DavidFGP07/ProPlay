@@ -102,6 +102,11 @@ describe('Aplicacion', () => {
     expect(await screen.findByText('Cuentas de demostración')).toBeInTheDocument()
     expect(screen.getByText('Caribe eSports')).toBeInTheDocument()
     expect(screen.getByText('Marcela Guzmán')).toBeInTheDocument()
+    const scout = screen.getByRole('button', { name: /^Usar la cuenta de demostración de Marcela Guzmán/ })
+    expect(scout).toHaveAttribute('aria-pressed', 'false')
+    scout.click()
+    expect(await screen.findByRole('button', { name: /de Marcela Guzmán/, pressed: true })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Correo electrónico' })).toHaveValue('scout@proplay.gg')
   })
 
   it('el registro exige aceptar el aviso de privacidad (RNF-05)', async () => {
@@ -199,6 +204,21 @@ describe('Aplicacion', () => {
       await screen.findByText(/no publicar ofertas ni cambiar el estado/i, {}, { timeout: 8000 }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Publicar oferta/i })).toBeNull()
+  })
+
+  it('el menú nombra el panel como su título: de equipo para el equipo, de scouting para el scout', async () => {
+    sesionDe('SCOUT')
+    const { unmount } = render(renderApp('/panel-equipo'))
+    expect(
+      await screen.findByRole('heading', { name: /Panel de scouting/i }, { timeout: 8000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Panel de scouting' })).toHaveAttribute('href', '/panel-equipo')
+    expect(screen.queryByRole('link', { name: 'Panel de equipo' })).toBeNull()
+    unmount()
+
+    sesionDe('EQUIPO')
+    render(renderApp('/panel-equipo'))
+    expect(await screen.findByRole('link', { name: 'Panel de equipo' }, { timeout: 8000 })).toBeInTheDocument()
   })
 
   it('el panel de equipo enlaza a publicar una oferta', async () => {
