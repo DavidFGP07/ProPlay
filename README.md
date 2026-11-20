@@ -12,11 +12,13 @@ Proyecto de grado — Universidad del Norte.
 > de Riot Games** (vinculación verificada por icono de la cuenta de League of
 > Legends, estadísticas e ingesta periódica en cola), el buscador de talento,
 > las ofertas con sus postulaciones, el **motor de matching** con ranking
-> explicable y la **analítica** (embudo de la vacante, dimensión decisiva y mapa
-> del talento) y las **notificaciones dentro de la app**. Siguen como andamiaje
-> (`501 Not Implemented`) `mensajeria`, `admin`, habilidades y endorsements, la vinculación por
-> OAuth y algunos endpoints sueltos de `scouting` y `matching`: la lista exacta
-> está en [Rutas de la API](#rutas-de-la-api).
+> explicable, la **explicación generada con IA** (Claude Haiku 5.5, con
+> comprobación de fidelidad), la **analítica** (embudo de la vacante, dimensión
+> decisiva y mapa del talento) y las **notificaciones dentro de la app**. Siguen
+> como andamiaje (`501 Not Implemented`) `mensajeria`, `admin`, habilidades y
+> endorsements (trabajo futuro), la vinculación por OAuth y algunos endpoints
+> sueltos de `scouting` y `matching`: la lista exacta está en
+> [Rutas de la API](#rutas-de-la-api).
 
 ---
 
@@ -299,7 +301,8 @@ Todos se ejecutan desde la raíz del monorepo.
 | `npm run db:deploy` | `prisma migrate deploy`: aplica las migraciones existentes (local, producción y CI) |
 | `npm run db:migrate` | `prisma migrate dev`: sólo para **crear** una migración nueva, con las reglas de CLAUDE.md §4 |
 | `npm run db:generate` | `prisma generate` (también lo hace el `postinstall`) |
-| `npm run db:seed` | Carga los datos de prueba (idempotente) |
+| `npm run db:seed` | Carga los datos de prueba. Pone al día sus propias filas, pero no borra lo creado después: para empezar de cero, `demo:reiniciar` |
+| `npm run demo:reiniciar` | Deja la base local como la crea el seed (borra los ensayos); sólo contra una base local que no sea la de pruebas ([docs/operacion.md](docs/operacion.md), «Demostración en local») |
 | `npm run db:test -w api` | Crea y migra la base de las pruebas (`proplay_test`); `npm test` ya lo hace solo |
 | `npm run db:studio` | Abre Prisma Studio |
 | `npm run db:reset` | Borra la base, reaplica migraciones y siembra |
@@ -334,12 +337,12 @@ de su vista en el inventario de CLAUDE.md §5.
 | `GET /perfiles/me` | con sesión | RF-05 | Implementado |
 | `PATCH /perfiles/jugador` | JUGADOR | RF-05, RF-09 | Implementado (incluida la ubicación) |
 | `PATCH /perfiles/equipo` | EQUIPO | RF-07 | Implementado (incluida la sede) |
-| `GET /perfiles/:id` | público (sesión opcional) | RF-05 | Implementado: perfil público |
+| `GET /perfiles/:id` | público (sesión opcional) | RF-05 | Implementado: perfil público, con el resumen de la última captura verificada de Riot |
 | `GET /perfiles/cuentas-gaming` | JUGADOR | RF-02, RF-03 | Implementado |
 | `POST /perfiles/cuentas-gaming/riot` · `GET`, `DELETE /perfiles/cuentas-gaming/riot/desafio` · `POST …/riot/desafio/regenerar` · `POST …/riot/verificar` | JUGADOR | RF-02 | Implementado: vinculación por icono |
 | `DELETE /perfiles/cuentas-gaming/:plataforma` | JUGADOR | RF-02 | Implementado |
 | `POST /perfiles/cuentas-gaming` | JUGADOR | RF-02 | **501**: vinculación por OAuth (necesita RSO) |
-| `GET`, `POST /perfiles/habilidades` · `POST /perfiles/endorsements` | con sesión / JUGADOR | RF-06 | **501** |
+| `GET`, `POST /perfiles/habilidades` · `POST /perfiles/endorsements` | con sesión / JUGADOR | RF-06 | **501**: trabajo futuro |
 | `POST /estadisticas/sincronizar` · `GET /estadisticas/sincronizacion` | JUGADOR | RF-03 | Implementado (cola de ingesta) |
 | `GET /estadisticas/jugador/:id` · `GET /estadisticas/jugador/:id/resumen` | con sesión | RF-04, RF-13 | Implementado |
 | `GET /scouting/jugadores` | EQUIPO, SCOUT, ADMIN | RF-08 | Implementado |
