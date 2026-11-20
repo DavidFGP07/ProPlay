@@ -88,23 +88,29 @@ export function contribucionTotal(desglose: DesgloseMatching, pesos: PesosMatchi
   return DIMENSIONES_MATCHING.reduce((s, d) => s + pesos[d] * desglose[d], 0);
 }
 
+/** Lo que necesita el orden del ranking de cada candidato. */
+export type CandidatoOrdenable = Pick<Puntuacion, "jugadorId" | "puntaje" | "desglose"> & {
+  explicacion: { dimensiones: { tecnica: Pick<ExplicacionMatching["dimensiones"]["tecnica"], "motivo"> } };
+};
+
+/** Tiene una cuenta de Riot verificada (la técnica no lo marca como ausente). */
+export const tieneCuentaVerificada = (c: CandidatoOrdenable): boolean =>
+  c.explicacion.dimensiones.tecnica.motivo !== "SIN_CUENTA_VERIFICADA";
+
 /**
- * Orden estable del ranking: puntaje de mayor a menor; a igualdad, la técnica
- * (lo verificable desempata) y, por último, el id del jugador.
+ * Orden estable del ranking: puntaje de mayor a menor; a igualdad, primero
+ * quien tiene la cuenta verificada, después la técnica (lo verificable
+ * desempata) y, por último, el id del jugador.
  */
-export function compararCandidatos(
-  a: Pick<Puntuacion, "jugadorId" | "puntaje" | "desglose">,
-  b: Pick<Puntuacion, "jugadorId" | "puntaje" | "desglose">,
-): number {
+export function compararCandidatos(a: CandidatoOrdenable, b: CandidatoOrdenable): number {
   return (
     b.puntaje - a.puntaje ||
+    Number(tieneCuentaVerificada(b)) - Number(tieneCuentaVerificada(a)) ||
     b.desglose.tecnica - a.desglose.tecnica ||
     (a.jugadorId < b.jugadorId ? -1 : a.jugadorId > b.jugadorId ? 1 : 0)
   );
 }
 
-export function ordenarRanking<T extends Pick<Puntuacion, "jugadorId" | "puntaje" | "desglose">>(
-  candidatos: readonly T[],
-): T[] {
+export function ordenarRanking<T extends CandidatoOrdenable>(candidatos: readonly T[]): T[] {
   return [...candidatos].sort(compararCandidatos);
 }
