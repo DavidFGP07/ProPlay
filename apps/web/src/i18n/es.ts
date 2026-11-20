@@ -840,8 +840,14 @@ export const es = {
     decisiva: 'Qué decide el ranking',
     decisivaSubtitulo: (top: number) =>
       `Ventaja media de tus ${top} primeros candidatos sobre el resto, en puntos de compatibilidad.`,
-    decisivaFrase: (dimension: string, top: number, puntos: string, total: string) =>
-      `Lo que más separa a tus ${top} primeros del resto es la ${dimension.toLowerCase()}: ${puntos} puntos de ventaja de media, sobre una diferencia total de ${total} puntos.`,
+    decisivaFrase: (dimension: string, top: number, puntos: string) =>
+      `Lo que más separa a tus ${top} primeros del resto es la ${dimension.toLowerCase()}: les da ${puntos} puntos de ventaja de media.`,
+    decisivaRestan: (puntos: string, total: string) =>
+      `Las demás dimensiones les restan ${puntos} puntos, así que la diferencia total es de ${total} puntos.`,
+    decisivaSuman: (puntos: string, total: string) =>
+      `Las demás dimensiones les suman ${puntos} puntos más, así que la diferencia total es de ${total} puntos.`,
+    decisivaSolo: (total: string) =>
+      `Las demás dimensiones no cambian la diferencia: la total es de ${total} puntos.`,
     empate: 'Tus primeros candidatos y el resto están igualados: ninguna dimensión los separa.',
     pocosCandidatos: (minimo: number, hay: number) =>
       `Hacen falta al menos ${minimo} candidatos en el ranking para saber qué lo decide (ahora hay ${hay}).`,
