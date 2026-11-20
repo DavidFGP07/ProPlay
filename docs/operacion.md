@@ -314,3 +314,39 @@ celda vacía, no un 0.
 Las cifras son **evidencia descriptiva con su n**, no un contraste estadístico: con el
 tamaño del piloto no hay potencia para una prueba de hipótesis (`docs/decisiones.md`,
 «Analítica»).
+
+---
+
+## Demostración en local
+
+### Reiniciar la base de la demostración
+
+```bash
+npm run demo:reiniciar
+```
+
+Deja la base de `DATABASE_URL` exactamente como la crea el seed: borra la base entera, le
+aplica todas las migraciones (el índice HNSW incluido) y ejecuta `prisma/seed.ts`. No queda
+nada de los ensayos: ni postulaciones, ni ofertas, ni cambios de etapa, ni notificaciones,
+ni cuentas creadas a mano. Volver a sembrar con `npm run db:seed` **no** basta para eso: el
+seed pone al día sus propias filas, pero no borra las que se crearon después.
+
+Sólo se ejecuta contra una base local de desarrollo. Se niega con `NODE_ENV=production`,
+contra un servidor de base de datos que no sea `localhost`, `127.0.0.1` o `::1` y contra la
+base de las pruebas (`*_test`), que gestiona `npm test`.
+
+Después, reinicia la API si estaba en marcha: el contador del límite de peticiones vive en
+su memoria. Los navegadores que tuvieran una sesión abierta la pierden al recargar, porque
+su cuenta se creó de nuevo.
+
+### Antes de la demostración
+
+1. `npm run demo:reiniciar`.
+2. En `apps/api/.env`, `LIMITE_GLOBAL_PETICIONES=100000`: en local todas las peticiones
+   salen de la misma IP y un recorrido por los tres roles agota las 300 por defecto en
+   unos 20 minutos. `/auth/logout` no cuenta nunca para ese límite.
+3. Renueva `RIOT_API_KEY` («Renovar la clave de desarrollo») si vas a vincular una cuenta
+   real; las cuentas del seed no la necesitan.
+4. Comprueba el explicador con la clave real («Prueba manual con la clave real»). Sin
+   ella, el detalle del candidato muestra sólo la explicación determinista.
+5. Arranca con `npm run dev`.

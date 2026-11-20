@@ -379,6 +379,7 @@ falta una obligatoria. El cliente lee las suyas en `apps/web/src/lib/env.ts`. Lo
 | `ENCRYPTION_KEY` | **sí** | — | Clave AES-256-GCM (64 caracteres hexadecimales) para los tokens de las cuentas de juego |
 | `CORS_ORIGIN` | no | `http://localhost:5173` | Origen (o lista) autorizado |
 | `TRUST_PROXY` | **en producción** | sin proxy | Proxies delante de la API (ver «Despliegue») |
+| `LIMITE_GLOBAL_PETICIONES` | no | `300` | Peticiones por IP cada 15 minutos para toda la API (`/auth/logout` no cuenta). Para la demostración en local, muy alto (p. ej. `100000`): todo sale de la misma IP |
 | `RIOT_API_KEY` | no | — | Clave de la API de Riot; sin ella, lo de Riot responde `503 RIOT_NO_DISPONIBLE` |
 | `RIOT_LIMITES` | no | `20:1,100:120` | Ventanas de cuota de la clave, `límite:segundos` |
 | `RIOT_RESERVA_ALTA` | no | `30` | Porcentaje de cada ventana reservado a la vinculación |

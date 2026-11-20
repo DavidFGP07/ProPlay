@@ -35,6 +35,31 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/**
+ * Marca de «el usuario salió, pero la API no pudo borrar la cookie». La cookie
+ * del refresh token es httpOnly: si /auth/logout falla, el cliente no puede
+ * borrarla, y al recargar recuperaría la sesión anterior. Con esta marca no se
+ * intenta recuperar hasta el siguiente inicio de sesión. No guarda ningún token.
+ */
+const CLAVE_SALIDA_PENDIENTE = 'proplay.salidaSinConfirmar'
+
+function marcarSalidaPendiente(pendiente: boolean): void {
+  try {
+    if (pendiente) sessionStorage.setItem(CLAVE_SALIDA_PENDIENTE, '1')
+    else sessionStorage.removeItem(CLAVE_SALIDA_PENDIENTE)
+  } catch {
+    // Sin almacenamiento disponible: queda el cierre local.
+  }
+}
+
+function haySalidaPendiente(): boolean {
+  try {
+    return sessionStorage.getItem(CLAVE_SALIDA_PENDIENTE) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [usuario, setUsuarioEstado] = useState<UsuarioPublico | null>(null)
@@ -57,6 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // el interceptor prueba a refrescar con la cookie y reintenta la peticion.
   useEffect(() => {
     let activo = true
+    if (haySalidaPendiente()) {
+      setUsuario(null)
+      setCargando(false)
+      return
+    }
     authApi
       .yo()
       .then((respuesta) => {
@@ -81,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const entrar = useCallback(
     async (datos: LoginInput) => {
       const respuesta = await authApi.login(datos)
+      marcarSalidaPendiente(false)
       guardarAccessToken(respuesta.accessToken)
       setUsuario(respuesta.usuario)
       return respuesta.usuario
@@ -91,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registrar = useCallback(
     async (datos: RegisterInput) => {
       const respuesta = await authApi.registrar(datos)
+      marcarSalidaPendiente(false)
       guardarAccessToken(respuesta.accessToken)
       setUsuario(respuesta.usuario)
       return respuesta.usuario
@@ -98,9 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setUsuario],
   )
 
+  // Salir nunca falla para el usuario: si la API no confirma el cierre, se
+  // cierra en local y no se recupera la sesión al recargar.
   const salir = useCallback(async () => {
     try {
       await authApi.logout()
+      marcarSalidaPendiente(false)
+    } catch {
+      marcarSalidaPendiente(true)
     } finally {
       cerrarLocalmente()
     }

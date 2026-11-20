@@ -14,6 +14,7 @@ import {
 import {
   MACROREGION_POR_DEPARTAMENTO,
   type PerfilJugadorPublico,
+  type ResumenVerificadoPublico,
 } from '@proplay/shared'
 import {
   Avatar,
@@ -32,6 +33,12 @@ import { lugar } from '@/lib/ubicacion'
 const t = es.perfilPublico
 
 const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' })
+const formatoDecimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 })
+const formatoEntero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
+const formatoPorcentaje = new Intl.NumberFormat('es-CO', {
+  style: 'percent',
+  maximumFractionDigits: 1,
+})
 
 /**
  * Durante el piloto los perfiles no deben aparecer en buscadores: la vista
@@ -133,11 +140,15 @@ function Perfil({ perfil }: { perfil: PerfilJugadorPublico }) {
               subtitle={t.estadisticasSubtitulo}
               icon={<BarChart3 size={16} />}
             />
-            <EmptyState
-              icono={<Gamepad2 size={22} />}
-              titulo={t.sinEstadisticas}
-              descripcion={t.sinEstadisticasDetalle}
-            />
+            {perfil.resumenVerificado ? (
+              <ResumenVerificado resumen={perfil.resumenVerificado} />
+            ) : (
+              <EmptyState
+                icono={<Gamepad2 size={22} />}
+                titulo={t.sinEstadisticas}
+                descripcion={riot ? t.sinCapturaDetalle : t.sinEstadisticasDetalle}
+              />
+            )}
           </Card>
           <Card>
             <CardHeader
@@ -202,6 +213,66 @@ function Perfil({ perfil }: { perfil: PerfilJugadorPublico }) {
           ))}
         </ol>
       </Card>
+    </div>
+  )
+}
+
+/**
+ * RF-05 · Resumen verificado: la última captura de la API de Riot, nunca
+ * cifras declaradas. Una métrica que falte en la captura no se muestra.
+ */
+function ResumenVerificado({ resumen }: { resumen: ResumenVerificadoPublico }) {
+  const r = t.resumen
+  const cabecera = [
+    {
+      etiqueta: r.posicion,
+      valor: resumen.posicionPrincipal ? es.posicionLol[resumen.posicionPrincipal] : r.sinPosicion,
+    },
+    { etiqueta: r.rango, valor: resumen.rango ? es.rangoLol[resumen.rango] : r.sinRango },
+    { etiqueta: r.partidas, valor: formatoEntero.format(resumen.partidasAnalizadas) },
+  ]
+  const metricas: { etiqueta: string; valor: number | null; formato: Intl.NumberFormat }[] = [
+    { etiqueta: r.winRate, valor: resumen.winRate, formato: formatoPorcentaje },
+    { etiqueta: r.kda, valor: resumen.kda, formato: formatoDecimal },
+    { etiqueta: r.csPorMinuto, valor: resumen.csPorMinuto, formato: formatoDecimal },
+    { etiqueta: r.danoPorMinuto, valor: resumen.danoPorMinuto, formato: formatoEntero },
+    { etiqueta: r.visionPorMinuto, valor: resumen.visionPorMinuto, formato: formatoDecimal },
+    {
+      etiqueta: r.participacionKills,
+      valor: resumen.participacionKills,
+      formato: formatoPorcentaje,
+    },
+  ]
+
+  return (
+    <div className="space-y-4 p-5">
+      <dl className="grid gap-3 sm:grid-cols-3">
+        {cabecera.map((dato) => (
+          <div key={dato.etiqueta} className="rounded-xl border border-white/8 bg-white/3 px-3.5 py-3">
+            <dt className="text-[11px] text-slate-400">{dato.etiqueta}</dt>
+            <dd className="mt-1 text-base font-semibold text-slate-50">{dato.valor}</dd>
+          </div>
+        ))}
+      </dl>
+      <div>
+        <p className="mb-2 text-xs font-medium text-slate-300">{r.metricasTitulo}</p>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {metricas.map((dato) =>
+            dato.valor === null ? null : (
+              <div key={dato.etiqueta}>
+                <dt className="text-[11px] text-slate-400">{dato.etiqueta}</dt>
+                <dd className="mt-0.5 font-mono text-sm text-slate-100">
+                  {dato.formato.format(dato.valor)}
+                </dd>
+              </div>
+            ),
+          )}
+        </dl>
+      </div>
+      <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+        <ShieldCheck size={12} className="text-emerald-300" aria-hidden />
+        {r.captura(formatoFecha.format(resumen.capturadaEn))}
+      </p>
     </div>
   )
 }
