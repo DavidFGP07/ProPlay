@@ -8,8 +8,16 @@ import { es } from '@/i18n/es'
 
 const t = es.sincronizacion
 
-/** Codigos que son una espera, no un fallo: se avisan sin rojo. */
-const CODIGOS_DE_ESPERA = ['MUCHA_DEMANDA', 'RIOT_NO_DISPONIBLE', 'TOO_MANY_REQUESTS']
+/**
+ * Codigos que son un aviso, no un fallo: se muestran sin rojo. Incluye la
+ * cuenta de demostracion, que nunca se sincroniza con Riot.
+ */
+const CODIGOS_DE_ESPERA = [
+  'MUCHA_DEMANDA',
+  'RIOT_NO_DISPONIBLE',
+  'TOO_MANY_REQUESTS',
+  'CUENTA_DE_DEMOSTRACION',
+]
 
 // RF-03 · Boton «Sincronizar» con el estado de la ingesta: en cola (tambien
 // por mucha demanda en la cuota de Riot), en curso y el resultado al terminar.
