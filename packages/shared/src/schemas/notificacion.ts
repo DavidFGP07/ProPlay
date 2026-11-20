@@ -9,7 +9,9 @@ import { paginacionQuerySchema, paginadoSchema } from "./common";
  * Las crea el módulo `notificaciones` al consumir los eventos que publican los
  * demás (CLAUDE.md §3.3). Guardan datos, no texto: el cliente compone el
  * mensaje y el enlace con el tipo y el `payload` (textos en el i18n). El
- * `payload` no lleva datos personales del jugador.
+ * `payload` sólo lleva del jugador el nombre, y sólo en la notificación al
+ * equipo dueño, que ya lo ve en las postulaciones recibidas: ni su correo ni
+ * otros datos.
  */
 
 /** Nueva postulación a una oferta: para el usuario del equipo dueño. */
@@ -19,6 +21,8 @@ const nuevaPostulacion = z.object({
     ofertaId: z.string(),
     ofertaTitulo: z.string(),
     postulacionId: z.string(),
+    /** Nombre de quien se postuló; falta en las notificaciones anteriores. */
+    jugadorNombre: z.string().optional(),
   }),
 });
 
