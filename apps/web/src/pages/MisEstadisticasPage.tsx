@@ -59,8 +59,11 @@ const t = es.misEstadisticas
 
 const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeStyle: 'short' })
 const formatoCorto = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' })
-const porcentaje = (valor: number) => `${Math.round(valor * 1000) / 10} %`
-const numero = (valor: number) => valor.toLocaleString('es-CO', { maximumFractionDigits: 2 })
+// Formato español en todas las cifras: coma decimal («3,21», «51,2 %»).
+const formatoNumero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 })
+const formatoUnDecimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
+const porcentaje = (valor: number) => `${formatoUnDecimal.format(valor * 100)} %`
+const numero = (valor: number) => formatoNumero.format(valor)
 
 /** Colores de las series: los mismos tokens brand-500 y accent-400 de index.css. */
 const COLOR_WIN_RATE = 'var(--color-brand-500)'
@@ -183,7 +186,7 @@ function Contenido({
         <Stat
           label={t.kda}
           value={numero(actual.kda)}
-          hint={t.kdaPista(m.promedioKills, m.promedioMuertes, m.promedioAsistencias)}
+          hint={t.kdaPista(numero(m.promedioKills), numero(m.promedioMuertes), numero(m.promedioAsistencias))}
           icono={<Swords size={17} />}
           acento="cian"
         />
@@ -205,7 +208,7 @@ function Contenido({
         <Stat
           label={t.participacion}
           value={porcentaje(m.participacionKills)}
-          hint={t.duracion(m.duracionMediaMinutos)}
+          hint={t.duracion(formatoUnDecimal.format(m.duracionMediaMinutos))}
           icono={<Users size={17} />}
           acento="verde"
         />
@@ -314,7 +317,7 @@ function Campeones({ metricas }: { metricas: MetricasLol }) {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-100">{campeon.campeon}</p>
               <p className="text-[11px] text-slate-500">
-                {t.campeonDetalle(campeon.partidas, campeon.victorias, campeon.kda)}
+                {t.campeonDetalle(campeon.partidas, campeon.victorias, numero(campeon.kda))}
               </p>
             </div>
           </li>
@@ -403,8 +406,8 @@ function Tendencia({ historial }: { historial: Estadistica[] }) {
               {puntos.map((p, i) => (
                 <tr key={i}>
                   <td>{p.fecha}</td>
-                  <td>{p.winRate}</td>
-                  <td>{p.kda}</td>
+                  <td>{formatoUnDecimal.format(p.winRate)}</td>
+                  <td>{numero(p.kda)}</td>
                 </tr>
               ))}
             </tbody>
