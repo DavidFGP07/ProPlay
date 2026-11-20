@@ -277,7 +277,9 @@ function MisOfertas() {
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Clock size={12} aria-hidden />
-                      {t.creadaEl(formatoFecha.format(oferta.creadoEn))}
+                      {oferta.publicadaEn
+                        ? t.publicadaEl(formatoFecha.format(oferta.publicadaEn))
+                        : t.borradorDel(formatoFecha.format(oferta.creadoEn))}
                     </span>
                   </p>
                 </div>
