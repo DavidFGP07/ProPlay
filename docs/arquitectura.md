@@ -508,7 +508,8 @@ refrescar y reintentar la petición fallida una única vez.
 ## Explicador con modelo de lenguaje
 
 RF-11, tareas 4.1, 4.3 y 4.7. El detalle del candidato muestra, sobre la tabla de aportes,
-un texto de 2 o 3 frases que explica qué suma y qué resta al puntaje. Lo redacta Claude
+un texto de 2 a 4 frases que explica qué suma y qué resta al puntaje y qué requisitos de la
+oferta no cumple el candidato. Lo redacta Claude
 Haiku 5.5 por la API de Anthropic. El porqué de cada decisión está en
 `docs/decisiones.md`, «Explicador con modelo de lenguaje».
 
@@ -535,15 +536,21 @@ flowchart LR
   dimensiones visibles con peso mayor que 0, con sus cifras ya en porcentaje, más el orden
   de lo que más suma (peso × valor) y de lo que más resta (peso × lo que le falta). Si la
   misma dimensión encabeza las dos listas, `mismaDimension` dice qué parte suma y cuál
-  resta (en la técnica, sus componentes). Nunca `candidato.jugador`: ni nombre, ni correo,
-  ni Riot ID, ni ids, ni ubicación, ni fechas.
-- **Prompt** (`redaccion/prompt.ts`): en español y versionado (`VERSION_PROMPT`).
+  resta (en la técnica, sus componentes). `requisitosNoCumplidos` lista, calculados aquí y
+  no por el modelo, los requisitos que no cumple: posición principal distinta de la pedida,
+  rango por debajo del mínimo y horas por debajo de las pedidas (sin datos verificados, no
+  se dan por cumplidos; la ubicación no es requisito). Nunca `candidato.jugador`: ni nombre,
+  ni correo, ni Riot ID, ni ids, ni ubicación, ni fechas.
+- **Prompt** (`redaccion/prompt.ts`): en español y versionado (`VERSION_PROMPT`, hoy 2).
+  Primero lo que más suma, después lo que más resta y, si hay requisitos sin cumplir, una
+  última frase que empieza por «No cumple». Sin veredicto: el puesto lo da el motor.
 - **Llamada** (`integrations/llm/`): `ProveedorLLM` con tres implementaciones (Anthropic,
   desactivada y, en las pruebas, una falsa). Esfuerzo `low`, pensamiento desactivado, 400
   tokens como máximo, sin reintentos y con el tiempo máximo de `EXPLICADOR_TIMEOUT_MS`.
 - **Fidelidad** (`redaccion/fidelidad.ts`): se descarta el texto que traiga una cifra que no
   está en la entrada (se admite la forma de fracción de un porcentaje), un rango o una
-  división que no están, o una dimensión oculta.
+  división que no están, o una dimensión oculta, y el que calle los requisitos que el
+  candidato no cumple (no dice «no cumple»).
 - **Caché** en Redis por contenido: sha256 de la versión del prompt, el modelo y la entrada,
   durante 30 días. Un acierto no llama al modelo ni gasta los límites.
 - **Límites**: `EXPLICADOR_LIMITE_USUARIO_HORA` generaciones nuevas por usuario y hora y

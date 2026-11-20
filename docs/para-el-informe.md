@@ -206,7 +206,8 @@ administradores obtienen las métricas del piloto por script (decisión 0.10).
   algo cambió.
 - **Explicador.** Módulo `explicador` fuera del motor: redacta con Claude Haiku 5.5 un texto a
   partir del desglose del candidato (sólo cifras y códigos), comprueba que no invente cifras ni
-  rangos y, si algo falla, se queda la explicación determinista. El ranking no depende de él.
+  rangos y que diga los requisitos de la oferta que el candidato no cumple y, si algo falla, se
+  queda la explicación determinista. El ranking no depende de él.
 - **Lo que no hay:** sin calculador en Python (el cálculo es determinista en TypeScript).
 - **Interfaz.** Panel del equipo con el resumen de la analítica, ranking con desglose,
   detalle del candidato y analítica. El feed quedó descartado.
@@ -230,8 +231,10 @@ matching», «Ranking de candidatos» y «Analítica»):
 6. **Explicación determinista** a partir de los motivos y cifras de cada dimensión, y encima
    la **generada con modelo de lenguaje** (4.1, 4.3 y 4.7): el explicador queda fuera del
    motor, no recibe datos personales, descarta los textos con cifras que no están en el
-   desglose y degrada a la determinista (`decisiones.md`, «Explicador con modelo de
-   lenguaje»).
+   desglose o que callan un requisito no cumplido (posición, rango mínimo u horas) y degrada
+   a la determinista (`decisiones.md`, «Explicador con modelo de lenguaje» y «Prompt del
+   explicador v2 y requisitos no cumplidos»). Como el motor ordena a todos los postulantes
+   aunque ninguno cumpla los mínimos, el texto lo dice en lugar de resaltar sólo lo bueno.
 7. **El desglose es una barra apilada de aportes**, no un radar: los aportes suman el
    puntaje mostrado.
 8. **Once módulos**, con `analitica` y `explicador`. RF-13 lo realiza `analitica`, no «Administración».
