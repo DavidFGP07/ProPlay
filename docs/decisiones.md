@@ -682,3 +682,20 @@ RF-12, tareas 4.5 y 4.9, en versión mínima. Contrato en el PR de `shared` del 
 | **Se retira el lateral simulado de notificaciones de Mi perfil** | CLAUDE.md §8: no se usan datos simulados en una vista que ya tiene su endpoint real. La campana lo sustituye en todas las vistas. |
 | **Seed**: tres notificaciones para `equipo@caribeesports.gg` y tres para `jugador1@proplay.gg`, dos sin leer y una leída para cada uno, sacadas de sus postulaciones reales y rehechas en cada ejecución | La demostración enseña la campana con contenido coherente con las postulaciones que se ven. |
 | Fuera de alcance: correo electrónico, push, tiempo real (WebSockets), preferencias de notificación y mensajería entre usuarios | Recorte acordado para el cierre de la tesis. |
+
+## Prompt del explicador v2 y requisitos no cumplidos (2026-11-20)
+
+La prueba manual con la clave real (puestos 1 a 3 de «ADC para la liga en línea») dio textos
+que cumplían los criterios, pero repetían en la tercera frase lo ya dicho, citaban nombres de
+campo y la escala de normalización («un winRate de 45% que queda en la escala 33») y, sobre
+todo, sólo resaltaban lo bueno: el puesto 1 no cumple las horas que pide la oferta (15 frente a
+20) y el texto no lo decía. Si ningún postulante cumple los mínimos, el motor igual los ordena
+y el texto los presentaría como buenos candidatos.
+
+| Decisión | Por qué |
+| --- | --- |
+| **`requisitosNoCumplidos` en la entrada**, calculado de forma determinista en `construirEntrada`: posición principal distinta de la pedida, rango por debajo del mínimo (`rangoAlMenos`) y horas por debajo de las pedidas, con lo que pide la oferta y lo que tiene el candidato. Sin datos verificados, el requisito no se da por cumplido (`candidato: null`) | Que el modelo no tenga que deducirlo ni pueda pasarlo por alto. Cuentan aunque la técnica pese 0 en la oferta: la oferta los pide igual. |
+| **La ubicación no es un requisito** | La oferta no fija un mínimo de ubicación: la dimensión geográfica sólo pondera la cercanía, con la relocalización. |
+| **El prompt obliga a una última frase que empiece por «No cumple»** con cada requisito de la lista, aunque el texto llegue a 4 frases | Un equipo no puede leer un texto favorable sobre alguien que no cumple los mínimos. Sigue sin haber veredicto («recomendable» o no): el puesto lo da el motor y la decisión es del equipo. |
+| **La comprobación de fidelidad rechaza el texto que no diga «no cumple»** cuando la lista no está vacía (`causa` `REQUISITOS_OMITIDOS`) | La red no se fía del prompt: si el modelo lo calla, la vista enseña la nota y la explicación determinista. |
+| **Prompt v2** (`VERSION_PROMPT = 2`): sin repeticiones, la escala no se cita y las métricas van con nombre en español | La clave de la caché incluye la versión, así que los textos de la v1 dejan de servirse. |

@@ -222,10 +222,12 @@ oferta «ADC para la liga en línea»:
 8. Vuelve a abrir el puesto 1 recargando la página: la línea nueva dice `deCache: true` y no
    lleva tokens.
 
-Qué revisar en cada texto: 2 o 3 frases; primero lo que más suma y después lo que más resta;
-en el puesto 1, que la técnica sume por la posición y el rango y reste por el rendimiento
-(`mismaDimension`), sin contradecirse; ninguna cifra que no esté en la tabla; ningún juicio
-sobre la persona.
+Qué revisar en cada texto: 2 o 3 frases (4 si hay requisitos sin cumplir); primero lo que más
+suma y después lo que más resta, sin repetirlo; en el puesto 1, que la técnica sume por la
+posición y el rango y reste por el rendimiento (`mismaDimension`), sin contradecirse; una
+última frase que empiece por «No cumple» con cada requisito que falte (en el puesto 1, las
+horas: 15 frente a 20); ninguna cifra que no esté en la tabla, ni la escala de las métricas, ni
+nombres de campo como «winRate»; ningún juicio sobre la persona.
 
 **Si sale la nota en vez del texto**, la línea del registro dice el motivo (o la respuesta de
 la API, en la pestaña Red del navegador):
@@ -235,7 +237,7 @@ la API, en la pestaña Red del navegador):
 | Ninguna línea (`DESACTIVADO`) | La API no leyó la clave o `EXPLICADOR_ACTIVO` es `false`: revisa `apps/api/.env` y reinicia `npm run dev` |
 | `ERROR` | Clave inválida o sin saldo (la línea no trae el mensaje de Anthropic: pruébala en la consola), o Redis caído (`docker compose ps`) |
 | `TIEMPO_AGOTADO` | Sube `EXPLICADOR_TIMEOUT_MS` (por ejemplo, a `8000`) y reinicia |
-| `FIDELIDAD` | El modelo escribió algo que no estaba en la entrada (`causa` y `detalle` dicen qué). No se guarda: recarga la página para pedir otro |
+| `FIDELIDAD` | El modelo escribió algo que no estaba en la entrada, o calló un requisito que el candidato no cumple (`causa` `REQUISITOS_OMITIDOS`); `causa` y `detalle` dicen qué. No se guarda: recarga la página para pedir otro |
 | `LIMITE` | Se agotó un límite; espera a la hora siguiente o súbelo |
 
 Para volver a generar los textos desde cero (por ejemplo, tras cambiar el prompt sin subir

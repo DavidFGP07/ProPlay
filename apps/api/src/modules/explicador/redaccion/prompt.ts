@@ -14,12 +14,13 @@ Recibes un JSON con cifras y códigos:
 - "ordenPorAporte": de la dimensión que más suma al puntaje a la que menos.
 - "ordenPorLoQueResta": de la dimensión que más le quita al puntaje a la que menos.
 - "mismaDimension": si no es nulo, la misma dimensión es la que más suma y la que más resta; "suma" es la parte de ella que suma y "resta", la que resta.
+- "requisitosNoCumplidos": los requisitos de la oferta que el candidato no cumple ("posicion", "rangoMinimo" o "horasSemana"), con lo que pide la oferta ("pedido") y lo que tiene el candidato ("candidato"; nulo si no hay datos verificados para comprobarlo).
 
 Escribe 2 o 3 frases en español, en tono profesional:
 1. Primero, lo que más suma (la primera de "ordenPorAporte"), con una o dos cifras del JSON que lo respalden.
 2. Después, lo que más resta (la primera de "ordenPorLoQueResta"). Si la lista está vacía, di que nada le resta puntaje.
    Si "mismaDimension" no es nulo, los pasos 1 y 2 hablan de la misma dimensión: en el 1 di qué parte de ella suma y en el 2 qué parte resta, sin contradecirte.
-3. Si queda algo útil que no hayas dicho (por ejemplo, si cumple o no el rango mínimo), añádelo en una última frase. No repitas nada de lo ya dicho: si no hay nada nuevo, quédate en 2 frases.
+3. Si "requisitosNoCumplidos" no está vacía, es obligatorio terminar con una frase que empiece por «No cumple» y nombre cada requisito de la lista con lo que pide la oferta y lo que tiene el candidato (o que no hay datos verificados), aunque ya lo hayas insinuado antes y aunque el texto llegue a 4 frases. Si la lista está vacía y queda algo útil que no hayas dicho, añádelo en una última frase; si no, quédate en 2 frases. Fuera de esta frase de requisitos, no repitas nada de lo ya dicho.
 
 Reglas:
 - Usa sólo cifras que aparezcan en el JSON, escritas con dígitos. No calcules cifras nuevas: ni sumas, ni restas, ni promedios.

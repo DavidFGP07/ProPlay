@@ -1,5 +1,6 @@
 import {
   DIMENSIONES_VISIBLES,
+  rangoAlMenos,
   type CandidatoRanking,
   type DimensionMatching,
   type MetricaTecnicaLol,
@@ -53,6 +54,43 @@ export interface EntradaExplicador {
    * técnica… lo que más resta es la técnica»).
    */
   mismaDimension: { dimension: DimensionMatching; suma: ParteDimension | null; resta: ParteDimension } | null;
+  /**
+   * Requisitos de la oferta que el candidato no cumple, calculados aquí y no
+   * por el modelo: el ranking ordena a todos, aunque ninguno los cumpla, y el
+   * texto tiene que decirlo en vez de resaltar sólo lo bueno.
+   */
+  requisitosNoCumplidos: RequisitoNoCumplido[];
+}
+
+/**
+ * Un requisito de la oferta que el candidato no cumple: lo que pide la oferta
+ * y lo que tiene el candidato (nulo si no hay datos verificados con que
+ * comprobarlo, que tampoco cuenta como cumplido).
+ */
+export type RequisitoNoCumplido =
+  | { requisito: "posicion"; pedido: string; candidato: string | null }
+  | { requisito: "rangoMinimo"; pedido: string; candidato: string | null }
+  | { requisito: "horasSemana"; pedido: number; candidato: number | null };
+
+/**
+ * Posición, rango mínimo y horas por semana: lo que la oferta pide como
+ * mínimo. La ubicación no entra: la oferta no fija un mínimo, sólo pondera la
+ * cercanía (con la relocalización).
+ */
+export function requisitosNoCumplidos(candidato: CandidatoRanking): RequisitoNoCumplido[] {
+  const { tecnica, disponibilidad } = candidato.explicacion.dimensiones;
+  const faltan: RequisitoNoCumplido[] = [];
+  if (tecnica.posicionPrincipal !== tecnica.posicionPedida) {
+    faltan.push({ requisito: "posicion", pedido: tecnica.posicionPedida, candidato: tecnica.posicionPrincipal });
+  }
+  if (tecnica.rangoMinimo && (!tecnica.rango || !rangoAlMenos(tecnica.rango, tecnica.rangoMinimo))) {
+    faltan.push({ requisito: "rangoMinimo", pedido: tecnica.rangoMinimo, candidato: tecnica.rango });
+  }
+  const { horasOferta, horasJugador } = disponibilidad;
+  if (horasOferta !== null && (horasJugador === null || horasJugador < horasOferta)) {
+    faltan.push({ requisito: "horasSemana", pedido: horasOferta, candidato: horasJugador });
+  }
+  return faltan;
 }
 
 const porcentaje = (fraccion: number): number => Math.round(fraccion * 100);
@@ -169,6 +207,7 @@ export function construirEntrada(candidato: CandidatoRanking): EntradaExplicador
     ordenPorAporte,
     ordenPorLoQueResta,
     mismaDimension,
+    requisitosNoCumplidos: requisitosNoCumplidos(candidato),
   };
 }
 
