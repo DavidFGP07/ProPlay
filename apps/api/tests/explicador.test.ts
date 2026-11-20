@@ -83,7 +83,7 @@ async function explicar(token = tokenEquipo): Promise<ExplicacionGenerada> {
 /** Un texto fiel a la entrada de este candidato (cifras y rango de la entrada). */
 const TEXTO_FIEL =
   "Lo que más suma es la técnica: juega de Mid en el 100 % de sus partidas y está en Diamante II. " +
-  "Lo que más resta es la disponibilidad: dedica 15 horas frente a las 20 que pide la oferta.";
+  "Lo que más resta es la disponibilidad. No cumple las horas por semana: dedica 15 frente a las 20 que pide la oferta.";
 
 let falso: ProveedorLLMFalso;
 
@@ -191,6 +191,17 @@ describe("GET /explicaciones/ofertas/:id/candidatos/:jugadorId", () => {
   it("un rango inventado también se descarta", async () => {
     falso.respuesta = { texto: "Está en Retador y juega de Mid.", tokensEntrada: 700, tokensSalida: 20 };
     expect(await explicar()).toMatchObject({ estado: "NO_DISPONIBLE", motivo: "FIDELIDAD" });
+  });
+
+  it("callar un requisito que no cumple también se descarta", async () => {
+    // Dedica 15 horas y la oferta pide 20: el texto sólo resalta lo bueno.
+    falso.respuesta = {
+      texto: "Lo que más suma es la técnica: juega de Mid en el 100 % de sus partidas y está en Diamante II.",
+      tokensEntrada: 700,
+      tokensSalida: 30,
+    };
+    expect(await explicar()).toMatchObject({ estado: "NO_DISPONIBLE", motivo: "FIDELIDAD" });
+    expect(falso.peticiones[0]!.entrada).toContain('"requisito": "horasSemana"');
   });
 
   it("agotado el límite por usuario y hora, se degrada a LIMITE; la caché sigue sirviendo", async () => {

@@ -70,6 +70,73 @@ function conPesos(tecnica: number, geografica: number, disponibilidad: number): 
   };
 }
 
+/**
+ * Mismo candidato con otra técnica y otras horas. `pesoTecnica` 0 deja la
+ * técnica fuera de las dimensiones, pero sus requisitos siguen contando.
+ */
+function conRequisitos(
+  tecnica: Partial<CandidatoRanking["explicacion"]["dimensiones"]["tecnica"]>,
+  pesoTecnica = 0.6,
+  horasJugador: number | null = 20,
+): CandidatoRanking {
+  const { dimensiones } = ADC.explicacion;
+  return {
+    ...ADC,
+    explicacion: {
+      pesos: { ...ADC.explicacion.pesos, tecnica: pesoTecnica, disponibilidad: 1 - pesoTecnica },
+      dimensiones: {
+        ...dimensiones,
+        tecnica: { ...dimensiones.tecnica, ...tecnica },
+        disponibilidad: { ...dimensiones.disponibilidad, horasJugador },
+      },
+    },
+  };
+}
+
+describe("requisitos no cumplidos", () => {
+  it("el puesto 1 del seed cumple posición y rango, pero no las horas", () => {
+    expect(construirEntrada(ADC).requisitosNoCumplidos).toEqual([
+      { requisito: "horasSemana", pedido: 20, candidato: 15 },
+    ]);
+  });
+
+  it("si cumple todo, la lista queda vacía", () => {
+    expect(construirEntrada(conRequisitos({})).requisitosNoCumplidos).toEqual([]);
+    // Por encima del mínimo y con más horas de las pedidas también cumple.
+    expect(construirEntrada(conRequisitos({ rango: "DIAMANTE_IV" }, 0.6, 30)).requisitosNoCumplidos).toEqual([]);
+  });
+
+  it("lista cada requisito que falla, con lo que pide la oferta y lo que tiene", () => {
+    const ninguno = conRequisitos({ posicionPrincipal: "MID", rango: "ORO_II" }, 0.6, 10);
+    expect(construirEntrada(ninguno).requisitosNoCumplidos).toEqual([
+      { requisito: "posicion", pedido: "ADC", candidato: "MID" },
+      { requisito: "rangoMinimo", pedido: "PLATINO_IV", candidato: "ORO_II" },
+      { requisito: "horasSemana", pedido: 20, candidato: 10 },
+    ]);
+  });
+
+  it("sin datos verificados, el requisito no se da por cumplido", () => {
+    const sinDatos = conRequisitos({ posicionPrincipal: null, rango: null }, 0.6, null);
+    expect(construirEntrada(sinDatos).requisitosNoCumplidos).toEqual([
+      { requisito: "posicion", pedido: "ADC", candidato: null },
+      { requisito: "rangoMinimo", pedido: "PLATINO_IV", candidato: null },
+      { requisito: "horasSemana", pedido: 20, candidato: null },
+    ]);
+  });
+
+  it("sin rango mínimo ni horas en la oferta, no hay nada que incumplir", () => {
+    const libre = conRequisitos({ rangoMinimo: null, rango: "HIERRO_IV" });
+    libre.explicacion.dimensiones.disponibilidad = { ...libre.explicacion.dimensiones.disponibilidad, horasOferta: null };
+    expect(construirEntrada(libre).requisitosNoCumplidos).toEqual([]);
+  });
+
+  it("cuentan aunque la técnica no pese en la oferta", () => {
+    const sinPeso = construirEntrada(conRequisitos({ rango: "ORO_II" }, 0));
+    expect(sinPeso.dimensiones.map((d) => d.dimension)).not.toContain("tecnica");
+    expect(sinPeso.requisitosNoCumplidos).toEqual([{ requisito: "rangoMinimo", pedido: "PLATINO_IV", candidato: "ORO_II" }]);
+  });
+});
+
 describe("construirEntrada", () => {
   const entrada = construirEntrada(ADC);
 
@@ -171,8 +238,10 @@ describe("prompt", () => {
   // dimensión y el texto citaba «winRate» y «la escala 33».
   it("prohíbe repetir, no cita la escala y da nombre en español a cada métrica", () => {
     expect(VERSION_PROMPT).toBeGreaterThanOrEqual(2);
-    expect(PROMPT_SISTEMA).toMatch(/No repitas nada de lo ya dicho/);
+    expect(PROMPT_SISTEMA).toMatch(/no repitas nada de lo ya dicho/);
     expect(PROMPT_SISTEMA).toMatch(/no la cites/);
+    expect(PROMPT_SISTEMA).toContain("requisitosNoCumplidos");
+    expect(PROMPT_SISTEMA).toMatch(/empiece por «No cumple»/);
     for (const metrica of METRICAS_TECNICA_LOL) {
       expect(PROMPT_SISTEMA).toContain(`${metrica} es «`);
     }
@@ -186,7 +255,7 @@ describe("comprobarFidelidad", () => {
     const texto =
       "Lo que más suma es la técnica: juega de ADC en el 80 % de sus partidas y ya está en Platino IV, " +
       "el mínimo que pide la oferta. Dentro de la técnica, lo que más resta es el rendimiento (60 de 100), " +
-      "con un win rate de 0,45 y un KDA de 5,38; además dedica 15 horas frente a las 20 que se piden. " +
+      "con un win rate de 0,45 y un KDA de 5,38. No cumple las horas: dedica 15 frente a las 20 que se piden. " +
       "Su oro por minuto es 408.";
     expect(comprobarFidelidad(texto, entrada)).toEqual({ fiel: true });
   });
@@ -204,12 +273,29 @@ describe("comprobarFidelidad", () => {
   });
 
   it("no confunde el oro por minuto con la liga Oro", () => {
-    expect(comprobarFidelidad("Su oro por minuto es 408 y su oro/min se mantiene.", entrada)).toEqual({ fiel: true });
+    const sinRequisitos = { ...entrada, requisitosNoCumplidos: [] };
+    expect(comprobarFidelidad("Su oro por minuto es 408 y su oro/min se mantiene.", sinRequisitos)).toEqual({ fiel: true });
     expect(comprobarFidelidad("Juega en Oro.", entrada)).toMatchObject({ fiel: false, causa: "RANGO" });
   });
 
   it("rechaza que mencione una dimensión oculta", () => {
     expect(comprobarFidelidad("Tiene mucha experiencia.", entrada)).toMatchObject({ fiel: false, causa: "DIMENSION_OCULTA", detalle: "experiencia" });
     expect(comprobarFidelidad("Le faltan habilidades blandas.", entrada)).toMatchObject({ fiel: false, causa: "DIMENSION_OCULTA" });
+  });
+
+  it("rechaza un texto que calla los requisitos que no cumple", () => {
+    // Dedica 15 horas y la oferta pide 20: no basta con resaltar lo bueno.
+    const soloLoBueno = "Lo que más suma es la técnica: juega de ADC en el 80 % de sus partidas y está en Platino IV.";
+    expect(comprobarFidelidad(soloLoBueno, entrada)).toEqual({
+      fiel: false,
+      causa: "REQUISITOS_OMITIDOS",
+      detalle: "horasSemana",
+    });
+    expect(comprobarFidelidad(`${soloLoBueno} No cumple las 20 horas por semana: dedica 15.`, entrada)).toEqual({ fiel: true });
+  });
+
+  it("acepta el rango del candidato que está por debajo del mínimo aunque la técnica no pese", () => {
+    const debajo = construirEntrada(conRequisitos({ rango: "ORO_II" }, 0));
+    expect(comprobarFidelidad("No cumple el rango mínimo: está en Oro II y se pide Platino IV.", debajo)).toEqual({ fiel: true });
   });
 });
