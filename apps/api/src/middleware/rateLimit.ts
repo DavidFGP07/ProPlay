@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import rateLimit, { type Options } from "express-rate-limit";
-import { REFRESH_COOKIE_NAME } from "@proplay/shared";
+import { API_PREFIX, REFRESH_COOKIE_NAME } from "@proplay/shared";
 import { env } from "../config/env";
 import { verificarRefreshToken } from "../utils/jwt";
 
@@ -20,11 +20,28 @@ const respuestaLimite: Partial<Options> = {
   skip: () => env.esTest,
 };
 
-/** Límite global aplicado a toda la API. */
+/** Ruta del cierre de sesión: nunca la frena el límite global (ver abajo). */
+const RUTA_LOGOUT = `${API_PREFIX}/auth/logout`;
+
+/**
+ * Configuración del límite global aplicado a toda la API: tantas peticiones
+ * por IP cada 15 minutos como diga LIMITE_GLOBAL_PETICIONES (300 por
+ * defecto). El cierre de sesión queda fuera: si lo frenara, la cookie del
+ * refresh token seguiría viva y la siguiente visita a /login abriría otra vez
+ * la sesión anterior. Se exporta para poder probarla sin el `skip` de los tests.
+ */
+export function opcionesLimiteGlobal(limite: number): Partial<Options> {
+  return {
+    windowMs: 15 * 60 * 1000,
+    limit: limite,
+    skip: (req) => req.path === RUTA_LOGOUT,
+  };
+}
+
 export const limiteGlobal = rateLimit({
   ...respuestaLimite,
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
+  ...opcionesLimiteGlobal(env.LIMITE_GLOBAL_PETICIONES),
+  skip: (req) => env.esTest || req.path === RUTA_LOGOUT,
 });
 
 /** Límite estricto para registro e inicio de sesión (fuerza bruta). */

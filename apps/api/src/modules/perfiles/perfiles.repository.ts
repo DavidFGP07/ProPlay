@@ -1,4 +1,5 @@
 import type { Plataforma, Prisma } from "@prisma/client";
+import { JUEGO_PILOTO } from "@proplay/shared";
 import { prisma } from "../../config/prisma";
 import { clienteRedis } from "../../config/redis";
 import { logger } from "../../config/logger";
@@ -53,6 +54,27 @@ const seleccionJugadorPublico = {
     where: { verificadaEn: { not: null } },
     select: { plataforma: true, verificadaEn: true },
     orderBy: { verificadaEn: "asc" },
+  },
+  // Última captura de LoL de una cuenta de Riot verificada, con el mismo
+  // criterio que el buscador. Es una relación del propio PerfilJugador: se lee
+  // la tabla, no se llama al módulo `estadisticas` (docs/decisiones.md).
+  estadisticas: {
+    where: {
+      fuente: "RIOT",
+      juego: JUEGO_PILOTO,
+      cuenta: { plataforma: "RIOT", verificadaEn: { not: null } },
+    },
+    orderBy: [{ capturadaEn: "desc" }, { id: "desc" }],
+    take: 1,
+    select: {
+      rol: true,
+      rango: true,
+      partidas: true,
+      winRate: true,
+      kda: true,
+      metricas: true,
+      capturadaEn: true,
+    },
   },
 } satisfies Prisma.PerfilJugadorSelect;
 

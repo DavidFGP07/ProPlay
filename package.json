@@ -24,6 +24,7 @@
     "db:seed": "npm run db:seed -w api",
     "db:studio": "npm run db:studio -w api",
     "db:reset": "npm run db:reset -w api",
+    "demo:reiniciar": "npm run demo:reiniciar -w api",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "verify": "npm run check:indice-hnsw -w api && npm run lint && npm run typecheck && npm test"

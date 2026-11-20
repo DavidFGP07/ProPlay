@@ -5,6 +5,7 @@ import request from "supertest";
 import {
   API_PREFIX,
   CAMPOS_PERFIL_JUGADOR_PUBLICO,
+  CAMPOS_RESUMEN_VERIFICADO_PUBLICO,
   perfilJugadorPublicoSchema,
   type RolRegistrable,
 } from "@proplay/shared";
@@ -110,6 +111,93 @@ describe(`GET ${RUTA}/:id`, () => {
     ]);
     const texto = JSON.stringify(respuesta.body);
     for (const privado of ["puuid-", "Jugadora#LAN", "cifrado-de-prueba", "@proplay.test"]) {
+      expect(texto).not.toContain(privado);
+    }
+  });
+
+  it("sin capturas de Riot, el resumen verificado es nulo", async () => {
+    const respuesta = await request(app).get(`${RUTA}/${jugador.perfilId}`);
+    expect(respuesta.body.resumenVerificado).toBeNull();
+  });
+
+  it("el resumen sale de la última captura de la cuenta verificada, sólo con sus campos", async () => {
+    const cuenta = await prisma.cuentaGaming.findFirstOrThrow({
+      where: { jugadorId: jugador.perfilId, plataforma: "RIOT" },
+    });
+    const metricas = {
+      servidor: "la1",
+      nivelInvocador: 120,
+      csPorMinuto: 6.5,
+      oroPorMinuto: 410,
+      danoPorMinuto: 620,
+      visionPorMinuto: 1.4,
+      participacionKills: 0.55,
+      campeonesMasJugados: [{ campeon: "Thresh", partidas: 8, victorias: 5, kda: 3 }],
+      ultimaPartidaId: "LA1_secreta",
+    };
+    const base = { jugadorId: jugador.perfilId, juego: "League of Legends", fuente: "RIOT" as const };
+    await prisma.estadistica.createMany({
+      data: [
+        {
+          ...base,
+          cuentaId: cuenta.id,
+          rol: "ADC",
+          rango: "ORO_I",
+          partidas: 18,
+          victorias: 8,
+          kda: 2.1,
+          winRate: 0.44,
+          metricas,
+          capturadaEn: new Date("2026-10-05T12:00:00Z"),
+        },
+        {
+          ...base,
+          cuentaId: cuenta.id,
+          rol: "SOPORTE",
+          rango: "PLATINO_II",
+          partidas: 20,
+          victorias: 11,
+          kda: 3.4,
+          winRate: 0.55,
+          metricas,
+          capturadaEn: new Date("2026-10-20T12:00:00Z"),
+        },
+        // Más reciente, pero sin cuenta verificada detrás: no cuenta.
+        {
+          ...base,
+          cuentaId: null,
+          rol: "TOP",
+          rango: "RETADOR",
+          partidas: 99,
+          victorias: 99,
+          kda: 9,
+          winRate: 1,
+          metricas,
+          capturadaEn: new Date("2026-11-01T12:00:00Z"),
+        },
+      ],
+    });
+
+    const respuesta = await request(app).get(`${RUTA}/${jugador.perfilId}`);
+
+    expect(respuesta.status).toBe(200);
+    expect(Object.keys(respuesta.body.resumenVerificado).sort()).toEqual(
+      [...CAMPOS_RESUMEN_VERIFICADO_PUBLICO].sort(),
+    );
+    expect(respuesta.body.resumenVerificado).toEqual({
+      posicionPrincipal: "SOPORTE",
+      rango: "PLATINO_II",
+      partidasAnalizadas: 20,
+      winRate: 0.55,
+      kda: 3.4,
+      csPorMinuto: 6.5,
+      danoPorMinuto: 620,
+      visionPorMinuto: 1.4,
+      participacionKills: 0.55,
+      capturadaEn: "2026-10-20T12:00:00.000Z",
+    });
+    const texto = JSON.stringify(respuesta.body);
+    for (const privado of ["la1", "Thresh", "LA1_secreta", "oroPorMinuto", "nivelInvocador"]) {
       expect(texto).not.toContain(privado);
     }
   });

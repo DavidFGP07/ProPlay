@@ -114,6 +114,13 @@ export const envSchema = z.object({
       "TRUST_PROXY debe ser el número de proxies delante de la API (p. ej. 1) o una lista de direcciones o subredes; `true` no se admite",
     ),
 
+  /**
+   * Peticiones por IP cada 15 minutos del límite global de la API. 300 por
+   * defecto; para la demostración en local, donde todo sale de la misma IP y
+   * se cambia de rol varias veces, se sube (p. ej. 100000).
+   */
+  LIMITE_GLOBAL_PETICIONES: z.coerce.number().int().positive().default(300),
+
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
