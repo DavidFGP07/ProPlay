@@ -354,15 +354,23 @@ function Tendencia({ historial }: { historial: Estadistica[] }) {
               <LineChart data={puntos}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                 <XAxis dataKey="fecha" stroke="#64748b" fontSize={11} tickLine={false} />
-                <YAxis yAxisId="wr" stroke="#64748b" fontSize={11} tickLine={false} unit="%" />
+                <YAxis
+                  yAxisId="wr"
+                  stroke="#64748b"
+                  fontSize={11}
+                  tickLine={false}
+                  tickFormatter={(v: number) => `${formatoUnDecimal.format(v)} %`}
+                />
                 <YAxis
                   yAxisId="kda"
                   orientation="right"
                   stroke="#64748b"
                   fontSize={11}
                   tickLine={false}
+                  tickFormatter={(v: number) => numero(v)}
                 />
                 <Tooltip
+                  formatter={(v) => numero(Number(v))}
                   contentStyle={{
                     background: 'var(--color-surface-800)',
                     border: '1px solid rgba(148,163,184,0.2)',
