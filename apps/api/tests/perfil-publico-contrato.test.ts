@@ -1,5 +1,6 @@
 import {
   CAMPOS_PERFIL_JUGADOR_PUBLICO,
+  CAMPOS_RESUMEN_VERIFICADO_PUBLICO,
   perfilJugadorPublicoSchema,
 } from "@proplay/shared";
 import { describe, expect, it } from "vitest";
@@ -20,6 +21,24 @@ describe("perfilJugadorPublicoSchema", () => {
         "id",
         "nombre",
         "pais",
+        "resumenVerificado",
+      ].sort(),
+    );
+  });
+
+  it("el resumen verificado sólo añade posición, rango, partidas, métricas principales y fecha", () => {
+    expect([...CAMPOS_RESUMEN_VERIFICADO_PUBLICO].sort()).toEqual(
+      [
+        "capturadaEn",
+        "csPorMinuto",
+        "danoPorMinuto",
+        "kda",
+        "partidasAnalizadas",
+        "participacionKills",
+        "posicionPrincipal",
+        "rango",
+        "visionPorMinuto",
+        "winRate",
       ].sort(),
     );
   });
@@ -40,6 +59,21 @@ describe("perfilJugadorPublicoSchema", () => {
           accessToken: "cifrado",
         },
       ],
+      resumenVerificado: {
+        posicionPrincipal: "ADC",
+        rango: "ORO_I",
+        partidasAnalizadas: 20,
+        winRate: 0.5,
+        kda: 3,
+        csPorMinuto: 7,
+        danoPorMinuto: 600,
+        visionPorMinuto: 1.2,
+        participacionKills: 0.5,
+        capturadaEn: "2026-10-01T00:00:00Z",
+        servidor: "la1",
+        campeonesMasJugados: [{ campeon: "Jinx" }],
+        riotId: "Jugador#LAN",
+      },
       email: "jugador@proplay.gg",
       usuarioId: "cuenta-1",
       avisoPrivacidadAceptadoEn: "2026-09-10T00:00:00Z",
@@ -55,6 +89,9 @@ describe("perfilJugadorPublicoSchema", () => {
       "plataforma",
       "verificadaEn",
     ]);
+    expect(Object.keys(resultado.resumenVerificado!).sort()).toEqual(
+      [...CAMPOS_RESUMEN_VERIFICADO_PUBLICO].sort(),
+    );
   });
 
   it("no admite una ubicación fuera del catálogo", () => {
@@ -66,6 +103,7 @@ describe("perfilJugadorPublicoSchema", () => {
       departamento: "BARRANQUILLA",
       avatarUrl: null,
       cuentasVerificadas: [],
+      resumenVerificado: null,
     });
     expect(resultado.success).toBe(false);
   });
