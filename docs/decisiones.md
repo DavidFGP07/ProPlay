@@ -740,3 +740,17 @@ seed y presentación.
 | **El menú nombra el panel como su título**: «Panel de scouting» para el scout | El menú decía «Panel de equipo» y la vista, «Panel de scouting». |
 | **Pestañas sin barra vertical a 375 px**: el subrayado activo queda dentro y la tira no se desplaza en vertical | El subrayado sobresalía 1 px y `overflow-x-auto` mostraba una barra. |
 | **La notificación de nueva postulación lleva el nombre del jugador** (`jugadorNombre`, opcional para las anteriores). Sustituye, sólo para ese dato, a «`Notificacion` guarda datos, no texto… ni el nombre ni el correo del jugador» de «Notificaciones dentro de la app» | El destinatario es el equipo dueño, que ya ve el nombre en las postulaciones recibidas: no amplía lo que ve. El correo sigue fuera. |
+
+## Prompt del explicador v3: forma (2026-11-20)
+
+La prueba manual de la v2 con la clave real (puestos 1 a 3 de «ADC para la liga en línea»)
+dio textos fieles que decían siempre lo que el candidato no cumple, pero con fallos de forma:
+«winRate» y «7.95» en el puesto 2, «MID» en el 3 y una frase de requisitos que empezaba por
+«Además, no cumple».
+
+| Decisión | Por qué |
+| --- | --- |
+| **Prompt v3**: coma decimal con ejemplo, las métricas nunca con su clave ni en inglés, las posiciones escritas exactamente como en la interfaz y la frase de requisitos empezando exactamente por «No cumple» | El modelo seguía la regla general («no menciones los nombres de los campos») peor que una prohibición concreta con el caso que fallaba. |
+| **Pulido determinista** (`redaccion/formato.ts`) antes de la fidelidad y la caché: coma decimal y «MID» → «Mid» | Son cambios de forma que no pueden alterar el contenido: no merece descartar un texto fiel por ellos. |
+| **La fidelidad descarta** los nombres de campo en camelCase sacados de la propia entrada y «win rate» (`causa` `NOMBRE_DE_CAMPO`), y la frase de requisitos que no empieza por «No cumple» | Un nombre de campo no se puede pulir sin interpretar el texto; mejor la explicación determinista que un texto con jerga del JSON. |
+| **Las horas por semana son declaradas**: el prompt sólo llama verificados a los datos de juego y pide «declara 15 horas»; la fidelidad descarta el texto que dice que las horas o la disponibilidad están verificadas (`causa` `HORAS_VERIFICADAS`) | En la prueba de la v3 el puesto 1 decía «15 horas verificadas». Las horas las escribe el jugador en su perfil: presentarlas como verificadas contradice la verificabilidad que el producto promete. |

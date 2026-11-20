@@ -237,7 +237,7 @@ la API, en la pestaña Red del navegador):
 | Ninguna línea (`DESACTIVADO`) | La API no leyó la clave o `EXPLICADOR_ACTIVO` es `false`: revisa `apps/api/.env` y reinicia `npm run dev` |
 | `ERROR` | Clave inválida o sin saldo (la línea no trae el mensaje de Anthropic: pruébala en la consola), o Redis caído (`docker compose ps`) |
 | `TIEMPO_AGOTADO` | Sube `EXPLICADOR_TIMEOUT_MS` (por ejemplo, a `8000`) y reinicia |
-| `FIDELIDAD` | El modelo escribió algo que no estaba en la entrada, o calló un requisito que el candidato no cumple (`causa` `REQUISITOS_OMITIDOS`); `causa` y `detalle` dicen qué. No se guarda: recarga la página para pedir otro |
+| `FIDELIDAD` | El modelo escribió algo que no estaba en la entrada, usó un nombre de campo del JSON o «win rate» (`causa` `NOMBRE_DE_CAMPO`), dijo que las horas están verificadas (`causa` `HORAS_VERIFICADAS`; las declara el jugador), o calló un requisito que el candidato no cumple (`causa` `REQUISITOS_OMITIDOS`); `causa` y `detalle` dicen qué. No se guarda: recarga la página para pedir otro |
 | `LIMITE` | Se agotó un límite; espera a la hora siguiente o súbelo |
 
 Para volver a generar los textos desde cero (por ejemplo, tras cambiar el prompt sin subir
