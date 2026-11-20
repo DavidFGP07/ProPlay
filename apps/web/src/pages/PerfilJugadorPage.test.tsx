@@ -48,6 +48,7 @@ function perfil(cambios: Partial<PerfilJugadorPublico> = {}) {
     departamento: 'ATLANTICO',
     avatarUrl: null,
     cuentasVerificadas: [{ plataforma: 'RIOT', verificadaEn: '2026-10-01T12:00:00.000Z' }],
+    resumenVerificado: null,
     ...cambios,
   }
 }
@@ -98,6 +99,47 @@ describe('Perfil público del jugador', () => {
     expect(screen.getByText('Cuenta de Riot verificada')).toBeInTheDocument()
     expect(screen.getByText('Verificada el 1 de octubre de 2026')).toBeInTheDocument()
     expect(screen.queryByText('Datos de demostracion')).toBeNull()
+  })
+
+  it('muestra el resumen verificado de la última captura de Riot', async () => {
+    doble.get.mockResolvedValue({
+      data: perfil({
+        resumenVerificado: {
+          posicionPrincipal: 'SOPORTE',
+          rango: 'PLATINO_II',
+          partidasAnalizadas: 20,
+          winRate: 0.55,
+          kda: 3.4,
+          csPorMinuto: 1.25,
+          danoPorMinuto: 410.6,
+          visionPorMinuto: 2.1,
+          participacionKills: null,
+          capturadaEn: new Date('2026-11-12T15:00:00.000Z'),
+        },
+      }),
+    })
+    renderPerfil()
+    await titulo('Valentina Rojas')
+
+    expect(screen.getByText('Soporte')).toBeInTheDocument()
+    expect(screen.getByText('Platino II')).toBeInTheDocument()
+    expect(screen.getByText('20')).toBeInTheDocument()
+    expect(screen.getByText('Tasa de victorias')).toBeInTheDocument()
+    expect(screen.getByText(/^55\s?%$/)).toBeInTheDocument()
+    expect(screen.getByText('3,4')).toBeInTheDocument()
+    expect(screen.getByText('411')).toBeInTheDocument()
+    expect(screen.queryByText('Participación en asesinatos')).toBeNull()
+    expect(screen.getByText('Datos de la API de Riot del 12 de noviembre de 2026')).toBeInTheDocument()
+    expect(screen.queryByText('Sin estadísticas todavía')).toBeNull()
+  })
+
+  it('con la cuenta verificada pero sin captura, no dice que falte vincularla', async () => {
+    doble.get.mockResolvedValue({ data: perfil() })
+    renderPerfil()
+    await titulo('Valentina Rojas')
+
+    expect(screen.getByText('Sin estadísticas todavía')).toBeInTheDocument()
+    expect(screen.getByText(/está verificada, pero todavía no hay ninguna captura/)).toBeInTheDocument()
   })
 
   it('pide no ser indexado mientras está abierto', async () => {
