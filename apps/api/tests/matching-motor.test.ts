@@ -453,10 +453,23 @@ describe("caso límite conocido: nadie de la posición pedida alcanza el rango m
 });
 
 describe("orden del ranking", () => {
-  const candidato = (jugadorId: string, puntaje: number, tecnica: number) => ({
+  const candidato = (jugadorId: string, puntaje: number, tecnica: number, verificado = true) => ({
     jugadorId,
     puntaje,
     desglose: { tecnica, experiencia: 0, habilidadesBlandas: 0, geografica: 0, disponibilidad: 0 },
+    explicacion: {
+      dimensiones: { tecnica: { motivo: verificado ? null : ("SIN_CUENTA_VERIFICADA" as const) } },
+    },
+  });
+
+  it("a igualdad de puntaje, primero los verificados, aunque su técnica también valga 0", () => {
+    const orden = ordenarRanking([
+      candidato("a-sin-cuenta", 0.4, 0, false),
+      candidato("b-sin-cuenta", 0.4, 0, false),
+      candidato("z-verificado", 0.4, 0),
+      candidato("y-verificado", 0.3, 0.5),
+    ]).map((c) => c.jugadorId);
+    expect(orden).toEqual(["z-verificado", "a-sin-cuenta", "b-sin-cuenta", "y-verificado"]);
   });
 
   it("puntaje de mayor a menor; a igualdad, técnica y después id", () => {
@@ -472,7 +485,7 @@ describe("orden del ranking", () => {
   it("es el mismo con cualquier orden de entrada", () => {
     const r = aleatorio(7);
     const lista = Array.from({ length: 60 }, (_, i) =>
-      candidato(`j-${i}`, Math.round(r() * 4) / 4, Math.round(r() * 2) / 2),
+      candidato(`j-${i}`, Math.round(r() * 4) / 4, Math.round(r() * 2) / 2, r() > 0.3),
     );
     const esperado = ordenarRanking(lista).map((c) => c.jugadorId);
     for (let vuelta = 0; vuelta < 10; vuelta++) {
