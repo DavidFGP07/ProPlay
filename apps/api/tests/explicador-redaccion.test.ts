@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { candidatoRankingSchema, type CandidatoRanking } from "@proplay/shared";
+import { METRICAS_TECNICA_LOL, candidatoRankingSchema, type CandidatoRanking } from "@proplay/shared";
 import { construirEntrada, serializarEntrada } from "../src/modules/explicador/redaccion/entrada";
 import { comprobarFidelidad } from "../src/modules/explicador/redaccion/fidelidad";
 import { PROMPT_SISTEMA, VERSION_PROMPT } from "../src/modules/explicador/redaccion/prompt";
@@ -165,6 +165,17 @@ describe("prompt", () => {
     expect(PROMPT_SISTEMA).toContain("mismaDimension");
     expect(PROMPT_SISTEMA).toMatch(/No calcules cifras nuevas/);
     expect(PROMPT_SISTEMA).toMatch(/no de la persona/);
+  });
+
+  // Prueba manual con la clave real (v1): la tercera frase repetía la misma
+  // dimensión y el texto citaba «winRate» y «la escala 33».
+  it("prohíbe repetir, no cita la escala y da nombre en español a cada métrica", () => {
+    expect(VERSION_PROMPT).toBeGreaterThanOrEqual(2);
+    expect(PROMPT_SISTEMA).toMatch(/No repitas nada de lo ya dicho/);
+    expect(PROMPT_SISTEMA).toMatch(/no la cites/);
+    for (const metrica of METRICAS_TECNICA_LOL) {
+      expect(PROMPT_SISTEMA).toContain(`${metrica} es «`);
+    }
   });
 });
 
