@@ -1,7 +1,7 @@
 # ProPlay — Plan de implementación y guía de trabajo colaborativo
 
 > Documento para los tres integrantes del equipo. Escrito al cierre del Sprint 1 y
-> **actualizado el 2026-11-17 con lo fusionado en `main` (PR #1 a #55)**: cada tarea dice si
+> **actualizado el 2026-11-20 con lo fusionado en `main` (PR #1 a #73)**: cada tarea dice si
 > está hecha (con sus PR), pendiente, reemplazada o fuera de alcance. Lo que no se puede
 > comprobar desde el repositorio va marcado «sin verificar desde el código».
 
@@ -9,7 +9,7 @@
 
 ## 1. Dónde estamos hoy
 
-Estado al 2026-11-20, con `main` en el PR #68. El detalle vive en otros documentos y aquí
+Estado al 2026-11-20, con `main` en el PR #73. El detalle vive en otros documentos y aquí
 sólo se resume: las rutas y su estado, en el README («Rutas de la API»); las vistas, en el
 inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones.md`.
 
@@ -19,10 +19,10 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
   la aceptación del aviso de privacidad y la mayoría de edad, `/cuenta`, perfiles de jugador
   y de equipo con ubicación, perfil público sin sesión y alta del primer administrador por
   script.
-- **Sprint 2 (perfil verificable), cerrado salvo 2.2, 2.13 y 2.14.** Vinculación de la cuenta
+- **Sprint 2 (perfil verificable), cerrado salvo 2.13 y 2.14** (2.2 pasa a trabajo futuro). Vinculación de la cuenta
   de Riot por desafío de icono, ingesta en cola con cuota global en Redis y sincronización
   periódica, Cuentas vinculadas y Mis estadísticas con su tendencia, y el buscador de
-  talento.
+  talento. El perfil público muestra el resumen de la última captura verificada (#70).
 - **Sprint 3 (motor de matching), cerrado salvo 3.15.** Ofertas con estados, pesos,
   modalidad y ubicación; postulaciones con la fecha de cada etapa; motor de matching
   (vectorizador, recuperador HNSW, cinco dimensiones, ponderador y persistencia); ranking
@@ -31,8 +31,13 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
   preselecciona su postulación.
 - **Sprint 4:** la analítica (4.10), con el script de las métricas del piloto; el explicador
   con modelo de lenguaje (4.1, 4.3 y 4.7), que dice los requisitos que el candidato no
-  cumple (la v2 se probó con la clave real el 2026-11-20; el prompt v3 corrige su forma y
-  falta su prueba manual); y las notificaciones dentro de la app (4.5 y 4.9).
+  cumple (prompt v3, probado con la clave real el 2026-11-20); y las notificaciones dentro
+  de la app (4.5 y 4.9).
+- **Correcciones del recorrido de la demostración** (#70, #71 y #72): límite de peticiones
+  configurable, `npm run demo:reiniciar` para dejar la base como el seed, textos fieles a lo
+  construido, seed con talento verificado del Caribe y detalles de accesibilidad y formato
+  (`docs/decisiones.md`, las tres secciones «Correcciones del recorrido de la
+  demostración»).
 
 La calidad la sostienen `npm run verify` (guarda del índice HNSW, lint, typecheck y
 pruebas de los tres workspaces) y el CI en cada pull request contra `main`, con una base de
@@ -44,7 +49,9 @@ pruebas propia (`proplay_test`).
   «Calculador exacto») y retirar el puente de demostración (4.12).
 - **Despliegue** (2.13): nunca se ha desplegado. Sin URL pública tampoco se puede pedir la
   clave de producción de Riot (0.1).
-- **Soporte:** habilidades y endorsements (2.2) y ajustes de privacidad.
+- **Habilidades y endorsements (2.2) y ajustes de privacidad**: pasan a trabajo futuro
+  (`docs/decisiones.md`, «Habilidades y ajustes de privacidad, a trabajo futuro»). La
+  tesis se queda con 17 vistas.
 - **Secciones simuladas de Mi perfil** (cuentas, habilidades, portafolio, privacidad y
   laterales), que desaparecen con `VITE_DEMO_DATA=false`.
 - **Validación** (4.13 a 4.16): fuera de la tesis, sin piloto con usuarios; queda diseñada en
@@ -68,7 +75,7 @@ paralelo al desarrollo, el proyecto se queda sin piso aunque el software funcion
 | 0.7 | **Plan de reclutamiento del piloto**: lista objetivo de 50 jugadores y 3 equipos, y quién contacta a cada uno<br>**Sin verificar desde el código** (no consta en el repositorio). | Conseguir 50 jugadores reales es más difícil que construir el matching, y tiene el mismo plazo | | |
 | 0.8 | **Diseñar los instrumentos de medición**: encuesta de NPS y de percepción de objetividad<br>**Sin verificar desde el código** (no consta en el repositorio). | Se aplican al final pero se diseñan ahora. Improvisarlos la última semana invalida el resultado | | |
 | 0.9 | **Consultar si la facultad exige aval de comité de ética** para pruebas con personas<br>**Sin verificar desde el código** (no consta en el repositorio). | En varias universidades sí, y tramitarlo tarda | | |
-| 0.10 | **Recortar el alcance**: decidir cuáles de las 39 vistas del inventario entran en la tesis y declarar el resto como trabajo futuro<br>**Cerrada:** 19 vistas (13 de núcleo y 6 de soporte mínimo); el resto, trabajo futuro. Columna «Alcance» en el inventario de `CLAUDE.md` (§5) y decisión en `docs/decisiones.md`, «Recorte de alcance». Las tareas de los bloques 2 a 4 están reubicadas según ella y las que salen están en el Bloque 6 | No vamos a construir 39. Decidirlo ahora se defiende; descubrirlo en la última semana, no | | |
+| 0.10 | **Recortar el alcance**: decidir cuáles de las 39 vistas del inventario entran en la tesis y declarar el resto como trabajo futuro<br>**Cerrada:** 19 vistas (13 de núcleo y 6 de soporte mínimo), ajustadas a 17 el 2026-11-20 al pasar a trabajo futuro habilidades y endorsements y ajustes de privacidad; el resto, trabajo futuro. Columna «Alcance» en el inventario de `CLAUDE.md` (§5) y decisión en `docs/decisiones.md`, «Recorte de alcance». Las tareas de los bloques 2 a 4 están reubicadas según ella y las que salen están en el Bloque 6 | No vamos a construir 39. Decidirlo ahora se defiende; descubrirlo en la última semana, no | | |
 
 **Sobre 0.1:** la clave de producción de Riot exige que el aviso de privacidad esté
 publicado en una URL pública. `/legal/privacidad` ya existe (#11), pero sólo en local: hay
@@ -109,7 +116,7 @@ Twitch, YouTube y las demás plataformas pasan a trabajo futuro; sus esqueletos 
 | # | Tarea |
 |---|---|
 | 2.1 | Módulo `perfiles`: consulta y edición del perfil de jugador y del perfil de equipo<br>**Adelantada en el Sprint 1.** Jugador: #14 y #15 (`GET /perfiles/me`, `PATCH /perfiles/jugador`) y #19 (`/mi-perfil`). Perfil público: #17 y #18 (`GET /perfiles/:id`). Equipo: #20 y #21 (`PATCH /perfiles/equipo` y «Datos de la organización» en `/panel-equipo`) |
-| 2.2 | Habilidades y endorsements en **versión mínima** (decisión 0.10): catálogo fijo cargado por el seed, asignación con nivel y endorsements sólo de equipos<br>**Pendiente:** las rutas de habilidades y endorsements responden `501`. |
+| 2.2 | Habilidades y endorsements en **versión mínima** (decisión 0.10): catálogo fijo cargado por el seed, asignación con nivel y endorsements sólo de equipos<br>**Fuera de alcance (2026-11-20):** pasa a trabajo futuro, 5.º en recuperarse (`docs/decisiones.md`, «Habilidades y ajustes de privacidad, a trabajo futuro»). Las rutas responden `501`. |
 | 2.3 | Módulo `integraciones`: implementar `GameStatsProvider` para Riot — flujo OAuth, obtención de la cuenta, obtención del historial de partidas<br>**Hecha por otro camino:** #34 y #38. Sin OAuth: la propiedad de la cuenta se demuestra con un desafío de icono (`docs/decisiones.md`, «Vinculación con Riot»); `vincularCuenta` y `refrescarToken` de `RiotProvider` responden `501` hasta tener Riot Sign On. |
 | 2.4 | Cifrado y descifrado de los tokens de `CuentaGaming`, y refresco automático cuando expiren<br>**Sin aplicación por ahora:** el cifrado está en `utils/crypto.ts`, pero sin OAuth no hay tokens que guardar ni refrescar (#38). |
 | 2.5 | Worker de ingesta: programación periódica, reintentos con retroceso, y control de cuota de la API de Riot usando Redis<br>**Hecha:** #39 (cola BullMQ y cuota global en Redis con prioridad). |
@@ -193,7 +200,7 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 
 | # | Tarea |
 |---|---|
-| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato), #64 y #68 (prompt v2). Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido, y dice siempre los requisitos que el candidato no cumple. La v1 y la v2 se probaron con la clave real el 2026-11-20; la v2 tenía fallos de forma («winRate», «7.95», «MID») que corrige la v3, pendiente de su prueba manual. |
+| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato), #64, #68 (prompt v2) y #73 (prompt v3). Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido, y dice siempre los requisitos que el candidato no cumple. Las tres versiones se probaron con la clave real el 2026-11-20: la v3 corrige los fallos de forma de la v2 («winRate», «7.95», «MID») y deja de presentar como verificadas las horas, que declara el jugador. |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje<br>**Pendiente.** |
 | 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Hecha** con el explicador: sin clave, con error, tiempo agotado, fidelidad fallida o límite agotado responde `NO_DISPONIBLE` y la vista se queda con la explicación determinista. |
 | 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y administración. **Notificaciones (4.5): hechas** en versión mínima (#65 contrato y #67): tres eventos, emisor en proceso y rutas propias |
@@ -224,7 +231,7 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 |---|---|
 | 5.1 | Mantener el documento al día con los cambios de diseño que surjan en cada sprint<br>**En curso:** los cambios pendientes para el documento están en `docs/para-el-informe.md`. |
 | 5.2 | Incorporar los resultados de validación<br>**Pendiente** (depende del piloto). |
-| 5.3 | Preparar una demostración guionizada, con usuarios y datos preparados de antemano<br>**Pendiente en el repositorio:** no hay guion de demostración versionado. |
+| 5.3 | Preparar una demostración guionizada, con usuarios y datos preparados de antemano<br>**Pendiente en el repositorio:** no hay guion de demostración versionado. Los datos sí están preparados: `npm run demo:reiniciar` deja la base como el seed y `docs/operacion.md`, «Demostración en local», lista lo que hay que hacer antes. |
 | 5.4 | Manual de usuario y manual técnico<br>**Pendiente.** Hay documentación técnica (README, `docs/`), no manual de usuario. |
 | 5.5 | Resumen ejecutivo para posible publicación<br>**Pendiente.** |
 
@@ -330,16 +337,18 @@ verificable, no sobre una rama local.
 
 ## 10. Orden de ataque recomendado
 
-Actualizado el 2026-11-20. Lo que queda, en el orden en que más incertidumbre resuelve:
+Actualizado el 2026-11-20 (tras el #73). Lo que queda, en el orden en que más incertidumbre resuelve:
 
 1. **Despliegue (2.13)**, con el cliente público: desbloquea la solicitud de la clave de
    producción de Riot (0.1) y es donde hay que repetir RNF-01.
 2. ~~**Retirar del menú las vistas simuladas (1.7)**~~: hecha (#58).
 3. ~~**Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**~~: hecha (#63, #64 y #68).
-4. **Soporte mínimo:** habilidades y endorsements (2.2) y ajustes de privacidad; el sustituto
-   de la mensajería (3.18) está hecho.
+4. ~~**Soporte mínimo:** habilidades y endorsements (2.2) y ajustes de privacidad~~: pasan a
+   trabajo futuro; el sustituto de la mensajería (3.18) está hecho.
 5. ~~**Notificaciones dentro de la app (4.5 y 4.9)**~~: hechas (#65 y #67).
-6. **Piloto (4.13 a 4.16)**: fuera de la tesis. Si se ejecuta después, con la línea base
+6. **Sustentación:** el guion de la demostración (5.3), la justificación de los pesos por
+   defecto (3.15) y el documento al día con `docs/para-el-informe.md` (5.1).
+7. **Piloto (4.13 a 4.16)**: fuera de la tesis. Si se ejecuta después, con la línea base
    (0.2) cargada en `LINEA_BASE_SCOUTING_MANUAL`, las métricas del script `metricas:piloto`
    y el procedimiento de `docs/protocolo-validacion.md`.
 

@@ -7,7 +7,7 @@ de verdad y qué hay que cambiar en el documento, **sección por sección**.
 > 2026-11-27. H1 y H2 se presentan como un **diseño de validación listo para ejecutarse**
 > ([`docs/protocolo-validacion.md`](protocolo-validacion.md)); la evidencia disponible es
 > RNF-01 (`docs/rnf-01.md`), las pruebas automáticas (`npm run verify`) y la demostración. Estado al
-2026-11-17, con `main` en el PR #55. Todo lo que se afirma aquí sobre la aplicación se
+2026-11-20, con `main` en el PR #73. Todo lo que se afirma aquí sobre la aplicación se
 comprobó en el código; lo que no se puede comprobar desde el repositorio va marcado
 «sin verificar desde el código».
 
@@ -104,7 +104,8 @@ con revisión sobre un incremento **desplegado** y verificable.
 **Divergencias.**
 - **Nada se ha desplegado** (tarea 2.13): las revisiones fueron sobre `main` en local, no
   sobre un incremento desplegado.
-- Se añadió un recorte de alcance a 19 vistas (tarea 0.10, «Recorte de alcance»), que el
+- Se añadió un recorte de alcance a 17 vistas (tarea 0.10, «Recorte de alcance»; 19 en un
+  principio, 17 tras «Habilidades y ajustes de privacidad, a trabajo futuro»), que el
   documento no recoge.
 
 ## VI. Marco teórico
@@ -158,8 +159,8 @@ funcionales (Cuadro IV).
 | RF-02 Vinculación de cuentas | Hecho para Riot **por icono**; OAuth en `501` |
 | RF-03 Ingesta periódica | Hecho: cola BullMQ, cuota global en Redis y sincronización cada `INGESTA_INTERVALO_HORAS` |
 | RF-04 Normalización y métricas derivadas | Hecho: captura normalizada de Riot y escalas fijas del motor |
-| RF-05 Perfil profesional | Hecho en parte: cabecera, datos profesionales, ubicación y perfil público reales; historial competitivo y portafolio, simulados |
-| RF-06 Habilidades y endorsements | **Pendiente** (`501`); la dimensión de habilidades blandas tiene peso 0 |
+| RF-05 Perfil profesional | Hecho en parte: cabecera, datos profesionales, ubicación y perfil público reales, este con el resumen de la última captura verificada de Riot (posición, rango, partidas y métricas principales); historial competitivo y portafolio, simulados |
+| RF-06 Habilidades y endorsements | **Trabajo futuro** (`501`; «Habilidades y ajustes de privacidad, a trabajo futuro»); la dimensión de habilidades blandas tiene peso 0 |
 | RF-07 Ofertas | Hecho |
 | RF-08 Búsqueda de jugadores | Hecho por posición, rango mínimo y departamento; **no por juego ni disponibilidad** |
 | RF-09 Puntaje y ranking | Hecho: cinco dimensiones, ranking persistido y explicable |
@@ -177,7 +178,7 @@ funcionales (Cuadro IV).
 | RNF-02 HTTPS | Depende del despliegue: sin verificar |
 | RNF-03 Tokens cifrados | Cifrado listo (`utils/crypto.ts`), pero **no se guarda ningún token**: sin OAuth no los hay |
 | RNF-04 Acceso por rol | Hecho, con pruebas de acceso denegado (`apps/api/tests/rutas-protegidas.test.ts` y las de cada módulo) |
-| RNF-05 Ley 1581 | Aviso aceptado y persistido en el registro. **La visibilidad configurable del perfil no existe** (ajustes de privacidad, soporte pendiente) |
+| RNF-05 Ley 1581 | Aviso aceptado y persistido en el registro. **La visibilidad configurable del perfil es trabajo futuro**: el perfil público es visible por enlace, como informa el aviso |
 | RNF-06 Trazabilidad | Se escribe en `AuditLog`; «consultable» sólo por la base, sin vista ni script |
 | RNF-07 Usabilidad | Diseño responsivo comprobado a 375 y 1440 px en cada vista conectada; las «tres interacciones o menos» no se han medido |
 | RNF-08 Mantenibilidad | Módulos por carpeta y contenedores en local. El umbral de cobertura del 60 % (`apps/web/vite.config.ts`) cubre archivos del cliente (`src/lib` y el motor y el explicador simulados del prototipo), **no el motor real de la API**, que no tiene umbral de cobertura configurado (sus fórmulas sí tienen pruebas con cifras exactas). El «despliegue con un solo comando» no se ha probado |
@@ -231,9 +232,11 @@ matching», «Ranking de candidatos» y «Analítica»):
 6. **Explicación determinista** a partir de los motivos y cifras de cada dimensión, y encima
    la **generada con modelo de lenguaje** (4.1, 4.3 y 4.7): el explicador queda fuera del
    motor, no recibe datos personales, descarta los textos con cifras que no están en el
-   desglose o que callan un requisito no cumplido (posición, rango mínimo u horas) y degrada
-   a la determinista (`decisiones.md`, «Explicador con modelo de lenguaje» y «Prompt del
-   explicador v2 y requisitos no cumplidos»). Como el motor ordena a todos los postulantes
+   desglose, que callan un requisito no cumplido (posición, rango mínimo u horas), que usan
+   nombres de campo del JSON o que presentan como verificadas las horas, que declara el
+   jugador, y degrada a la determinista (`decisiones.md`, «Explicador con modelo de
+   lenguaje», «Prompt del explicador v2 y requisitos no cumplidos» y «Prompt del explicador
+   v3: forma»). Como el motor ordena a todos los postulantes
    aunque ninguno cumpla los mínimos, el texto lo dice en lugar de resaltar sólo lo bueno.
 7. **El desglose es una barra apilada de aportes**, no un radar: los aportes suman el
    puntaje mostrado.
@@ -382,8 +385,10 @@ Para la sección de limitaciones del informe:
    pero no es OAuth. Se sustituye por Riot Sign On si llega la clave de producción.
 5. **Componente colaborativo con peso 0.** El motor opera sólo por contenido. El modo
    híbrido necesita un historial de contrataciones que el piloto no tendrá.
-6. **Recorte de alcance.** 19 vistas de 39. Mensajería, administración, feed, comparador y
-   lista de seguimiento quedaron fuera («Recorte de alcance»). Las notificaciones volvieron en
+6. **Recorte de alcance.** 17 vistas de 39. Mensajería, administración, feed, comparador y
+   lista de seguimiento quedaron fuera («Recorte de alcance»), y después habilidades y
+   endorsements y los ajustes de privacidad («Habilidades y ajustes de privacidad, a trabajo
+   futuro»). Las notificaciones volvieron en
    versión mínima (sin correo, push, tiempo real ni preferencias) y la mensajería la sustituye
    el correo del jugador visible para el equipo dueño.
 7. **RNF-01 medido en local** (Apple M4, base en la misma máquina), no en la infraestructura
