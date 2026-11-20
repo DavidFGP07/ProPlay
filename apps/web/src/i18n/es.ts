@@ -101,7 +101,8 @@ export const es = {
     sinUbicacion: 'Ubicación no indicada',
     sinBio: 'Este jugador todavía no ha escrito su presentación.',
     cuentasTitulo: 'Cuentas verificadas',
-    cuentasSubtitulo: 'Vinculadas por OAuth 2.0: la plataforma confirma que la cuenta es suya.',
+    cuentasSubtitulo:
+      'Verificadas con un desafío de icono: el jugador demuestra que la cuenta es suya poniendo en su perfil del juego el icono que le pide ProPlay.',
     verificadaEl: (fecha: string) => `Verificada el ${fecha}`,
     sinCuentas: 'Todavía no hay cuentas verificadas',
     sinCuentasDetalle:
@@ -138,8 +139,9 @@ export const es = {
     pasos: [
       {
         n: '01',
-        titulo: 'Vinculación OAuth 2.0',
-        detalle: 'El jugador autoriza el acceso a su cuenta de Riot Games.',
+        titulo: 'Verificación de la cuenta',
+        detalle:
+          'El jugador demuestra que la cuenta de Riot Games es suya poniendo en su perfil el icono que le pide ProPlay.',
       },
       {
         n: '02',
@@ -167,6 +169,47 @@ export const es = {
       YOUTUBE: 'YouTube',
     } satisfies Record<Plataforma, string>,
   },
+  // RF-01 · Ingreso y registro
+  login: {
+    lema: 'Plataforma web para el scouting de talento en eSports',
+    titularInicio: 'De la',
+    titularResaltado: 'declaración sin verificar',
+    titularFin: 'a la evidencia comprobable.',
+    presentacion:
+      'ProPlay convierte las señales no verificables del scouting de eSports en rankings de compatibilidad trazables, con estadísticas que llegan directamente de la API oficial del juego.',
+    rasgos: [
+      { titulo: 'Ingesta directa', texto: 'API oficial de Riot y cuenta verificada por icono' },
+      { titulo: 'Matching explicable', texto: 'Cinco dimensiones, pgvector y explicación con IA' },
+      { titulo: 'Trazable', texto: 'Cada puesto, con su desglose por dimensión' },
+    ],
+    pie: 'Universidad del Norte · Departamento de Ingeniería de Sistemas · 2026',
+    tituloEntrar: 'Iniciar sesión',
+    tituloRegistrar: 'Crear cuenta',
+    subtituloEntrar: 'Accede a tu espacio de trabajo según tu rol.',
+    subtituloRegistrar: 'Registra tu perfil y empieza a construir evidencia verificable.',
+    pestanaEntrar: 'Iniciar sesión',
+    pestanaRegistrar: 'Crear cuenta',
+    nombre: 'Nombre completo',
+    nombreEjemplo: 'Daniel Ocoro',
+    correo: 'Correo electrónico',
+    correoEjemplo: 'tucorreo@dominio.com',
+    contrasena: 'Contraseña',
+    rol: 'Rol en la plataforma',
+    entrar: 'Entrar a ProPlay',
+    registrar: 'Crear mi cuenta',
+    entrando: 'Verificando credenciales…',
+    registrando: 'Creando tu cuenta…',
+    errorEntrar: 'No pudimos iniciar tu sesión.',
+    errorRegistrar: 'No pudimos crear tu cuenta.',
+    cuentasDemo: 'Cuentas de demostración',
+    descripcionDemo: {
+      JUGADOR: 'Ofertas compatibles, perfil verificado y postulaciones',
+      EQUIPO: 'Publica vacantes y revisa el ranking de candidatos',
+      SCOUT: 'Busca talento verificado y consulta los rankings',
+      ADMIN: 'Analítica del talento verificado',
+    } satisfies Record<Rol, string>,
+    sesionCerrada: 'Sesión cerrada correctamente.',
+  },
   // Tarea 1.7 · Funciones del prototipo fuera de esta versión (mensajes, administración)
   noDisponible: {
     titulo: 'Función no disponible en esta versión',
@@ -175,8 +218,8 @@ export const es = {
     volver: 'Ir al inicio',
   },
   noEncontrada: {
-    titulo: 'Pagina no encontrada',
-    detalle: 'La direccion que buscas no existe o ya no esta disponible.',
+    titulo: 'Página no encontrada',
+    detalle: 'La dirección que buscas no existe o ya no está disponible.',
     volver: 'Volver al inicio',
   },
   sincronizacion: {
@@ -342,9 +385,9 @@ export const es = {
     subtitulo: 'Tus datos de acceso a ProPlay.',
     datos: {
       titulo: 'Datos de la cuenta',
-      subtitulo: 'El correo identifica tu cuenta y no se puede cambiar desde aqui.',
+      subtitulo: 'El correo identifica tu cuenta y no se puede cambiar desde aquí.',
       nombre: 'Nombre',
-      correo: 'Correo electronico',
+      correo: 'Correo electrónico',
       rol: 'Rol',
       guardar: 'Guardar nombre',
       exito: 'Nombre actualizado.',
@@ -357,7 +400,7 @@ export const es = {
       actual: 'Contraseña actual',
       nueva: 'Contraseña nueva',
       confirmacion: 'Confirma la contraseña nueva',
-      pista: 'Minimo 8 caracteres, con al menos una letra y un numero.',
+      pista: 'Mínimo 8 caracteres, con al menos una letra y un número.',
       guardar: 'Cambiar contraseña',
       exito: 'Contraseña actualizada. Cerramos tus sesiones en otros dispositivos.',
     },
@@ -655,7 +698,7 @@ export const es = {
   buscador: {
     titulo: 'Buscador de talento',
     subtitulo:
-      'Jugadores de ProPlay con sus datos de juego verificados en Riot. Primero los verificados y por rango; sin puntaje de compatibilidad, que llegará con el motor de matching.',
+      'Jugadores de ProPlay con sus datos de juego verificados en Riot. Primero los verificados y por rango; la compatibilidad con cada oferta está en su ranking de candidatos.',
     filtros: 'Filtros',
     posicion: 'Posición',
     rangoMinimo: 'Rango mínimo',
@@ -1097,7 +1140,7 @@ export const es = {
   } satisfies Record<EstadoOferta, string>,
   estadoPostulacion: {
     ENVIADA: 'Recibida',
-    EN_REVISION: 'En revision',
+    EN_REVISION: 'En revisión',
     ENTREVISTA: 'Tryout / entrevista',
     ACEPTADA: 'Aceptada',
     RECHAZADA: 'Rechazada',

@@ -548,7 +548,7 @@ describe('Ranking de candidatos (/vacantes/:id/ranking)', () => {
     )
     // El ranking se vuelve a pedir para traer el estado nuevo.
     await waitFor(() => expect(doble.get.mock.calls.length).toBeGreaterThan(pedidasAntes))
-    expect(await screen.findByText('Isabela Cortés: En revision.')).toBeInTheDocument()
+    expect(await screen.findByText('Isabela Cortés: En revisión.')).toBeInTheDocument()
   })
 
   it('el scout ve el ranking y recalcula, pero no cambia el estado de las postulaciones', async () => {

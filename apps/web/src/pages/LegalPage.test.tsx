@@ -63,7 +63,7 @@ describe('Aviso de privacidad (/legal/privacidad)', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Volver al inicio de sesión/ })).toHaveAttribute('href', '/login')
     // Es una vista publica: no redirige al login ni muestra el aviso de demostracion.
-    expect(screen.queryByRole('heading', { name: /Iniciar sesion/i })).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Iniciar sesión/i })).toBeNull()
     expect(screen.queryByRole('note')).toBeNull()
   })
 
@@ -84,7 +84,7 @@ describe('Aviso de privacidad (/legal/privacidad)', () => {
 describe('Registro (RNF-05)', () => {
   it('no se envia sin aceptar el aviso ni declarar la mayoria de edad', async () => {
     renderEn('/login')
-    await screen.findByRole('heading', { name: /Iniciar sesion/i })
+    await screen.findByRole('heading', { name: /Iniciar sesión/i })
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
     fireEvent.change(await screen.findByPlaceholderText('Daniel Ocoro'), {
