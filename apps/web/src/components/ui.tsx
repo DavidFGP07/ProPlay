@@ -509,8 +509,12 @@ export function Tabs({
   activa: string
   onChange: (id: string) => void
 }) {
+  // `overflow-x-auto` también recorta en vertical: el subrayado de la pestaña
+  // activa sobresalía 1 px y aparecía una barra de desplazamiento vertical en
+  // el móvil. Ahora el subrayado queda dentro y la vertical no se permite; la
+  // horizontal se oculta y las pestañas siguen desplazándose con el dedo.
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-white/8">
+    <div className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-white/8 [scrollbar-width:none]">
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -531,7 +535,7 @@ export function Tabs({
             )}
           </span>
           {activa === t.id && (
-            <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-brand-500 to-accent-500" />
+            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-500 to-accent-500" />
           )}
         </button>
       ))}
