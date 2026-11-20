@@ -699,3 +699,17 @@ y el texto los presentaría como buenos candidatos.
 | **El prompt obliga a una última frase que empiece por «No cumple»** con cada requisito de la lista, aunque el texto llegue a 4 frases | Un equipo no puede leer un texto favorable sobre alguien que no cumple los mínimos. Sigue sin haber veredicto («recomendable» o no): el puesto lo da el motor y la decisión es del equipo. |
 | **La comprobación de fidelidad rechaza el texto que no diga «no cumple»** cuando la lista no está vacía (`causa` `REQUISITOS_OMITIDOS`) | La red no se fía del prompt: si el modelo lo calla, la vista enseña la nota y la explicación determinista. |
 | **Prompt v2** (`VERSION_PROMPT = 2`): sin repeticiones, la escala no se cita y las métricas van con nombre en español | La clave de la caché incluye la versión, así que los textos de la v1 dejan de servirse. |
+
+## Correcciones del recorrido de la demostración: bloqueantes (2026-11-20)
+
+El recorrido completo de la demostración (tres roles, 1440 y 375 px, `VITE_DEMO_DATA=false`)
+encontró tres fallos que la bloqueaban.
+
+| Decisión | Por qué |
+| --- | --- |
+| **`LIMITE_GLOBAL_PETICIONES`** (300 por defecto) fija el límite global por IP cada 15 minutos; para la demostración en local se sube mucho | En local todas las peticiones salen de la misma IP; el recorrido por los tres roles agotó las 300 en unos 20 minutos y el inicio de sesión respondió 429. En el despliegue sigue el valor por defecto. |
+| **`/auth/logout` queda fuera del límite global** | Si el límite frenaba el cierre de sesión, la cookie httpOnly del refresh token seguía viva y la siguiente visita a `/login` abría otra vez la sesión anterior. El cierre de sesión sólo revoca: no hay nada que forzar. |
+| **Si el logout falla igualmente, el cliente cierra en local y deja una marca en `sessionStorage`** (`proplay.salidaSinConfirmar`, sin ningún token) para no recuperar la sesión al recargar hasta el siguiente inicio de sesión | El cliente no puede borrar una cookie httpOnly. La marca sólo dice «no intentes recuperar la sesión»; el access token sigue sin tocar el almacenamiento (CLAUDE.md §8). |
+| **El perfil público lleva `resumenVerificado`**: posición principal, rango, partidas analizadas, cinco métricas (tasa de victorias, KDA, súbditos, daño y visión por minuto) y participación en asesinatos, y la fecha de la captura. Sale de la **última captura de Riot de una cuenta verificada**, con el mismo criterio que el buscador; nulo si no la hay. Lista blanca propia (`CAMPOS_RESUMEN_VERIFICADO_PUBLICO`): ni historial, ni campeones, ni servidor, ni Riot ID | Sin él, la página que demuestra la verificabilidad decía «Cuenta de Riot verificada» y, debajo, «Sin estadísticas todavía». |
+| **`perfiles` lee la relación `PerfilJugador.estadisticas` en su repositorio**, sin importar el módulo `estadisticas` | La captura es una relación del propio perfil, como las cuentas vinculadas que ya leía; el grafo de módulos de CLAUDE.md §3.3 no gana ninguna arista de código. La normalización de las métricas se lee con `metricasLolSchema` de `shared`, que es el contrato con la ingesta. |
+| **`npm run demo:reiniciar`**: `prisma migrate reset --force` más el seed, sólo contra una base local que no sea la de pruebas ni de producción | Volver a sembrar no borraba lo creado en los ensayos (postulaciones, ofertas, fechas de etapa, cuentas a mano), y esos restos falseaban el embudo. |
