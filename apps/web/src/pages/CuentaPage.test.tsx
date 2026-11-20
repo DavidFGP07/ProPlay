@@ -100,8 +100,8 @@ describe('Vista de cuenta', () => {
       renderCuenta()
 
       expect(await screen.findByText('Datos de la cuenta', {}, { timeout: 8000 })).toBeInTheDocument()
-      expect(campo(/^Correo electronico/)).toHaveValue(`${rol.toLowerCase()}@proplay.gg`)
-      expect(campo(/^Correo electronico/)).toHaveAttribute('readonly')
+      expect(campo(/^Correo electrónico/)).toHaveValue(`${rol.toLowerCase()}@proplay.gg`)
+      expect(campo(/^Correo electrónico/)).toHaveAttribute('readonly')
       expect(campo(/^Nombre/)).toHaveValue(`Usuario ${rol}`)
       const menu = screen.getByRole('navigation')
       expect(within(menu).getByRole('link', { name: /Mi cuenta/ })).toHaveAttribute('href', '/cuenta')

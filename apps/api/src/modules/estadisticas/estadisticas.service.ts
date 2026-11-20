@@ -12,6 +12,7 @@ import { descifrarOpcional } from "../../utils/crypto";
 import { esPuuidSeed } from "../../utils/datosDePrueba";
 import {
   AppError,
+  CuentaDeDemostracionError,
   IntegracionRiotNoDisponibleError,
   NotFoundError,
   NotImplementedError,
@@ -141,8 +142,9 @@ export async function solicitarSincronizacion(
   datos: SincronizarEstadisticasInput,
 ): Promise<EstadoSincronizacion> {
   const { jugadorId, cuenta } = await cuentaRiotDelUsuario(usuarioId, datos);
-  // Cuenta del seed: no se encola ni se llama a Riot; queda como la dejó el seed.
-  if (esPuuidSeed(cuenta.externalId)) return sincronizacionDeSeed(cuenta.sincronizadaEn);
+  // Cuenta del seed: no se encola ni se llama a Riot; queda como la dejó el
+  // seed, y se le dice al jugador en lugar de responder como si se encolara.
+  if (esPuuidSeed(cuenta.externalId)) throw new CuentaDeDemostracionError();
   if ((await estadoClaveRiot.estado(env.RIOT_API_KEY)) !== "ok") {
     throw new IntegracionRiotNoDisponibleError();
   }

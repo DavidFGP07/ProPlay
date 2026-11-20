@@ -405,7 +405,9 @@ describe('Panel del equipo: «Tus ofertas»', () => {
 
     const top = (await screen.findByRole('heading', { name: 'Top para la clausura' }, ESPERA)).closest('li')!
     expect(within(top).getByText('Borrador')).toBeInTheDocument()
+    expect(within(top).getByText(/^Borrador del /)).toBeInTheDocument()
     expect(screen.getByText('4 postulaciones')).toBeInTheDocument()
+    expect(screen.getByText(/^Publicada el 20\/10\/2026$/)).toBeInTheDocument()
     expect(within(top).getByRole('link', { name: 'Gestionar: Top para la clausura' })).toHaveAttribute(
       'href',
       '/vacantes/oferta-2',

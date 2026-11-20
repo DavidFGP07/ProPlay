@@ -367,6 +367,22 @@ describe('Cuentas vinculadas', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
+  it('con una cuenta de demostración, sincronizar lo explica sin error rojo', async () => {
+    responderGet([CUENTA_RIOT])
+    doble.post.mockRejectedValue(
+      errorApi(
+        409,
+        'CUENTA_DE_DEMOSTRACION',
+        'Es una cuenta de demostración: sus estadísticas vienen del seed y no se sincronizan con Riot',
+      ),
+    )
+    renderRuta('/cuentas-vinculadas')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sincronizar estadísticas' }, espera))
+    expect(await screen.findByText(/cuenta de demostración/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('sin cupo para comprobar el icono muestra «Mucha demanda, reintentando»', async () => {
     doble.desafio = desafioRiot()
     responderGet([])

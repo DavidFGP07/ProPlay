@@ -70,7 +70,7 @@ export function Layout() {
 
   const manejarSalir = async () => {
     await salir()
-    notificar('Sesion cerrada correctamente.', 'info')
+    notificar(es.login.sesionCerrada, 'info')
     navegar('/login')
   }
 
