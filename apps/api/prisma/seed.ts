@@ -77,11 +77,14 @@ const HABILIDADES_BLANDAS = [
 /**
  * Cuenta de Riot y datos de juego de los 21 jugadores, en orden. Los diez
  * primeros tienen la cuenta verificada y dos capturas de estadísticas (la
- * anterior, un mes antes y con un rango más bajo, para que haya historia); los
- * cinco siguientes no tienen cuenta, como un jugador recién registrado. Los
- * seis últimos, verificados, son de Antioquia y Bogotá: con ellos el mapa del
- * talento tiene celdas fuera del Caribe por encima del umbral de privacidad.
- * Ninguno juega ADC ni MID, para no mover los rankings de la demostración. Sólo
+ * anterior, un mes antes y con un rango más bajo, para que haya historia). Del
+ * 11.º al 14.º, también verificados y del Caribe (Soporte, Jungla y dos Top):
+ * con ellos el Caribe tiene tres posiciones con 3 o más jugadores y el mapa del
+ * talento las muestra por encima del umbral de privacidad. El 15.º, de fuera
+ * de Colombia, no tiene cuenta, como un jugador recién registrado. Los seis
+ * últimos, verificados, son de Antioquia y Bogotá: el mapa tiene celdas fuera
+ * del Caribe. Los añadidos no juegan ADC ni MID, para no mover los rankings
+ * de la demostración. Sólo
  * League of Legends, el juego del piloto. Los puuid llevan el prefijo `seed-`
  * para que nunca se confundan con uno real.
  */
@@ -96,10 +99,10 @@ const DATOS_RIOT: ({ posicion: PosicionLol; rango: RangoLol; rangoAnterior: Rang
   { posicion: "JUNGLA", rango: "ESMERALDA_I", rangoAnterior: "ESMERALDA_II" },
   { posicion: "ADC", rango: "PLATINO_IV", rangoAnterior: "ORO_I" },
   { posicion: "TOP", rango: "GRAN_MAESTRO", rangoAnterior: "MAESTRO" },
-  null,
-  null,
-  null,
-  null,
+  { posicion: "SOPORTE", rango: "PLATA_II", rangoAnterior: "PLATA_IV" },
+  { posicion: "JUNGLA", rango: "ORO_III", rangoAnterior: "ORO_IV" },
+  { posicion: "TOP", rango: "PLATINO_IV", rangoAnterior: "ORO_I" },
+  { posicion: "TOP", rango: "ESMERALDA_IV", rangoAnterior: "PLATINO_II" },
   null,
   { posicion: "TOP", rango: "ESMERALDA_II", rangoAnterior: "ESMERALDA_IV" },
   { posicion: "JUNGLA", rango: "DIAMANTE_III", rangoAnterior: "DIAMANTE_IV" },
@@ -138,7 +141,7 @@ const UBICACIONES: { pais: Pais; departamento: Departamento | null }[] = [
   { pais: "CO", departamento: "BOGOTA_DC" },
   { pais: "CO", departamento: "LA_GUAJIRA" },
   { pais: "CO", departamento: "BOLIVAR" },
-  { pais: "CO", departamento: "VALLE_DEL_CAUCA" },
+  { pais: "CO", departamento: "CORDOBA" },
   { pais: "CO", departamento: "SAN_ANDRES" },
   { pais: "MX", departamento: null },
   { pais: "CO", departamento: "ANTIOQUIA" },
@@ -212,6 +215,16 @@ function rangoColaDeSeed(rango: RangoLol, partidasTemporada: number, victoriasTe
     derrotas: partidasTemporada - victoriasTemporada,
   };
 }
+
+/** Nombre de la posición como lo escribe la interfaz («Mid», «Soporte»…). */
+const NOMBRE_POSICION: Record<PosicionLol, string> = {
+  TOP: "Top",
+  JUNGLA: "Jungla",
+  MID: "Mid",
+  ADC: "ADC",
+  SOPORTE: "Soporte",
+};
+const nombrePosicion = (posicion: PosicionLol) => NOMBRE_POSICION[posicion];
 
 /** El resto de partidas, en la posición siguiente del catálogo. */
 function otraPosicion(posicion: PosicionLol, partidas: number) {
@@ -617,17 +630,18 @@ async function main() {
       },
     });
 
-    // La ubicación también va en `update`: las bases anteriores a la migración
-    // de ubicación tienen `pais` vacío y el seed lo repone.
+    // La ubicación y la presentación también van en `update`: el seed las
+    // repone, y la presentación nombra la posición que de verdad juega.
     const ubicacion = UBICACIONES[indice % UBICACIONES.length]!;
+    const bio = riot
+      ? `${nombrePosicion(riot.posicion)} de ${JUEGO_PILOTO} buscando equipo competitivo.`
+      : `Jugador de ${JUEGO_PILOTO} buscando equipo competitivo.`;
     const jugador = await prisma.perfilJugador.upsert({
       where: { usuarioId: usuario.id },
-      update: { ...ubicacion },
+      update: { ...ubicacion, bio },
       create: {
         usuarioId: usuario.id,
-        bio: riot
-          ? `${riot.posicion} de ${JUEGO_PILOTO} buscando equipo competitivo.`
-          : `Jugador de ${JUEGO_PILOTO} buscando equipo competitivo.`,
+        bio,
         ...ubicacion,
         fechaNacimiento: new Date(1998 + (indice % 8), indice % 12, 1 + (indice % 27)),
         disponibilidadHoras: 15 + (indice % 4) * 5,
@@ -801,6 +815,8 @@ async function main() {
       pesoHabilidadesBlandas: pesos.habilidadesBlandas,
       pesoGeografica: pesos.geografica,
       pesoDisponibilidad: pesos.disponibilidad,
+      // Creada un par de días antes de publicarla; el borrador, hace tres.
+      creadoEn: haceDias(publicadaHaceDias === null ? 3 : publicadaHaceDias + 2),
       publicadaEn: publicadaHaceDias === null ? null : haceDias(publicadaHaceDias),
       cerradaEn: cerradaHaceDias === null ? null : haceDias(cerradaHaceDias),
       equipoId: equipo.id,
