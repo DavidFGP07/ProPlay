@@ -10,7 +10,10 @@ import type { EntradaExplicador } from "./entrada";
 
 export type ResultadoFidelidad =
   | { fiel: true }
-  | { fiel: false; causa: "CIFRA" | "RANGO" | "DIMENSION_OCULTA"; detalle: string };
+  | { fiel: false; causa: "CIFRA" | "RANGO" | "DIMENSION_OCULTA" | "REQUISITOS_OMITIDOS"; detalle: string };
+
+/** Lo que el prompt obliga a escribir cuando hay requisitos sin cumplir. */
+const PATRON_NO_CUMPLE = /\bno cumple\b/;
 
 /** Todas las cifras que aparecen en la entrada, a cualquier profundidad. */
 function cifrasDe(valor: unknown, cifras = new Set<number>()): Set<number> {
@@ -63,7 +66,11 @@ export function comprobarFidelidad(texto: string, entrada: EntradaExplicador): R
   const normalizado = normalizar(texto);
 
   // Rangos: la liga tiene que estar en la entrada y, si lleva división, el rango exacto.
-  const rangos = [entrada.oferta.rangoMinimo, entrada.dimensiones.find((d) => d.dimension === "tecnica")?.detalle.rango]
+  const rangos = [
+    entrada.oferta.rangoMinimo,
+    entrada.dimensiones.find((d) => d.dimension === "tecnica")?.detalle.rango,
+    ...entrada.requisitosNoCumplidos.filter((r) => r.requisito === "rangoMinimo").map((r) => r.candidato),
+  ]
     .filter((r): r is string => typeof r === "string")
     .map(rangoEnTexto);
   const ligas = rangos.map((r) => r.replace(/ (iv|iii|ii|i)$/, ""));
@@ -77,6 +84,15 @@ export function comprobarFidelidad(texto: string, entrada: EntradaExplicador): R
   // Dimensiones ocultas: no están en la entrada, así que no se pueden mencionar.
   for (const [dimension, patron] of Object.entries(NOMBRES_OCULTAS)) {
     if (patron.test(normalizado)) return { fiel: false, causa: "DIMENSION_OCULTA", detalle: dimension };
+  }
+
+  // Requisitos sin cumplir: el texto no puede callarlos y resaltar sólo lo bueno.
+  if (entrada.requisitosNoCumplidos.length > 0 && !PATRON_NO_CUMPLE.test(normalizado)) {
+    return {
+      fiel: false,
+      causa: "REQUISITOS_OMITIDOS",
+      detalle: entrada.requisitosNoCumplidos.map((r) => r.requisito).join(","),
+    };
   }
   return { fiel: true };
 }
