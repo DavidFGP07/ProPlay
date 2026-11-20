@@ -754,3 +754,15 @@ dio textos fieles que decían siempre lo que el candidato no cumple, pero con fa
 | **Pulido determinista** (`redaccion/formato.ts`) antes de la fidelidad y la caché: coma decimal y «MID» → «Mid» | Son cambios de forma que no pueden alterar el contenido: no merece descartar un texto fiel por ellos. |
 | **La fidelidad descarta** los nombres de campo en camelCase sacados de la propia entrada y «win rate» (`causa` `NOMBRE_DE_CAMPO`), y la frase de requisitos que no empieza por «No cumple» | Un nombre de campo no se puede pulir sin interpretar el texto; mejor la explicación determinista que un texto con jerga del JSON. |
 | **Las horas por semana son declaradas**: el prompt sólo llama verificados a los datos de juego y pide «declara 15 horas»; la fidelidad descarta el texto que dice que las horas o la disponibilidad están verificadas (`causa` `HORAS_VERIFICADAS`) | En la prueba de la v3 el puesto 1 decía «15 horas verificadas». Las horas las escribe el jugador en su perfil: presentarlas como verificadas contradice la verificabilidad que el producto promete. |
+
+## Habilidades y ajustes de privacidad, a trabajo futuro (2026-11-20)
+
+Ajuste del «Recorte de alcance»: la tesis se queda con **17 vistas** (13 de núcleo y 4 de
+soporte). Dos vistas de soporte pasan a trabajo futuro sin haberse construido.
+
+| Decisión | Por qué |
+| --- | --- |
+| **Habilidades y endorsements (RF-06)** pasa a trabajo futuro, 5.º en recuperarse. Las rutas siguen registradas y responden `501`; las habilidades del seed y la dimensión de habilidades blandas (peso 0 en el piloto, `DIMENSIONES_SIN_DATOS_PILOTO`) no cambian | No aporta a la verificabilidad ni al matching explicable, que son el núcleo, y la dimensión ya no cuenta en el piloto. Construirla a una semana de la sustentación compite con el guion y el documento. |
+| **Ajustes de privacidad (RNF-05)** pasa a trabajo futuro, 4.º en recuperarse. El perfil público sigue visible para quien tenga el enlace, como dice el aviso de privacidad, y la ubicación sale a nivel de departamento | El aviso ya informa de ello y el titular puede pedir la supresión por los canales del aviso. Un interruptor de visibilidad es lo primero que convendría añadir si el sistema se abre a usuarios reales. |
+| El aviso de privacidad sólo nombra los datos de perfil que se registran de verdad (presentación, ubicación, disposición a relocalizarse y horas por semana) | Decía «habilidades y experiencia», que no se pueden registrar. |
+| **Sustituye** a «Soporte mínimo (6)» de «Recorte de alcance», que queda en 4: Mi cuenta, Buscador de talento, Mis postulaciones y Postulaciones recibidas | `docs/decisiones.md` sólo se amplía: la decisión original queda como estaba. |
