@@ -12,7 +12,13 @@ export type ResultadoFidelidad =
   | { fiel: true }
   | {
       fiel: false;
-      causa: "CIFRA" | "RANGO" | "DIMENSION_OCULTA" | "REQUISITOS_OMITIDOS" | "NOMBRE_DE_CAMPO";
+      causa:
+        | "CIFRA"
+        | "RANGO"
+        | "DIMENSION_OCULTA"
+        | "REQUISITOS_OMITIDOS"
+        | "NOMBRE_DE_CAMPO"
+        | "HORAS_VERIFICADAS";
       detalle: string;
     };
 
@@ -21,6 +27,13 @@ export type ResultadoFidelidad =
  * frase que empiece por «No cumple» (al principio del texto o tras un punto).
  */
 const PATRON_NO_CUMPLE = /(?:^|[.!?]\s+)No cumple\b/;
+
+/**
+ * Las horas por semana las declara el jugador: decir que están «verificadas»
+ * engaña al equipo. Busca «verificad…» en la misma frase que las horas o la
+ * disponibilidad.
+ */
+const PATRON_HORAS_VERIFICADAS = /\b(horas?|disponibilidad)\b[^.]{0,60}\bverificad|\bverificad\w*\b[^.]{0,30}\bhoras?\b/;
 
 /** «win rate» en inglés: el prompt pide «tasa de victorias». */
 const PATRON_WIN_RATE = /\bwin\s?rate\b/;
@@ -120,6 +133,11 @@ export function comprobarFidelidad(texto: string, entrada: EntradaExplicador): R
     }
   }
   if (PATRON_WIN_RATE.test(normalizado)) return { fiel: false, causa: "NOMBRE_DE_CAMPO", detalle: "win rate" };
+
+  // Las horas son declaradas, nunca verificadas.
+  if (PATRON_HORAS_VERIFICADAS.test(normalizado)) {
+    return { fiel: false, causa: "HORAS_VERIFICADAS", detalle: "horas" };
+  }
 
   // Requisitos sin cumplir: el texto no puede callarlos y resaltar sólo lo bueno.
   if (entrada.requisitosNoCumplidos.length > 0 && !PATRON_NO_CUMPLE.test(texto.trim())) {

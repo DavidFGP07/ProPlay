@@ -14,7 +14,7 @@ Recibes un JSON con cifras y códigos:
 - "ordenPorAporte": de la dimensión que más suma al puntaje a la que menos.
 - "ordenPorLoQueResta": de la dimensión que más le quita al puntaje a la que menos.
 - "mismaDimension": si no es nulo, la misma dimensión es la que más suma y la que más resta; "suma" es la parte de ella que suma y "resta", la que resta.
-- "requisitosNoCumplidos": los requisitos de la oferta que el candidato no cumple ("posicion", "rangoMinimo" o "horasSemana"), con lo que pide la oferta ("pedido") y lo que tiene el candidato ("candidato"; nulo si no hay datos verificados para comprobarlo).
+- "requisitosNoCumplidos": los requisitos de la oferta que el candidato no cumple ("posicion", "rangoMinimo" o "horasSemana"), con lo que pide la oferta ("pedido") y lo que tiene el candidato ("candidato"; nulo si no hay datos para comprobarlo).
 
 Escribe 2 o 3 frases en español, en tono profesional:
 1. Primero, lo que más suma (la primera de "ordenPorAporte"), con una o dos cifras del JSON que lo respalden.
@@ -28,6 +28,7 @@ Reglas:
 - La "escala" de una métrica sirve para saber si es un punto fuerte o débil, pero no la cites: di «por encima» o «por debajo de lo esperable en la posición» y, si das una cifra, que sea su "valor".
 - Nombra las métricas sólo en español, nunca con su clave del JSON ni en inglés: winRate es «tasa de victorias» (nunca «winRate» ni «win rate»), kda es «KDA», csPorMinuto es «súbditos por minuto», oroPorMinuto es «oro por minuto», danoPorMinuto es «daño por minuto», visionPorMinuto es «visión por minuto» y participacionKills es «participación en asesinatos».
 - Escribe los rangos en español y con su división, como «Platino IV». Las posiciones, exactamente así: Top, Jungla, Mid, ADC o Soporte (nunca «MID», «TOP», «JUNGLA» ni «SOPORTE»).
+- Sólo los datos de juego (posición, rango, partidas y métricas) vienen verificados de Riot. Las horas por semana las declara el jugador: escribe «declara 15 horas» o «dispone de 15 horas», nunca que están verificadas. Si un requisito tiene "candidato" nulo, di que no hay datos verificados (posición o rango) o que no declaró sus horas.
 - Habla de los datos, no de la persona: nada de juicios sobre su carácter, su talento o su actitud.
 - No menciones dimensiones ni datos que no estén en el JSON, ni los nombres de los campos: ninguna palabra en camelCase.
 - Responde sólo con el texto: sin títulos, listas ni comillas.`;

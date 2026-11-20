@@ -249,6 +249,7 @@ describe("prompt", () => {
     expect(PROMPT_SISTEMA).toContain("coma decimal («7,95», nunca «7.95»)");
     expect(PROMPT_SISTEMA).toContain("nunca «winRate» ni «win rate»");
     expect(PROMPT_SISTEMA).toContain("nunca «MID», «TOP», «JUNGLA» ni «SOPORTE»");
+    expect(PROMPT_SISTEMA).toContain("Las horas por semana las declara el jugador");
   });
 });
 
@@ -279,6 +280,23 @@ describe("comprobarFidelidad", () => {
       causa: "NOMBRE_DE_CAMPO",
       detalle: "win rate",
     });
+  });
+
+  it("rechaza que las horas por semana estén verificadas: las declara el jugador", () => {
+    for (const frase of [
+      "No cumple las horas: la oferta pide 20 y el candidato tiene 15 horas verificadas.",
+      "No cumple la disponibilidad verificada: 15 frente a 20 horas.",
+      "No cumple: tiene 15 verificadas frente a las 20 horas que pide la oferta.",
+    ]) {
+      expect(comprobarFidelidad(frase, entrada)).toMatchObject({ fiel: false, causa: "HORAS_VERIFICADAS" });
+    }
+    expect(comprobarFidelidad("No cumple las horas: declara 15 frente a las 20 que pide la oferta.", entrada)).toEqual({
+      fiel: true,
+    });
+    // «Verificado» en otra frase (el rango, de Riot) no cuenta.
+    expect(
+      comprobarFidelidad("Su rango verificado es Platino IV. No cumple las horas: declara 15 de 20.", entrada),
+    ).toEqual({ fiel: true });
   });
 
   it("la frase de los requisitos tiene que empezar por «No cumple»", () => {
