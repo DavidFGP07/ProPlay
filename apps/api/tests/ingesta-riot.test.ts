@@ -502,16 +502,16 @@ describe("cuentas del seed en la ingesta", () => {
     expect(await cola.cola.getJob(idTrabajoSincronizacion(seed.perfilId))).toBeUndefined();
   });
 
-  it("la manual de una cuenta del seed no encola ni consulta a Riot y conserva su fecha", async () => {
+  it("la manual de una cuenta del seed responde 409, no encola ni consulta a Riot y conserva su fecha", async () => {
     const clave = vi.spyOn(estadoClaveRiot, "estado").mockResolvedValue("clave-caducada");
     const sincronizadaEn = new Date("2026-11-10T15:00:00Z");
     const jugador = await jugadorConCuenta("seed-manual", true, sincronizadaEn);
     const auth = { Authorization: `Bearer ${jugador.token}` };
 
     const respuesta = await request(app).post(`${API_PREFIX}/estadisticas/sincronizar`).set(auth).send({});
-    expect(respuesta.status).toBe(202);
-    const estado = estadoSincronizacionSchema.parse(respuesta.body);
-    expect(estado).toMatchObject({ estado: "INACTIVA", sincronizadaEn });
+    expect(respuesta.status).toBe(409);
+    expect(respuesta.body.error.code).toBe("CUENTA_DE_DEMOSTRACION");
+    expect(respuesta.body.error.message).toMatch(/cuenta de demostración/);
     expect(clave).not.toHaveBeenCalled();
 
     const consulta = await request(app).get(`${API_PREFIX}/estadisticas/sincronizacion`).set(auth);
