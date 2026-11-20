@@ -9,7 +9,7 @@
 
 ## 1. Dónde estamos hoy
 
-Estado al 2026-11-17, con `main` en el PR #55. El detalle vive en otros documentos y aquí
+Estado al 2026-11-20, con `main` en el PR #68. El detalle vive en otros documentos y aquí
 sólo se resume: las rutas y su estado, en el README («Rutas de la API»); las vistas, en el
 inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones.md`.
 
@@ -26,8 +26,12 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
 - **Sprint 3 (motor de matching), cerrado salvo 3.15.** Ofertas con estados, pesos,
   modalidad y ubicación; postulaciones con la fecha de cada etapa; motor de matching
   (vectorizador, recuperador HNSW, cinco dimensiones, ponderador y persistencia); ranking
-  con desglose y detalle del candidato; RNF-01 medido en local (`docs/rnf-01.md`).
-- **Sprint 4: la analítica (4.10) está hecha**, con el script de las métricas del piloto.
+  con desglose y detalle del candidato; RNF-01 medido en local (`docs/rnf-01.md`); el
+  sustituto de la mensajería (3.18): el equipo dueño ve el correo del jugador desde que
+  preselecciona su postulación.
+- **Sprint 4:** la analítica (4.10), con el script de las métricas del piloto; el explicador
+  con modelo de lenguaje (4.1, 4.3 y 4.7), que dice los requisitos que el candidato no
+  cumple (falta repetir con la clave real la prueba manual del prompt v2); y las notificaciones dentro de la app (4.5 y 4.9).
 
 La calidad la sostienen `npm run verify` (guarda del índice HNSW, lint, typecheck y
 pruebas de los tres workspaces) y el CI en cada pull request contra `main`, con una base de
@@ -42,8 +46,8 @@ pruebas propia (`proplay_test`).
 - **Soporte:** habilidades y endorsements (2.2) y ajustes de privacidad.
 - **Secciones simuladas de Mi perfil** (cuentas, habilidades, portafolio, privacidad y
   laterales), que desaparecen con `VITE_DEMO_DATA=false`.
-- **Validación** (4.13 a 4.16): depende del despliegue, del reclutamiento y de la línea base,
-  que no constan en el repositorio.
+- **Validación** (4.13 a 4.16): fuera de la tesis, sin piloto con usuarios; queda diseñada en
+  `docs/protocolo-validacion.md`.
 
 ---
 
@@ -162,7 +166,7 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 | 3.9 | **Medir RNF-01 en este sprint**: percentil 95 por debajo de 2 s con 1.000 perfiles indexados. Si se mide al final y falla, corregirlo exige rehacer el motor<br>**Hecha:** #46 (`docs/rnf-01.md`; medido en local, se repetirá en el despliegue). |
 | 3.16 | **Guardar la fecha de cada cambio de estado de la postulación** (historial de estados, no sólo el estado actual). Sin ella no se calcula el embudo de la vacante ni el tiempo hasta cubrirla (H1). Va con 3.2 y es un cambio de esquema en su propio PR<br>**Hecha:** #28 y #29 (columnas `revisadaEn`, `entrevistaEn`, `aceptadaEn`, `rechazadaEn`). |
 | 3.17 | Datos de la analítica: **embudo de la vacante con tiempo hasta cubrirla** (sobre 3.16) y **qué dimensión decide el ranking** (sobre el desglose de 3.7). La vista se completa en 4.10<br>**Hecha:** #51, #52 y #53/#55. |
-| 3.18 | Sustituto de la mensajería en el piloto (decisión 0.10): el equipo ve el correo del jugador cuando **preselecciona** su postulación. Antes de activarlo, reflejarlo en el aviso de privacidad y, si cambia el texto, subir `VERSION_AVISO_PRIVACIDAD`<br>**Hecha** (PR del correo visible): el equipo dueño ve el correo en revisión, entrevista o aceptada, en las postulaciones recibidas y en el detalle del candidato; el aviso lo dice (sigue en 1.0, sin publicar). |
+| 3.18 | Sustituto de la mensajería en el piloto (decisión 0.10): el equipo ve el correo del jugador cuando **preselecciona** su postulación. Antes de activarlo, reflejarlo en el aviso de privacidad y, si cambia el texto, subir `VERSION_AVISO_PRIVACIDAD`<br>**Hecha** (#65 contrato y #66): el equipo dueño ve el correo en revisión, entrevista o aceptada, en las postulaciones recibidas y en el detalle del candidato; el aviso lo dice (sigue en 1.0, sin publicar). |
 
 ### Frontend
 
@@ -188,10 +192,10 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 
 | # | Tarea |
 |---|---|
-| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato) y el PR del explicador. Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido. |
+| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato), #64 y #68 (prompt v2). Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido, y dice siempre los requisitos que el candidato no cumple. La v1 se probó con la clave real el 2026-11-20; la prueba manual de la v2 está pendiente. |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje<br>**Pendiente.** |
 | 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Hecha** con el explicador: sin clave, con error, tiempo agotado, fidelidad fallida o límite agotado responde `NO_DISPONIBLE` y la vista se queda con la explicación determinista. |
-| 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y administración. **Notificaciones (4.5): hechas** en versión mínima (PR de notificaciones): tres eventos, emisor en proceso y rutas propias |
+| 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y administración. **Notificaciones (4.5): hechas** en versión mínima (#65 contrato y #67): tres eventos, emisor en proceso y rutas propias |
 
 ### Frontend
 
@@ -325,16 +329,18 @@ verificable, no sobre una rama local.
 
 ## 10. Orden de ataque recomendado
 
-Actualizado el 2026-11-17. Lo que queda, en el orden en que más incertidumbre resuelve:
+Actualizado el 2026-11-20. Lo que queda, en el orden en que más incertidumbre resuelve:
 
 1. **Despliegue (2.13)**, con el cliente público: desbloquea la solicitud de la clave de
    producción de Riot (0.1) y es donde hay que repetir RNF-01.
 2. ~~**Retirar del menú las vistas simuladas (1.7)**~~: hecha (#58).
-3. ~~**Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**~~: hecha (#63 y el PR del explicador).
+3. ~~**Explicación con modelo de lenguaje (4.1, 4.3 y 4.7)**~~: hecha (#63, #64 y #68).
 4. **Soporte mínimo:** habilidades y endorsements (2.2) y ajustes de privacidad; el sustituto
    de la mensajería (3.18) está hecho.
-5. **Piloto (4.13 a 4.16)**, con la línea base (0.2) cargada en
-   `LINEA_BASE_SCOUTING_MANUAL` y las métricas del script `metricas:piloto`.
+5. ~~**Notificaciones dentro de la app (4.5 y 4.9)**~~: hechas (#65 y #67).
+6. **Piloto (4.13 a 4.16)**: fuera de la tesis. Si se ejecuta después, con la línea base
+   (0.2) cargada en `LINEA_BASE_SCOUTING_MANUAL`, las métricas del script `metricas:piloto`
+   y el procedimiento de `docs/protocolo-validacion.md`.
 
 El criterio que ordena todo sigue siendo el mismo: **primero lo que resuelve
 incertidumbre**. Las dos incertidumbres técnicas del documento (si Riot da los datos
