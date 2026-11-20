@@ -863,7 +863,12 @@ async function main() {
     where: { oferta: { equipoId: equipoDemo.id } },
     orderBy: [{ creadoEn: "desc" }, { id: "asc" }],
     take: 3,
-    select: { id: true, creadoEn: true, oferta: { select: { id: true, titulo: true } } },
+    select: {
+      id: true,
+      creadoEn: true,
+      oferta: { select: { id: true, titulo: true } },
+      jugador: { select: { usuario: { select: { nombre: true } } } },
+    },
   });
   const propias = await prisma.postulacion.findMany({
     where: { jugadorId: jugadorDemo.id, estado: { not: "ENVIADA" } },
@@ -902,7 +907,12 @@ async function main() {
     ...recibidas.map((p, i) => ({
       usuarioId: equipoDemo.usuarioId,
       tipo: "NUEVA_POSTULACION",
-      payload: { ofertaId: p.oferta.id, ofertaTitulo: p.oferta.titulo, postulacionId: p.id },
+      payload: {
+        ofertaId: p.oferta.id,
+        ofertaTitulo: p.oferta.titulo,
+        postulacionId: p.id,
+        jugadorNombre: p.jugador.usuario.nombre,
+      },
       creadoEn: p.creadoEn,
       // La más antigua, leída; las demás, sin leer.
       leidaEn: i > 0 && i === recibidas.length - 1 ? p.creadoEn : null,

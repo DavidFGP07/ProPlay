@@ -326,6 +326,7 @@ export async function postular(
     ofertaId,
     ofertaTitulo: oferta.titulo,
     postulacionId: postulacion.id,
+    jugadorNombre: jugador.usuario.nombre,
     equipoUsuarioId: oferta.equipo.usuarioId,
   });
   return postulacion;
