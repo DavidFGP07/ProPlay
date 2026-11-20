@@ -729,3 +729,14 @@ seed y presentación.
 | **«Qué decide el ranking» separa lo que suma la dimensión decisiva de lo que suman o restan las demás**, con las cifras redondeadas para que la cuenta cuadre | «21,7 puntos de ventaja sobre una diferencia total de 18,7» parecía un error aritmético. |
 | **Sincronizar una cuenta del seed responde 409 `CUENTA_DE_DEMOSTRACION`** y el cliente lo muestra como aviso, igual que «Riot no está disponible». Sustituye al 202 silencioso | El botón no hacía nada visible. Las cuentas del seed siguen sin llamar a Riot. |
 | **Ranking: a igualdad de puntaje, primero quien tiene la cuenta verificada**; después la técnica y el id. El mismo orden en `compararCandidatos` y en la ventana SQL del ranking guardado | Un jugador sin cuenta verificada empataba con verificados y podía quedar por delante de ellos sólo por el id. |
+
+## Correcciones del recorrido de la demostración: cosmético (2026-11-20)
+
+| Decisión | Por qué |
+| --- | --- |
+| **Cifras con formato español** en Mis estadísticas (coma decimal en el KDA medio, la participación, la duración, los campeones y la tabla de la tendencia) y «Tasa de victorias» en lugar de «Win rate», también en la explicación de la técnica | Convivían «3,21» y «4.86» en la misma vista. El signo de porcentaje va con espacio, como en el resto de la aplicación. |
+| **`Field` asocia la etiqueta por `id`** (`useId` y un contexto que leen `Input`, `Select` y `Textarea`) en lugar de envolver el control; la ayuda va en `aria-describedby` | Con la etiqueta envolvente, el nombre accesible de un campo incluía la ayuda, los errores y, en un select, todas sus opciones. Afecta a todos los formularios (Crear oferta, filtros, login). Cada `Field` lleva un único control. |
+| **Las tarjetas de las cuentas de demostración** llevan nombre accesible («Usar la cuenta de demostración de…») y `aria-pressed` | Eran botones sin nombre para un lector de pantalla. |
+| **El menú nombra el panel como su título**: «Panel de scouting» para el scout | El menú decía «Panel de equipo» y la vista, «Panel de scouting». |
+| **Pestañas sin barra vertical a 375 px**: el subrayado activo queda dentro y la tira no se desplaza en vertical | El subrayado sobresalía 1 px y `overflow-x-auto` mostraba una barra. |
+| **La notificación de nueva postulación lleva el nombre del jugador** (`jugadorNombre`, opcional para las anteriores). Sustituye, sólo para ese dato, a «`Notificacion` guarda datos, no texto… ni el nombre ni el correo del jugador» de «Notificaciones dentro de la app» | El destinatario es el equipo dueño, que ya ve el nombre en las postulaciones recibidas: no amplía lo que ve. El correo sigue fuera. |
