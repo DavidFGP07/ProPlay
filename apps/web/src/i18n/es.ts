@@ -153,7 +153,7 @@ export const es = {
         n: '03',
         titulo: 'Normalización',
         detalle:
-          'Las métricas se llevan a una escala comparable y se calculan las derivadas (KDA, win rate, tendencia).',
+          'Las métricas se llevan a una escala comparable y se calculan las derivadas (KDA, tasa de victorias, tendencia).',
       },
       {
         n: '04',
@@ -202,6 +202,8 @@ export const es = {
     errorEntrar: 'No pudimos iniciar tu sesión.',
     errorRegistrar: 'No pudimos crear tu cuenta.',
     cuentasDemo: 'Cuentas de demostración',
+    usarCuenta: (nombre: string, descripcion: string) =>
+      `Usar la cuenta de demostración de ${nombre}: ${descripcion}`,
     descripcionDemo: {
       JUGADOR: 'Ofertas compatibles, perfil verificado y postulaciones',
       EQUIPO: 'Publica vacantes y revisa el ranking de candidatos',
@@ -322,15 +324,15 @@ export const es = {
     nivel: (nivel: number) => `Nivel de invocador ${nivel}`,
     partidas: 'Partidas analizadas',
     partidasPista: (victorias: number) => `${victorias} victorias`,
-    winRate: 'Win rate',
+    winRate: 'Tasa de victorias',
     kda: 'KDA',
-    kdaPista: (k: number, d: number, a: number) => `${k} / ${d} / ${a} de media`,
+    kdaPista: (k: string, d: string, a: string) => `${k} / ${d} / ${a} de media`,
     csMinuto: 'CS por minuto',
     oroMinuto: 'Oro por minuto',
     danoMinuto: 'Daño a campeones por minuto',
     visionMinuto: 'Visión por minuto',
     participacion: 'Participación en kills',
-    duracion: (minutos: number) => `Partidas de ${minutos} min de media`,
+    duracion: (minutos: string) => `Partidas de ${minutos} min de media`,
     tendencia: (signo: string, valor: string) => `${signo}${valor} frente a la captura anterior`,
     rolesTitulo: 'Posiciones',
     rolesSubtitulo: 'En qué posición jugaste tus partidas de clasificatoria solo/dúo.',
@@ -339,13 +341,13 @@ export const es = {
     partidasDe: (n: number) => (n === 1 ? '1 partida' : `${n} partidas`),
     campeonesTitulo: 'Campeones más jugados',
     campeonesSubtitulo: 'Los tres con más partidas en la muestra.',
-    campeonDetalle: (partidas: number, victorias: number, kda: number) =>
+    campeonDetalle: (partidas: number, victorias: number, kda: string) =>
       `${partidas} ${partidas === 1 ? 'partida' : 'partidas'} · ${victorias} ${victorias === 1 ? 'victoria' : 'victorias'} · KDA ${kda}`,
     tendenciaTitulo: 'Tendencia del rendimiento',
-    tendenciaSubtitulo: 'Win rate y KDA en cada sincronización.',
+    tendenciaSubtitulo: 'Tasa de victorias y KDA en cada sincronización.',
     tendenciaVacia:
       'Necesitas al menos dos sincronizaciones con partidas nuevas para ver la tendencia.',
-    serieWinRate: 'Win rate (%)',
+    serieWinRate: 'Tasa de victorias (%)',
     serieKda: 'KDA',
     tablaResumen: 'Valores de la gráfica',
     fecha: 'Fecha',
@@ -684,7 +686,8 @@ export const es = {
     reintentar: 'Reintentar',
     nueva: 'Sin leer',
     ahora: 'ahora',
-    nuevaPostulacion: (oferta: string) => `Nueva postulación a «${oferta}».`,
+    nuevaPostulacion: (oferta: string, jugador?: string) =>
+      jugador ? `${jugador} se postuló a «${oferta}».` : `Nueva postulación a «${oferta}».`,
     postulacionActualizada: (oferta: string, estado: string) =>
       `Tu postulación a «${oferta}» pasó a «${estado}».`,
     cierreOferta: (oferta: string) => `La oferta «${oferta}» se cerró y tu postulación quedó rechazada.`,
@@ -1078,7 +1081,7 @@ export const es = {
         `Dispone de ${jugador} h a la semana de las ${oferta} h que pide la oferta (${porcentaje} %).`,
     },
     metrica: {
-      winRate: 'Win rate',
+      winRate: 'Tasa de victorias',
       kda: 'KDA',
       csPorMinuto: 'CS por minuto',
       oroPorMinuto: 'Oro por minuto',

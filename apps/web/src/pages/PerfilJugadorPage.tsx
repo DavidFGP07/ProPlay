@@ -35,10 +35,10 @@ const t = es.perfilPublico
 const formatoFecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' })
 const formatoDecimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 })
 const formatoEntero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
-const formatoPorcentaje = new Intl.NumberFormat('es-CO', {
-  style: 'percent',
-  maximumFractionDigits: 1,
-})
+// Con espacio antes del signo, como el resto de la aplicación («51,2 %»).
+const formatoPorcentaje = {
+  format: (fraccion: number) => `${formatoDecimal.format(Math.round(fraccion * 1000) / 10)} %`,
+}
 
 /**
  * Durante el piloto los perfiles no deben aparecer en buscadores: la vista
@@ -231,7 +231,7 @@ function ResumenVerificado({ resumen }: { resumen: ResumenVerificadoPublico }) {
     { etiqueta: r.rango, valor: resumen.rango ? es.rangoLol[resumen.rango] : r.sinRango },
     { etiqueta: r.partidas, valor: formatoEntero.format(resumen.partidasAnalizadas) },
   ]
-  const metricas: { etiqueta: string; valor: number | null; formato: Intl.NumberFormat }[] = [
+  const metricas: { etiqueta: string; valor: number | null; formato: { format: (n: number) => string } }[] = [
     { etiqueta: r.winRate, valor: resumen.winRate, formato: formatoPorcentaje },
     { etiqueta: r.kda, valor: resumen.kda, formato: formatoDecimal },
     { etiqueta: r.csPorMinuto, valor: resumen.csPorMinuto, formato: formatoDecimal },

@@ -120,7 +120,10 @@ export async function buscarEquipoDeUsuario(usuarioId: string) {
 }
 
 export async function buscarJugadorDeUsuario(usuarioId: string) {
-  return prisma.perfilJugador.findUnique({ where: { usuarioId }, select: { id: true } });
+  return prisma.perfilJugador.findUnique({
+    where: { usuarioId },
+    select: { id: true, usuario: { select: { nombre: true } } },
+  });
 }
 
 // --------------------------------------------------------------- ofertas

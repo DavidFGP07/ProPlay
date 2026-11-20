@@ -12,7 +12,10 @@ const t = es.notificaciones
 export function describirNotificacion(n: Notificacion): { texto: string; enlace: string } {
   switch (n.tipo) {
     case 'NUEVA_POSTULACION':
-      return { texto: t.nuevaPostulacion(n.payload.ofertaTitulo), enlace: `/vacantes/${n.payload.ofertaId}` }
+      return {
+        texto: t.nuevaPostulacion(n.payload.ofertaTitulo, n.payload.jugadorNombre),
+        enlace: `/vacantes/${n.payload.ofertaId}`,
+      }
     case 'POSTULACION_ACTUALIZADA':
       return {
         texto:
