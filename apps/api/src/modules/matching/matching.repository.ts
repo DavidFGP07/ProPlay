@@ -434,8 +434,8 @@ export interface OpcionesRanking {
 
 /**
  * Ranking guardado de la oferta con el puesto de cada candidato: el mismo
- * orden que `ordenarRanking` (puntaje, técnica e id, con collation binaria,
- * como en JS) sobre los jugadores activos. El puesto se calcula aquí, antes de
+ * orden que `ordenarRanking` (puntaje, cuenta verificada, técnica e id, con
+ * collation binaria, como en JS) sobre los jugadores activos. El puesto se calcula aquí, antes de
  * filtrar o reordenar, para que sea siempre el del ranking completo.
  */
 function clasificado(ofertaId: string): Prisma.Sql {
@@ -454,6 +454,7 @@ function clasificado(ofertaId: string): Prisma.Sql {
      WHERE m."ofertaId" = ${ofertaId}
     WINDOW orden AS (
       ORDER BY m.puntaje DESC,
+               (m.explicacion->'dimensiones'->'tecnica'->>'motivo') IS DISTINCT FROM 'SIN_CUENTA_VERIFICADA' DESC,
                (m.desglose->>'tecnica')::double precision DESC,
                m."jugadorId" COLLATE "C" ASC
     )

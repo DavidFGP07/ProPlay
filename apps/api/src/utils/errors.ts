@@ -121,6 +121,20 @@ export class IntegracionRiotNoDisponibleError extends AppError {
 }
 
 /**
+ * Sincronizar una cuenta de demostración del seed: sus estadísticas son las
+ * del seed y nunca se piden a Riot. Es un aviso, no un fallo.
+ */
+export class CuentaDeDemostracionError extends AppError {
+  constructor() {
+    super(
+      409,
+      "CUENTA_DE_DEMOSTRACION",
+      "Es una cuenta de demostración: sus estadísticas vienen del seed y no se sincronizan con Riot",
+    );
+  }
+}
+
+/**
  * Marca el andamiaje pendiente de implementar. Los módulos que todavía no
  * tienen lógica de negocio devuelven este error (501).
  */

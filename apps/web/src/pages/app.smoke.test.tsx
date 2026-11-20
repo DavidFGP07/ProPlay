@@ -93,20 +93,20 @@ describe('Aplicacion', () => {
   it('sin sesion activa redirige al login', async () => {
     render(renderApp('/'))
     expect(
-      await screen.findByRole('heading', { name: /Iniciar sesion/i }),
+      await screen.findByRole('heading', { name: /Iniciar sesión/i }),
     ).toBeInTheDocument()
   })
 
   it('el login ofrece las cuentas de demostracion por rol', async () => {
     render(renderApp('/login'))
-    expect(await screen.findByText('Cuentas de demostracion')).toBeInTheDocument()
+    expect(await screen.findByText('Cuentas de demostración')).toBeInTheDocument()
     expect(screen.getByText('Caribe eSports')).toBeInTheDocument()
     expect(screen.getByText('Marcela Guzmán')).toBeInTheDocument()
   })
 
   it('el registro exige aceptar el aviso de privacidad (RNF-05)', async () => {
     render(renderApp('/login'))
-    await screen.findByRole('heading', { name: /Iniciar sesion/i })
+    await screen.findByRole('heading', { name: /Iniciar sesión/i })
     const pestana = screen.getByRole('button', { name: 'Crear cuenta' })
     pestana.click()
 
@@ -283,6 +283,6 @@ describe('Aplicacion', () => {
     expect(
       await screen.findByRole('link', { name: /Iniciar sesión/ }, { timeout: 8000 }),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /Iniciar sesion/i })).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Iniciar sesión/i })).toBeNull()
   })
 })

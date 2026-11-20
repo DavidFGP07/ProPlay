@@ -331,12 +331,20 @@ export function fraseDecisiva(d: DimensionDecisiva): string {
   if (!d.decisiva || d.ventajaTotal === null) return t.empate
   const ventaja = d.dimensiones.find((x) => x.dimension === d.decisiva)!.ventaja
   const formato = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
-  return t.decisivaFrase(
-    es.dimension[d.decisiva],
-    d.top,
-    formato.format(puntos(ventaja)),
-    formato.format(puntos(d.ventajaTotal)),
-  )
+  // Lo que aporta la decisiva y lo que suman o restan las demás, por separado:
+  // con las cifras ya redondeadas, para que la cuenta cuadre en la frase.
+  const decisiva = puntos(ventaja)
+  const total = puntos(d.ventajaTotal)
+  const resto = Math.round((total - decisiva) * 10) / 10
+  const principal = t.decisivaFrase(es.dimension[d.decisiva], d.top, formato.format(decisiva))
+  const totalTexto = formato.format(total)
+  const demas =
+    resto < 0
+      ? t.decisivaRestan(formato.format(-resto), totalTexto)
+      : resto > 0
+        ? t.decisivaSuman(formato.format(resto), totalTexto)
+        : t.decisivaSolo(totalTexto)
+  return `${principal} ${demas}`
 }
 
 // RF-13 · Qué dimensión decide el ranking de una oferta

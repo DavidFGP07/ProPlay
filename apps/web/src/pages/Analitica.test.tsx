@@ -238,7 +238,14 @@ describe('funciones de presentación', () => {
   it('la frase de la dimensión decisiva cubre el caso normal, el empate y los pocos candidatos', () => {
     const datos = dimensionDecisivaSchema.parse(DECISIVA)
     expect(fraseDecisiva(datos)).toBe(
-      'Lo que más separa a tus 5 primeros del resto es la técnica: 21,7 puntos de ventaja de media, sobre una diferencia total de 18,9 puntos.',
+      'Lo que más separa a tus 5 primeros del resto es la técnica: les da 21,7 puntos de ventaja de media. Las demás dimensiones les restan 2,8 puntos, así que la diferencia total es de 18,9 puntos.',
+    )
+    const tecnica = datos.dimensiones.find((x) => x.dimension === 'tecnica')!
+    expect(fraseDecisiva({ ...datos, ventajaTotal: tecnica.ventaja + 0.02 })).toMatch(
+      /les suman 2 puntos más, así que la diferencia total es de 23,7 puntos\.$/,
+    )
+    expect(fraseDecisiva({ ...datos, ventajaTotal: tecnica.ventaja })).toMatch(
+      /no cambian la diferencia: la total es de 21,7 puntos\.$/,
     )
     expect(fraseDecisiva({ ...datos, decisiva: null })).toMatch(/igualados/)
     expect(
@@ -301,7 +308,7 @@ describe('Analítica del equipo (/dashboard)', () => {
     const porOferta = await tarjeta('Por oferta')
     expect(porOferta.getByLabelText('Oferta')).toHaveValue('o-adc')
     expect(
-      await porOferta.findByText(/es la técnica: 21,7 puntos de ventaja de media/, {}, ESPERA),
+      await porOferta.findByText(/es la técnica: les da 21,7 puntos de ventaja de media/, {}, ESPERA),
     ).toBeInTheDocument()
     const filaDisponibilidad = porOferta.getByRole('rowheader', { name: 'Disponibilidad' }).closest('tr')!
     expect(within(filaDisponibilidad).getByText('juega en contra de los primeros')).toBeInTheDocument()

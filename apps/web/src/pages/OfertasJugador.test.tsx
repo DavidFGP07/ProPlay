@@ -236,7 +236,7 @@ describe('Explorar oportunidades (/vacantes)', () => {
     expect(within(tarjetas[0]!).getByTestId('barra-aportes')).toBeInTheDocument()
     expect(screen.getByText('2 ofertas abiertas')).toBeInTheDocument()
     expect(screen.getByText('Remota, sin restricción de ubicación')).toBeInTheDocument()
-    expect(await screen.findByText(/Ya te postulaste · En revision/)).toBeInTheDocument()
+    expect(await screen.findByText(/Ya te postulaste · En revisión/)).toBeInTheDocument()
     // Con cuenta verificada no hay aviso.
     expect(screen.queryByText(/Vincula tu cuenta de Riot para que la técnica cuente/)).toBeNull()
   })
@@ -426,7 +426,7 @@ describe('Mis postulaciones (pestaña de /mi-perfil)', () => {
     const primera = (await screen.findByRole('heading', { name: 'MID para la academia' }, ESPERA)).closest('li')
     const segunda = screen.getByRole('heading', { name: 'Soporte universitario' }).closest('li')
     expect(within(primera!).getByText('MID para la academia')).toBeInTheDocument()
-    expect(within(primera!).getAllByText('En revision')).not.toHaveLength(0)
+    expect(within(primera!).getAllByText('En revisión')).not.toHaveLength(0)
     expect(within(primera!).getByText('Recibida')).toBeInTheDocument()
     expect(within(segunda!).getByText('Oferta cubierta')).toBeInTheDocument()
     expect(within(segunda!).getAllByText('Rechazada')).not.toHaveLength(0)
