@@ -28,12 +28,10 @@ import { config } from '@/lib/env'
 import { es } from '@/i18n/es'
 import { DESCARGO_RIOT } from '@/i18n/legal'
 
-const CUENTAS_DEMO: { rol: Rol; descripcion: string }[] = [
-  { rol: 'JUGADOR', descripcion: 'Perfil, postulaciones y endoses' },
-  { rol: 'EQUIPO', descripcion: 'Publica vacantes y usa el matching' },
-  { rol: 'SCOUT', descripcion: 'Busca y evalua talento' },
-  { rol: 'ADMIN', descripcion: 'Gestion, metricas y auditoria' },
-]
+const t = es.login
+
+const ROLES_DEMO: Rol[] = ['JUGADOR', 'EQUIPO', 'SCOUT', 'ADMIN']
+const ICONOS_RASGOS = [Database, Sparkles, ShieldCheck]
 
 /**
  * El registro valida con el esquema compartido, que ya exige aceptar el aviso
@@ -79,7 +77,7 @@ export default function LoginPage() {
       await entrar(datos)
       navegar('/')
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos iniciar tu sesion.'))
+      setError(mensajeDeError(e, t.errorEntrar))
     }
   })
 
@@ -89,7 +87,7 @@ export default function LoginPage() {
       await registrar(registerSchema.parse(datos))
       navegar('/')
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos crear tu cuenta.'))
+      setError(mensajeDeError(e, t.errorRegistrar))
     }
   })
 
@@ -113,42 +111,34 @@ export default function LoginPage() {
               <p className="text-xl font-bold leading-none tracking-tight text-slate-50">
                 Pro<span className="gradient-text">Play</span>
               </p>
-              <p className="text-xs text-slate-500">
-                Plataforma Web para el Scouting de Talento en eSports
-              </p>
+              <p className="text-xs text-slate-500">{t.lema}</p>
             </div>
           </div>
         </div>
 
         <div className="relative max-w-lg">
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-50">
-            De la{' '}
-            <span className="gradient-text">declaracion sin verificar</span> a la
-            evidencia comprobable.
+            {t.titularInicio} <span className="gradient-text">{t.titularResaltado}</span>{' '}
+            {t.titularFin}
           </h1>
-          <p className="mt-4 text-sm leading-relaxed text-slate-400">
-            ProPlay convierte las senales no verificables del scouting de eSports en
-            rankings de compatibilidad trazables, ingiriendo las estadisticas
-            directamente desde las APIs oficiales de los juegos.
-          </p>
+          <p className="mt-4 text-sm leading-relaxed text-slate-400">{t.presentacion}</p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              { icono: Database, titulo: 'Ingesta directa', texto: 'OAuth 2.0 + API oficial' },
-              { icono: Sparkles, titulo: 'Matching hibrido', texto: 'pgvector + Transformer' },
-              { icono: ShieldCheck, titulo: 'Trazable', texto: 'Ranking explicable' },
-            ].map((f) => (
+            {t.rasgos.map((f, i) => {
+              const Icono = ICONOS_RASGOS[i] ?? ShieldCheck
+              return (
               <div key={f.titulo} className="card p-3.5">
-                <f.icono size={16} className="text-brand-400" />
+                <Icono size={16} className="text-brand-400" aria-hidden />
                 <p className="mt-2 text-xs font-semibold text-slate-200">{f.titulo}</p>
                 <p className="mt-0.5 text-[11px] text-slate-500">{f.texto}</p>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
         <p className="relative text-[11px] text-slate-600">
-          Universidad del Norte · Departamento de Ingenieria de Sistemas · 2026
+          {t.pie}
         </p>
       </div>
 
@@ -165,35 +155,33 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-2xl font-bold tracking-tight text-slate-50">
-            {modo === 'entrar' ? 'Iniciar sesion' : 'Crear cuenta'}
+            {modo === 'entrar' ? t.tituloEntrar : t.tituloRegistrar}
           </h2>
           <p className="mt-1.5 text-sm text-slate-500">
-            {modo === 'entrar'
-              ? 'Accede a tu espacio de trabajo segun tu rol.'
-              : 'Registra tu perfil y empieza a construir evidencia verificable.'}
+            {modo === 'entrar' ? t.subtituloEntrar : t.subtituloRegistrar}
           </p>
 
           {/* Selector de modo */}
           <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-white/3 p-1">
             {[
-              { id: 'entrar' as const, l: 'Iniciar sesion' },
-              { id: 'registrar' as const, l: 'Crear cuenta' },
-            ].map((t) => (
+              { id: 'entrar' as const, l: t.pestanaEntrar },
+              { id: 'registrar' as const, l: t.pestanaRegistrar },
+            ].map((pestana) => (
               <button
-                key={t.id}
+                key={pestana.id}
                 type="button"
                 onClick={() => {
-                  setModo(t.id)
+                  setModo(pestana.id)
                   setError(null)
                 }}
                 className={cn(
                   'rounded-lg px-3 py-2 text-xs font-medium transition',
-                  modo === t.id
+                  modo === pestana.id
                     ? 'bg-brand-500/20 text-brand-200'
                     : 'text-slate-500 hover:text-slate-300',
                 )}
               >
-                {t.l}
+                {pestana.l}
               </button>
             ))}
           </div>
@@ -205,9 +193,9 @@ export default function LoginPage() {
             noValidate
           >
             {modo === 'registrar' && (
-              <Field label="Nombre completo">
+              <Field label={t.nombre}>
                 <Input
-                  placeholder="Daniel Ocoro"
+                  placeholder={t.nombreEjemplo}
                   autoComplete="name"
                   aria-invalid={Boolean(formRegistro.formState.errors.nombre)}
                   {...formRegistro.register('nombre')}
@@ -216,10 +204,10 @@ export default function LoginPage() {
               </Field>
             )}
 
-            <Field label="Correo electronico">
+            <Field label={t.correo}>
               <Input
                 type="email"
-                placeholder="tucorreo@dominio.com"
+                placeholder={t.correoEjemplo}
                 autoComplete="email"
                 aria-invalid={Boolean(errores.email)}
                 {...(modo === 'entrar'
@@ -229,7 +217,7 @@ export default function LoginPage() {
               <ErrorCampo mensaje={errores.email?.message} />
             </Field>
 
-            <Field label="Contraseña">
+            <Field label={t.contrasena}>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -243,7 +231,7 @@ export default function LoginPage() {
             </Field>
 
             {modo === 'registrar' && (
-              <Field label="Rol en la plataforma">
+              <Field label={t.rol}>
                 <Select {...formRegistro.register('rol')}>
                   {(['JUGADOR', 'EQUIPO', 'SCOUT'] satisfies RolRegistrable[]).map((r) => (
                     <option key={r} value={r}>
@@ -305,7 +293,7 @@ export default function LoginPage() {
             >
               {!cargando &&
                 (modo === 'entrar' ? <Lock size={16} /> : <UserPlus size={16} />)}
-              {modo === 'entrar' ? 'Entrar a ProPlay' : 'Crear mi cuenta'}
+              {modo === 'entrar' ? t.entrar : t.registrar}
             </Button>
           </form>
 
@@ -314,18 +302,18 @@ export default function LoginPage() {
               <div className="my-7 flex items-center gap-3">
                 <div className="h-px flex-1 bg-white/8" />
                 <span className="text-[11px] uppercase tracking-wider text-slate-600">
-                  Cuentas de demostracion
+                  {t.cuentasDemo}
                 </span>
                 <div className="h-px flex-1 bg-white/8" />
               </div>
 
               <div className="space-y-2">
-                {CUENTAS_DEMO.map((c) => {
-                  const usuario = CUENTAS_SEMILLA.find((u) => u.rol === c.rol)
+                {ROLES_DEMO.map((rol) => {
+                  const usuario = CUENTAS_SEMILLA.find((u) => u.rol === rol)
                   if (!usuario) return null
                   return (
                     <button
-                      key={c.rol}
+                      key={rol}
                       type="button"
                       onClick={() => usarCuenta(usuario.email)}
                       className={cn(
@@ -340,7 +328,7 @@ export default function LoginPage() {
                           {usuario.nombre}
                         </p>
                         <p className="truncate text-[11px] text-slate-500">
-                          {c.descripcion}
+                          {t.descripcionDemo[rol]}
                         </p>
                       </div>
                       <Users size={14} className="shrink-0 text-slate-600" />
@@ -354,9 +342,7 @@ export default function LoginPage() {
           {cargando && (
             <p className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-500">
               <Loader2 size={13} className="animate-spin" />
-              {modo === 'entrar'
-                ? 'Verificando credenciales...'
-                : 'Creando tu cuenta...'}
+              {modo === 'entrar' ? t.entrando : t.registrando}
             </p>
           )}
 

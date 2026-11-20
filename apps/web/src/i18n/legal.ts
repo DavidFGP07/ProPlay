@@ -72,7 +72,7 @@ export const legal = {
         {
           titulo: '4. Quién ve tus datos',
           parrafos: [
-            'Tu perfil público de jugador (nombre, ubicación por país y departamento, estadísticas y habilidades) es visible para cualquier persona que tenga el enlace, para que puedas compartirlo como carta de presentación.',
+            'Tu perfil público de jugador (nombre, presentación, ubicación por país y departamento, cuentas verificadas y el resumen de tus estadísticas de Riot: posición, rango, partidas analizadas y métricas principales) es visible para cualquier persona que tenga el enlace, para que puedas compartirlo como carta de presentación.',
             'Los equipos y scouts registrados pueden ver los perfiles de jugadores y su compatibilidad con las ofertas. Tu correo electrónico y tu contraseña nunca son públicos.',
             'Cuando una organización preselecciona tu postulación (la pasa a «en revisión»), puede ver tu correo para contactarte mientras la postulación siga en proceso o haya sido aceptada. Si la rechaza, deja de verlo. Los scouts no lo ven.',
             'En el buscador de talento y en el ranking de candidatos de cada oferta, los equipos y scouts registrados ven además tus horas disponibles por semana y si estás dispuesto a relocalizarte: con esos dos datos se calculan y se explican las dimensiones de disponibilidad y de ubicación de tu compatibilidad. No aparecen en tu perfil público.',
