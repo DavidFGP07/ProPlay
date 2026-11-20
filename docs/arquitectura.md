@@ -553,8 +553,9 @@ flowchart LR
   tokens como máximo, sin reintentos y con el tiempo máximo de `EXPLICADOR_TIMEOUT_MS`.
 - **Fidelidad** (`redaccion/fidelidad.ts`): se descarta el texto que traiga una cifra que no
   está en la entrada (se admite la forma de fracción de un porcentaje), un rango o una
-  división que no están, una dimensión oculta o un nombre de campo del JSON («winRate») o
-  «win rate» en inglés, y el que calle los requisitos que el candidato no cumple (sin una
+  división que no están, una dimensión oculta, un nombre de campo del JSON («winRate») o
+  «win rate» en inglés, o que diga que las horas por semana están verificadas (las declara
+  el jugador), y el que calle los requisitos que el candidato no cumple (sin una
   frase que empiece por «No cumple»).
 - **Caché** en Redis por contenido: sha256 de la versión del prompt, el modelo y la entrada,
   durante 30 días. Un acierto no llama al modelo ni gasta los límites.
