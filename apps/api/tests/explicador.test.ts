@@ -188,6 +188,16 @@ describe("GET /explicaciones/ofertas/:id/candidatos/:jugadorId", () => {
     expect(falso.peticiones).toHaveLength(2);
   });
 
+  it("el texto se pule antes de comprobarlo y guardarlo: la posición como en la interfaz", async () => {
+    falso.respuesta = {
+      texto: TEXTO_FIEL.replace("juega de Mid", "juega de MID"),
+      tokensEntrada: 700,
+      tokensSalida: 80,
+    };
+    const cuerpo = await explicar();
+    expect(cuerpo).toMatchObject({ estado: "GENERADA", texto: TEXTO_FIEL });
+  });
+
   it("un rango inventado también se descarta", async () => {
     falso.respuesta = { texto: "Está en Retador y juega de Mid.", tokensEntrada: 700, tokensSalida: 20 };
     expect(await explicar()).toMatchObject({ estado: "NO_DISPONIBLE", motivo: "FIDELIDAD" });

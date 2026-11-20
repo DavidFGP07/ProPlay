@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { METRICAS_TECNICA_LOL, candidatoRankingSchema, type CandidatoRanking } from "@proplay/shared";
 import { construirEntrada, serializarEntrada } from "../src/modules/explicador/redaccion/entrada";
 import { comprobarFidelidad } from "../src/modules/explicador/redaccion/fidelidad";
+import { pulirFormato } from "../src/modules/explicador/redaccion/formato";
 import { PROMPT_SISTEMA, VERSION_PROMPT } from "../src/modules/explicador/redaccion/prompt";
 
 /**
@@ -237,14 +238,18 @@ describe("prompt", () => {
   // Prueba manual con la clave real (v1): la tercera frase repetía la misma
   // dimensión y el texto citaba «winRate» y «la escala 33».
   it("prohíbe repetir, no cita la escala y da nombre en español a cada métrica", () => {
-    expect(VERSION_PROMPT).toBeGreaterThanOrEqual(2);
+    expect(VERSION_PROMPT).toBeGreaterThanOrEqual(3);
     expect(PROMPT_SISTEMA).toMatch(/no repitas nada de lo ya dicho/);
     expect(PROMPT_SISTEMA).toMatch(/no la cites/);
     expect(PROMPT_SISTEMA).toContain("requisitosNoCumplidos");
-    expect(PROMPT_SISTEMA).toMatch(/empiece por «No cumple»/);
+    expect(PROMPT_SISTEMA).toMatch(/empiece exactamente por «No cumple» \(nunca «Además, no cumple»/);
     for (const metrica of METRICAS_TECNICA_LOL) {
       expect(PROMPT_SISTEMA).toContain(`${metrica} es «`);
     }
+    expect(PROMPT_SISTEMA).toContain("coma decimal («7,95», nunca «7.95»)");
+    expect(PROMPT_SISTEMA).toContain("nunca «winRate» ni «win rate»");
+    expect(PROMPT_SISTEMA).toContain("nunca «MID», «TOP», «JUNGLA» ni «SOPORTE»");
+    expect(PROMPT_SISTEMA).toContain("Las horas por semana las declara el jugador");
   });
 });
 
@@ -255,9 +260,52 @@ describe("comprobarFidelidad", () => {
     const texto =
       "Lo que más suma es la técnica: juega de ADC en el 80 % de sus partidas y ya está en Platino IV, " +
       "el mínimo que pide la oferta. Dentro de la técnica, lo que más resta es el rendimiento (60 de 100), " +
-      "con un win rate de 0,45 y un KDA de 5,38. No cumple las horas: dedica 15 frente a las 20 que se piden. " +
+      "con una tasa de victorias de 0,45 y un KDA de 5,38. No cumple las horas: dedica 15 frente a las 20 que se piden. " +
       "Su oro por minuto es 408.";
     expect(comprobarFidelidad(texto, entrada)).toEqual({ fiel: true });
+  });
+
+  it("rechaza los nombres de campo del JSON y «win rate» en inglés", () => {
+    const fin = " No cumple las horas: dedica 15 frente a las 20 que se piden.";
+    expect(comprobarFidelidad(`Su winRate es de 0,45.${fin}`, entrada)).toMatchObject({
+      fiel: false,
+      causa: "NOMBRE_DE_CAMPO",
+      detalle: "winRate",
+    });
+    expect(comprobarFidelidad(`Su csPorMinuto queda por encima de lo esperable.${fin}`, entrada)).toMatchObject({
+      causa: "NOMBRE_DE_CAMPO",
+      detalle: "csPorMinuto",
+    });
+    expect(comprobarFidelidad(`Su Win Rate es de 0,45.${fin}`, entrada)).toMatchObject({
+      causa: "NOMBRE_DE_CAMPO",
+      detalle: "win rate",
+    });
+  });
+
+  it("rechaza que las horas por semana estén verificadas: las declara el jugador", () => {
+    for (const frase of [
+      "No cumple las horas: la oferta pide 20 y el candidato tiene 15 horas verificadas.",
+      "No cumple la disponibilidad verificada: 15 frente a 20 horas.",
+      "No cumple: tiene 15 verificadas frente a las 20 horas que pide la oferta.",
+    ]) {
+      expect(comprobarFidelidad(frase, entrada)).toMatchObject({ fiel: false, causa: "HORAS_VERIFICADAS" });
+    }
+    expect(comprobarFidelidad("No cumple las horas: declara 15 frente a las 20 que pide la oferta.", entrada)).toEqual({
+      fiel: true,
+    });
+    // «Verificado» en otra frase (el rango, de Riot) no cuenta.
+    expect(
+      comprobarFidelidad("Su rango verificado es Platino IV. No cumple las horas: declara 15 de 20.", entrada),
+    ).toEqual({ fiel: true });
+  });
+
+  it("la frase de los requisitos tiene que empezar por «No cumple»", () => {
+    const inicio = "Lo que más suma es la técnica.";
+    expect(comprobarFidelidad(`${inicio} Además, no cumple las horas: 15 frente a 20.`, entrada)).toMatchObject({
+      fiel: false,
+      causa: "REQUISITOS_OMITIDOS",
+    });
+    expect(comprobarFidelidad(`${inicio} No cumple las horas: 15 frente a 20.`, entrada)).toEqual({ fiel: true });
   });
 
   it("rechaza una cifra que no está en la entrada", () => {
@@ -297,5 +345,16 @@ describe("comprobarFidelidad", () => {
   it("acepta el rango del candidato que está por debajo del mínimo aunque la técnica no pese", () => {
     const debajo = construirEntrada(conRequisitos({ rango: "ORO_II" }, 0));
     expect(comprobarFidelidad("No cumple el rango mínimo: está en Oro II y se pide Platino IV.", debajo)).toEqual({ fiel: true });
+  });
+});
+
+describe("pulirFormato", () => {
+  it("pasa los decimales a coma y las posiciones a como las escribe la interfaz, sin tocar las cifras", () => {
+    expect(pulirFormato("Juega de MID con 7.95 súbditos por minuto y un KDA de 5.38.")).toBe(
+      "Juega de Mid con 7,95 súbditos por minuto y un KDA de 5,38.",
+    );
+    expect(pulirFormato("TOP, JUNGLA, SOPORTE y ADC.")).toBe("Top, Jungla, Soporte y ADC.");
+    // Una palabra que sólo contiene el código no cambia; un final de frase tras un número, tampoco.
+    expect(pulirFormato("MIDLANER. Tiene 15. Luego 20 horas.")).toBe("MIDLANER. Tiene 15. Luego 20 horas.");
   });
 });

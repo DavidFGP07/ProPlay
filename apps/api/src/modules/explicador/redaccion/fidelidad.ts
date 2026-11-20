@@ -10,10 +10,50 @@ import type { EntradaExplicador } from "./entrada";
 
 export type ResultadoFidelidad =
   | { fiel: true }
-  | { fiel: false; causa: "CIFRA" | "RANGO" | "DIMENSION_OCULTA" | "REQUISITOS_OMITIDOS"; detalle: string };
+  | {
+      fiel: false;
+      causa:
+        | "CIFRA"
+        | "RANGO"
+        | "DIMENSION_OCULTA"
+        | "REQUISITOS_OMITIDOS"
+        | "NOMBRE_DE_CAMPO"
+        | "HORAS_VERIFICADAS";
+      detalle: string;
+    };
 
-/** Lo que el prompt obliga a escribir cuando hay requisitos sin cumplir. */
-const PATRON_NO_CUMPLE = /\bno cumple\b/;
+/**
+ * Lo que el prompt obliga a escribir cuando hay requisitos sin cumplir: una
+ * frase que empiece por «No cumple» (al principio del texto o tras un punto).
+ */
+const PATRON_NO_CUMPLE = /(?:^|[.!?]\s+)No cumple\b/;
+
+/**
+ * Las horas por semana las declara el jugador: decir que están «verificadas»
+ * engaña al equipo. Busca «verificad…» en la misma frase que las horas o la
+ * disponibilidad.
+ */
+const PATRON_HORAS_VERIFICADAS = /\b(horas?|disponibilidad)\b[^.]{0,60}\bverificad|\bverificad\w*\b[^.]{0,30}\bhoras?\b/;
+
+/** «win rate» en inglés: el prompt pide «tasa de victorias». */
+const PATRON_WIN_RATE = /\bwin\s?rate\b/;
+
+/**
+ * Nombres de campo de la entrada que el equipo no debe leer: toda clave o
+ * código en camelCase («winRate», «csPorMinuto», «ordenPorAporte»…).
+ */
+function nombresDeCampo(valor: unknown, nombres = new Set<string>()): Set<string> {
+  const esCamel = (t: string) => /^[a-z]+[A-Z][A-Za-z]*$/.test(t);
+  if (typeof valor === "string" && esCamel(valor)) nombres.add(valor);
+  else if (Array.isArray(valor)) valor.forEach((v) => nombresDeCampo(v, nombres));
+  else if (valor && typeof valor === "object") {
+    for (const [clave, v] of Object.entries(valor)) {
+      if (esCamel(clave)) nombres.add(clave);
+      nombresDeCampo(v, nombres);
+    }
+  }
+  return nombres;
+}
 
 /** Todas las cifras que aparecen en la entrada, a cualquier profundidad. */
 function cifrasDe(valor: unknown, cifras = new Set<number>()): Set<number> {
@@ -86,8 +126,21 @@ export function comprobarFidelidad(texto: string, entrada: EntradaExplicador): R
     if (patron.test(normalizado)) return { fiel: false, causa: "DIMENSION_OCULTA", detalle: dimension };
   }
 
+  // Nombres de campo: el texto habla en español, no con las claves del JSON.
+  for (const nombre of nombresDeCampo(entrada)) {
+    if (new RegExp(`\\b${nombre}\\b`).test(texto)) {
+      return { fiel: false, causa: "NOMBRE_DE_CAMPO", detalle: nombre };
+    }
+  }
+  if (PATRON_WIN_RATE.test(normalizado)) return { fiel: false, causa: "NOMBRE_DE_CAMPO", detalle: "win rate" };
+
+  // Las horas son declaradas, nunca verificadas.
+  if (PATRON_HORAS_VERIFICADAS.test(normalizado)) {
+    return { fiel: false, causa: "HORAS_VERIFICADAS", detalle: "horas" };
+  }
+
   // Requisitos sin cumplir: el texto no puede callarlos y resaltar sólo lo bueno.
-  if (entrada.requisitosNoCumplidos.length > 0 && !PATRON_NO_CUMPLE.test(normalizado)) {
+  if (entrada.requisitosNoCumplidos.length > 0 && !PATRON_NO_CUMPLE.test(texto.trim())) {
     return {
       fiel: false,
       causa: "REQUISITOS_OMITIDOS",

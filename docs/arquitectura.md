@@ -541,16 +541,22 @@ flowchart LR
   rango por debajo del mínimo y horas por debajo de las pedidas (sin datos verificados, no
   se dan por cumplidos; la ubicación no es requisito). Nunca `candidato.jugador`: ni nombre,
   ni correo, ni Riot ID, ni ids, ni ubicación, ni fechas.
-- **Prompt** (`redaccion/prompt.ts`): en español y versionado (`VERSION_PROMPT`, hoy 2).
+- **Prompt** (`redaccion/prompt.ts`): en español y versionado (`VERSION_PROMPT`, hoy 3).
   Primero lo que más suma, después lo que más resta y, si hay requisitos sin cumplir, una
-  última frase que empieza por «No cumple». Sin veredicto: el puesto lo da el motor.
+  última frase que empieza exactamente por «No cumple». Coma decimal, las métricas sólo en
+  español y las posiciones como en la interfaz. Sin veredicto: el puesto lo da el motor.
+- **Pulido** (`redaccion/formato.ts`): antes de comprobar y guardar, el texto pasa a coma
+  decimal y las posiciones a «Mid», «Top», «Jungla» y «Soporte». Sólo forma: ninguna cifra
+  cambia.
 - **Llamada** (`integrations/llm/`): `ProveedorLLM` con tres implementaciones (Anthropic,
   desactivada y, en las pruebas, una falsa). Esfuerzo `low`, pensamiento desactivado, 400
   tokens como máximo, sin reintentos y con el tiempo máximo de `EXPLICADOR_TIMEOUT_MS`.
 - **Fidelidad** (`redaccion/fidelidad.ts`): se descarta el texto que traiga una cifra que no
   está en la entrada (se admite la forma de fracción de un porcentaje), un rango o una
-  división que no están, o una dimensión oculta, y el que calle los requisitos que el
-  candidato no cumple (no dice «no cumple»).
+  división que no están, una dimensión oculta, un nombre de campo del JSON («winRate») o
+  «win rate» en inglés, o que diga que las horas por semana están verificadas (las declara
+  el jugador), y el que calle los requisitos que el candidato no cumple (sin una
+  frase que empiece por «No cumple»).
 - **Caché** en Redis por contenido: sha256 de la versión del prompt, el modelo y la entrada,
   durante 30 días. Un acierto no llama al modelo ni gasta los límites.
 - **Límites**: `EXPLICADOR_LIMITE_USUARIO_HORA` generaciones nuevas por usuario y hora y

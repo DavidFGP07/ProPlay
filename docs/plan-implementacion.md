@@ -31,7 +31,8 @@ inventario de `CLAUDE.md` §5; el porqué de cada decisión, en `docs/decisiones
   preselecciona su postulación.
 - **Sprint 4:** la analítica (4.10), con el script de las métricas del piloto; el explicador
   con modelo de lenguaje (4.1, 4.3 y 4.7), que dice los requisitos que el candidato no
-  cumple (falta repetir con la clave real la prueba manual del prompt v2); y las notificaciones dentro de la app (4.5 y 4.9).
+  cumple (la v2 se probó con la clave real el 2026-11-20; el prompt v3 corrige su forma y
+  falta su prueba manual); y las notificaciones dentro de la app (4.5 y 4.9).
 
 La calidad la sostienen `npm run verify` (guarda del índice HNSW, lint, typecheck y
 pruebas de los tres workspaces) y el CI en cada pull request contra `main`, con una base de
@@ -192,7 +193,7 @@ ese modelo y decidir cómo se distingue lo declarado por el jugador de lo verifi
 
 | # | Tarea |
 |---|---|
-| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato), #64 y #68 (prompt v2). Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido, y dice siempre los requisitos que el candidato no cumple. La v1 se probó con la clave real el 2026-11-20; la prueba manual de la v2 está pendiente. |
+| 4.1 | Explicador: generar en lenguaje natural la justificación del puntaje, anclada en datos recuperados en tiempo real<br>**Hecha:** #63 (contrato), #64 y #68 (prompt v2). Claude Haiku 5.5 redacta a partir del desglose del ranking recalculado al pedirlo, con comprobación de fidelidad y caché por contenido, y dice siempre los requisitos que el candidato no cumple. La v1 y la v2 se probaron con la clave real el 2026-11-20; la v2 tenía fallos de forma («winRate», «7.95», «MID») que corrige la v3, pendiente de su prueba manual. |
 | 4.2 | Sandbox de Python para el cálculo exacto de métricas, fuera del modelo de lenguaje<br>**Pendiente.** |
 | 4.3 | **Degradación elegante**: si el servicio de LLM falla, se muestra el desglose numérico y el ranking sigue funcionando. El ranking nunca depende de que el LLM esté vivo<br>**Hecha** con el explicador: sin clave, con error, tiempo agotado, fidelidad fallida o límite agotado responde `NO_DISPONIBLE` y la vista se queda con la explicación determinista. |
 | 4.4–4.6 | Pasan a trabajo futuro (Bloque 6) por la decisión 0.10: mensajería y administración. **Notificaciones (4.5): hechas** en versión mínima (#65 contrato y #67): tres eventos, emisor en proceso y rutas propias |

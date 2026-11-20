@@ -11,6 +11,7 @@ import {
 import * as matching from "../matching/matching.service";
 import * as repositorio from "./explicador.repository";
 import { comprobarFidelidad } from "./redaccion/fidelidad";
+import { pulirFormato } from "./redaccion/formato";
 import { construirEntrada, serializarEntrada } from "./redaccion/entrada";
 import { PROMPT_SISTEMA, VERSION_PROMPT, mensajeUsuario } from "./redaccion/prompt";
 
@@ -103,7 +104,9 @@ export async function explicar(
     return noDisponible(motivo, modelo);
   }
 
-  const { texto, tokensEntrada, tokensSalida } = respuesta;
+  const { tokensEntrada, tokensSalida } = respuesta;
+  // Forma (coma decimal, nombres de posición) antes de comprobar y de guardar.
+  const texto = pulirFormato(respuesta.texto);
   const tokens = { tokensEntrada, tokensSalida, costeUsd: costeEstimado(modelo, tokensEntrada, tokensSalida) };
   const fidelidad = comprobarFidelidad(texto, entrada);
   if (!fidelidad.fiel) {
