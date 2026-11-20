@@ -54,7 +54,7 @@ export const legal = {
           parrafos: ['Recogemos solo los datos necesarios para prestar el servicio:'],
           lista: [
             'Datos de la cuenta: nombre, correo electrónico, rol (jugador, equipo o scout) y contraseña, que guardamos cifrada con una función de hash y nunca en claro.',
-            'Datos de tu perfil que tú mismo registras: biografía, ubicación (país y, en Colombia, departamento; nunca tu ciudad ni tu dirección), disposición a relocalizarte, disponibilidad, habilidades y experiencia.',
+            'Datos de tu perfil que tú mismo registras: biografía, ubicación (país y, en Colombia, departamento; nunca tu ciudad ni tu dirección), disposición a relocalizarte y horas disponibles por semana.',
             'Si vinculas tu cuenta de League of Legends, los datos que nos entrega la API oficial de Riot Games: tu identificador de jugador, tu rango, tu historial de partidas y las estadísticas de esas partidas.',
             'Datos técnicos de uso, como registros de acceso y de auditoría, para la seguridad del servicio.',
           ],
