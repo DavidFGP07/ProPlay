@@ -3,8 +3,11 @@ import {
   ICONO_VERIFICACION_MIN,
   MAX_COMPROBACIONES_DESAFIO,
   MINUTOS_DESAFIO_VERIFICACION,
+  POSICIONES_LOL,
   SEGUNDOS_MINIMOS_ENTRE_COMPROBACIONES,
+  metricasLolSchema,
   type Plataforma,
+  type PosicionLol,
 } from "@proplay/shared";
 import type {
   CuentaGaming,
@@ -16,6 +19,7 @@ import type {
   PerfilJugadorRespuesta,
   PerfilPropioResponse,
   ResultadoVerificacionRiot,
+  ResumenVerificadoPublico,
   Rol,
   ServidorLol,
 } from "@proplay/shared";
@@ -492,5 +496,34 @@ export async function obtenerPublico(perfilId: string): Promise<PerfilJugadorPub
     departamento: perfil.departamento,
     avatarUrl: perfil.avatarUrl,
     cuentasVerificadas: perfil.cuentasGaming,
+    resumenVerificado: resumenVerificado(perfil.estadisticas[0]),
   });
+}
+
+const esPosicionLol = (valor: string | null): valor is PosicionLol =>
+  (POSICIONES_LOL as readonly (string | null)[]).includes(valor);
+
+/**
+ * RF-05 · Resumen verificado del perfil público a partir de la última captura
+ * de Riot: posición, rango, partidas y las métricas principales. Una métrica
+ * que falte en la captura sale nula; nunca se rellena con un valor declarado.
+ */
+function resumenVerificado(
+  captura: repositorio.PerfilJugadorPublicoDb["estadisticas"][number] | undefined,
+): ResumenVerificadoPublico | null {
+  if (!captura) return null;
+  const leidas = metricasLolSchema.partial().safeParse(captura.metricas ?? {});
+  const metricas = leidas.success ? leidas.data : {};
+  return {
+    posicionPrincipal: esPosicionLol(captura.rol) ? captura.rol : null,
+    rango: captura.rango,
+    partidasAnalizadas: captura.partidas,
+    winRate: captura.winRate,
+    kda: captura.kda,
+    csPorMinuto: metricas.csPorMinuto ?? null,
+    danoPorMinuto: metricas.danoPorMinuto ?? null,
+    visionPorMinuto: metricas.visionPorMinuto ?? null,
+    participacionKills: metricas.participacionKills ?? null,
+    capturadaEn: captura.capturadaEn,
+  };
 }
