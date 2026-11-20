@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { crearQueryClient } from '@/api/queryClient'
 import { NotificacionesBell } from '@/components/NotificacionesBell'
+import { es } from '@/i18n/es'
 
 /**
  * RF-12 · Campana de notificaciones: contador anunciado, lista con el texto y
@@ -23,7 +24,7 @@ const NOTIFICACIONES = [
   {
     id: 'n1',
     tipo: 'NUEVA_POSTULACION',
-    payload: { ofertaId: 'o1', ofertaTitulo: 'ADC para la liga', postulacionId: 'p1' },
+    payload: { ofertaId: 'o1', ofertaTitulo: 'ADC para la liga', postulacionId: 'p1', jugadorNombre: 'Tomás Herrera' },
     leidaEn: null,
     creadoEn: hace(5),
   },
@@ -108,7 +109,7 @@ describe('Campana de notificaciones', () => {
     expect(screen.getByRole('button', { name: /^Notificaciones/ })).toHaveAttribute('aria-expanded', 'true')
     const enlaces = await within(panel).findAllByRole('link', {}, ESPERA)
     expect(enlaces.map((a) => [a.textContent?.replace(/hace.*|ayer.*/, '').trim(), a.getAttribute('href')])).toEqual([
-      ['Sin leer: Nueva postulación a «ADC para la liga».', '/vacantes/o1'],
+      ['Sin leer: Tomás Herrera se postuló a «ADC para la liga».', '/vacantes/o1'],
       ['Sin leer: Tu postulación a «MID academia» pasó a «Tryout / entrevista».', '/mi-perfil?pestana=postulaciones'],
       ['La oferta «Top regional» se cerró y tu postulación quedó rechazada.', '/mi-perfil?pestana=postulaciones'],
     ])
@@ -120,7 +121,7 @@ describe('Campana de notificaciones', () => {
     servidor(2)
     renderCampana()
     fireEvent.click(await screen.findByRole('button', { name: /^Notificaciones/ }, ESPERA))
-    fireEvent.click(await screen.findByRole('link', { name: /Nueva postulación a «ADC para la liga»/ }, ESPERA))
+    fireEvent.click(await screen.findByRole('link', { name: /Tomás Herrera se postuló a «ADC para la liga»/ }, ESPERA))
 
     await waitFor(() => expect(doble.post).toHaveBeenCalledWith('/notificaciones/leidas', { ids: ['n1'] }))
     expect(screen.getByTestId('ubicacion')).toHaveTextContent('/vacantes/o1')
@@ -182,5 +183,16 @@ describe('Campana de notificaciones', () => {
     })
     await screen.findByRole('button', { name: 'Notificaciones, 3 sin leer' }, ESPERA)
     expect(llamadas()).toBe(2)
+  })
+})
+
+describe('texto de una nueva postulación', () => {
+  it('nombra al jugador y, en las notificaciones anteriores sin nombre, dice sólo la oferta', () => {
+    expect(es.notificaciones.nuevaPostulacion('ADC para la liga', 'Tomás Herrera')).toBe(
+      'Tomás Herrera se postuló a «ADC para la liga».',
+    )
+    expect(es.notificaciones.nuevaPostulacion('ADC para la liga')).toBe(
+      'Nueva postulación a «ADC para la liga».',
+    )
   })
 })

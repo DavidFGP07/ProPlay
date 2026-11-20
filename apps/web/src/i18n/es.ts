@@ -686,7 +686,8 @@ export const es = {
     reintentar: 'Reintentar',
     nueva: 'Sin leer',
     ahora: 'ahora',
-    nuevaPostulacion: (oferta: string) => `Nueva postulación a «${oferta}».`,
+    nuevaPostulacion: (oferta: string, jugador?: string) =>
+      jugador ? `${jugador} se postuló a «${oferta}».` : `Nueva postulación a «${oferta}».`,
     postulacionActualizada: (oferta: string, estado: string) =>
       `Tu postulación a «${oferta}» pasó a «${estado}».`,
     cierreOferta: (oferta: string) => `La oferta «${oferta}» se cerró y tu postulación quedó rechazada.`,
