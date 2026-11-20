@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORIAS_HABILIDAD, DEPARTAMENTOS, PLATAFORMAS } from "../enums";
+import { CATEGORIAS_HABILIDAD, DEPARTAMENTOS, PLATAFORMAS, POSICIONES_LOL, RANGOS_LOL } from "../enums";
 import { urlHttpSchema, validarPaisDepartamento } from "./common";
 import {
   NIVEL_HABILIDAD_MAX,
@@ -102,6 +102,30 @@ export const perfilEquipoRespuestaSchema = z.object({
 });
 
 /**
+ * Resumen verificado del perfil público (RF-05): sale de la última captura de
+ * Riot de una cuenta verificada, nunca de lo que declara el jugador. Las tasas
+ * van en [0, 1]; las demás métricas, por minuto de partida.
+ */
+export const resumenVerificadoPublicoSchema = z.object({
+  /** Posición más jugada en clasificatoria solo/dúo. */
+  posicionPrincipal: z.enum(POSICIONES_LOL).nullable(),
+  rango: z.enum(RANGOS_LOL).nullable(),
+  partidasAnalizadas: z.number().int().min(0),
+  winRate: z.number().min(0).max(1),
+  kda: z.number(),
+  csPorMinuto: z.number().nullable(),
+  danoPorMinuto: z.number().nullable(),
+  visionPorMinuto: z.number().nullable(),
+  participacionKills: z.number().min(0).max(1).nullable(),
+  capturadaEn: z.coerce.date(),
+});
+
+/** Claves del resumen verificado público: las pruebas comparan contra esta lista. */
+export const CAMPOS_RESUMEN_VERIFICADO_PUBLICO = Object.keys(
+  resumenVerificadoPublicoSchema.shape,
+) as (keyof z.infer<typeof resumenVerificadoPublicoSchema>)[];
+
+/**
  * Perfil público del jugador (`GET /perfiles/:id`, sin sesión): la vitrina que
  * se comparte por enlace (RF-05). Es una **lista blanca**, no el perfil privado
  * menos algunos campos: todo lo que no esté aquí no sale. Nunca el correo, el
@@ -124,6 +148,13 @@ export const perfilJugadorPublicoSchema = z.object({
       verificadaEn: z.coerce.date(),
     }),
   ),
+  /**
+   * Resumen de la última captura de Riot de una cuenta verificada: lo que
+   * prueba que el perfil es verificable. Nulo sin cuenta verificada o sin
+   * captura. También es lista blanca: ni el historial de partidas, ni los
+   * campeones, ni el servidor, ni el Riot ID.
+   */
+  resumenVerificado: resumenVerificadoPublicoSchema.nullable(),
 });
 
 /** Claves que puede llevar la respuesta pública: las pruebas comparan contra esta lista. */
@@ -147,6 +178,7 @@ export type PerfilJugadorRespuesta = z.infer<typeof perfilJugadorRespuestaSchema
 export type PerfilEquipoRespuesta = z.infer<typeof perfilEquipoRespuestaSchema>;
 export type PerfilPropioResponse = z.infer<typeof perfilPropioResponseSchema>;
 export type PerfilJugadorPublico = z.infer<typeof perfilJugadorPublicoSchema>;
+export type ResumenVerificadoPublico = z.infer<typeof resumenVerificadoPublicoSchema>;
 export type PerfilEquipoInput = z.infer<typeof perfilEquipoSchema>;
 export type Habilidad = z.infer<typeof habilidadSchema>;
 export type AsignarHabilidadInput = z.infer<typeof asignarHabilidadSchema>;
