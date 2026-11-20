@@ -16,7 +16,8 @@ import { notificacionSchema } from "./notificaciones.schema";
  * Nadie llama a este módulo para notificar (CLAUDE.md §3.3): consume los
  * eventos que publican los demás (`src/eventos`) y crea una fila de
  * `Notificacion` para el destinatario. Guarda datos, no texto: el cliente
- * compone el mensaje y el enlace. El `payload` no lleva datos personales.
+ * compone el mensaje y el enlace. Del jugador, el `payload` sólo lleva el
+ * nombre, y sólo para el equipo dueño de la oferta.
  */
 
 const log = logger.child({ modulo: "notificaciones" });
@@ -33,6 +34,7 @@ async function consumir(evento: Evento): Promise<void> {
           ofertaId: evento.ofertaId,
           ofertaTitulo: evento.ofertaTitulo,
           postulacionId: evento.postulacionId,
+          jugadorNombre: evento.jugadorNombre,
         },
       });
       return;

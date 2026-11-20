@@ -454,7 +454,10 @@ describe('Mis estadísticas', () => {
     expect(await screen.findByText('Esmeralda II', { exact: false }, espera)).toBeInTheDocument()
     expect(screen.getByText('Sin clasificar esta temporada')).toBeInTheDocument()
     expect(screen.getByText('60 %')).toBeInTheDocument()
+    expect(screen.getByText('Tasa de victorias')).toBeInTheDocument()
     expect(screen.getByText('+10 % frente a la captura anterior')).toBeInTheDocument()
+    // Formato español: ninguna cifra con punto decimal.
+    expect(document.querySelector('main')!.textContent).not.toMatch(/\d\.\d/)
     expect(screen.getByText('Thresh')).toBeInTheDocument()
     expect(screen.getByText('Principal')).toBeInTheDocument()
     expect(screen.queryByText('Datos de demostracion')).toBeNull()

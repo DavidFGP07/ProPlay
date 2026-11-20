@@ -663,7 +663,7 @@ describe('Detalle del candidato (/vacantes/:id/ranking/:jugadorId)', () => {
       .slice(1)
       .map((tr) => [...tr.querySelectorAll('th, td')].map((c) => c.textContent))
     expect(metricas).toEqual([
-      ['Win rate', '45 %', '33 %'],
+      ['Tasa de victorias', '45 %', '33 %'],
       ['KDA', '5,38', '100 %'],
       ['Oro por minuto', '408', '54 %'],
     ])
